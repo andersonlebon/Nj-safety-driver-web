@@ -162,6 +162,52 @@ Files are private; the app generates short-lived signed URLs for downloads.
 4. Deploy. Vercel will build with `npm run build` automatically.
 5. Back in Supabase, update **Auth → URL Configuration** to include your production domain in the Site URL and redirect URL allow list.
 
+## Development workflow
+
+This repo uses two long-lived branches:
+
+| Branch | Purpose                          | Vercel environment |
+| ------ | -------------------------------- | ------------------ |
+| `main` | Production-ready code            | Production         |
+| `dev`  | Active development & integration | Preview / staging  |
+
+Recommended flow:
+
+1. Create a feature branch off `dev`:
+   ```bash
+   git checkout dev
+   git pull
+   git checkout -b feat/short-description
+   ```
+2. Commit your work, push, and open a PR **into `dev`**.
+3. Once `dev` is stable and green in CI, open a PR from `dev` → `main` to release.
+
+### Environment files
+
+- `.env.example` — reference template (committed).
+- `.env.development.example` — copy this to `.env.local` for local dev pointing at a **dev Supabase project**.
+- `.env.local` — your real local secrets (git-ignored).
+
+> **Tip:** create a **separate Supabase project** for development so experimental schema changes or test data never touch production.
+
+### Continuous integration
+
+GitHub Actions ([`.github/workflows/ci.yml`](./.github/workflows/ci.yml)) runs on every push and pull request to `main` and `dev`:
+
+- `npm run lint`
+- `npm run type-check`
+- `npm run build`
+
+The workflow uses stub Supabase env vars at build time so it works without secrets configured.
+
+### Vercel preview deployments
+
+After importing the repo on Vercel:
+
+- **Production branch:** `main` → maps to your production domain.
+- **Preview deployments:** every push to `dev` (and every PR) gets its own preview URL.
+- Set environment variables **per environment** in Vercel: use your dev Supabase keys for the Preview environment and prod keys for Production.
+
 ## MVP scope (intentionally limited)
 
 This MVP **does not** include:
