@@ -9,7 +9,8 @@
     "lint": "next lint",
     "type-check": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:push": "drizzle-kit push",
+    "db:push": "node --env-file=.env.local scripts/db-push.mjs",
+    "db:push:tables-only": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {

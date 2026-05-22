@@ -12,6 +12,12 @@ export async function getSessionUser() {
   return user;
 }
 
+/**
+ * Returns the current user's profile.
+ * If the auth user exists but the profiles row is missing (e.g. signup happened
+ * before the auth trigger was installed, or RLS blocked the trigger), this
+ * will lazily create the row from the user's metadata.
+ */
 export async function getCurrentProfile(): Promise<Profile | null> {
   const supabase = createClient();
   const {
@@ -19,13 +25,31 @@ export async function getCurrentProfile(): Promise<Profile | null> {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: profile } = await supabase
+  const { data: existing } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", user.id)
+    .maybeSingle<Profile>();
+
+  if (existing) return existing;
+
+  const meta = (user.user_metadata ?? {}) as {
+    full_name?: string;
+    role?: UserRole;
+  };
+
+  const { data: created } = await supabase
+    .from("profiles")
+    .insert({
+      id: user.id,
+      email: user.email ?? null,
+      full_name: meta.full_name ?? null,
+      role: meta.role ?? "driver",
+    })
+    .select("*")
     .single<Profile>();
 
-  return profile;
+  return created ?? null;
 }
 
 export async function requireRole(allowed: UserRole[]): Promise<Profile> {
