@@ -12,7 +12,7 @@ export function CardHeader({
   return (
     <div
       className={cn(
-        "px-5 py-4 border-b border-slate-200 flex items-center justify-between",
+        "px-5 py-4 border-b border-stone-200 dark:border-slate-800 flex items-center justify-between",
         className
       )}
       {...props}
@@ -26,7 +26,10 @@ export function CardTitle({
 }: HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h3
-      className={cn("text-base font-semibold text-slate-900", className)}
+      className={cn(
+        "text-base font-semibold tracking-tight text-stone-900 dark:text-stone-100",
+        className
+      )}
       {...props}
     />
   );
@@ -37,7 +40,10 @@ export function CardDescription({
   ...props
 }: HTMLAttributes<HTMLParagraphElement>) {
   return (
-    <p className={cn("text-sm text-slate-500", className)} {...props} />
+    <p
+      className={cn("text-sm text-stone-500 dark:text-slate-400", className)}
+      {...props}
+    />
   );
 }
 
@@ -55,7 +61,7 @@ export function CardFooter({
   return (
     <div
       className={cn(
-        "px-5 py-3 border-t border-slate-200 bg-slate-50/60 rounded-b-lg",
+        "px-5 py-3 border-t border-stone-200 dark:border-slate-800 bg-stone-50/60 dark:bg-slate-800/40 rounded-b-xl",
         className
       )}
       {...props}

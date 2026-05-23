@@ -26,7 +26,7 @@ export default async function DriverVehiclesPage() {
 
       <Card>
         <CardBody>
-          <h3 className="text-sm font-semibold text-slate-900 mb-4">
+          <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100 mb-4">
             Register a new vehicle
           </h3>
           <VehicleForm ownerId={profile!.id} />
@@ -35,7 +35,7 @@ export default async function DriverVehiclesPage() {
 
       <Card>
         <CardBody>
-          <h3 className="text-sm font-semibold text-slate-900 mb-4">
+          <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100 mb-4">
             Your vehicles
           </h3>
           {!vehicles || vehicles.length === 0 ? (

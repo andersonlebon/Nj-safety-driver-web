@@ -13,17 +13,21 @@ export function Topbar({
 }) {
   const displayName = userName?.trim() || userEmail || "User";
   return (
-    <header className="border-b border-slate-200 bg-white">
+    <header className="border-b border-stone-200 dark:border-slate-800 bg-white dark:bg-slate-900">
       <div className="flex items-center justify-between px-6 py-4">
         <div>
-          <h1 className="text-lg font-semibold text-slate-900">{title}</h1>
-          <p className="text-xs text-slate-500">{roleLabel}</p>
+          <h1 className="text-lg font-semibold tracking-tight text-stone-900 dark:text-stone-100">
+            {title}
+          </h1>
+          <p className="text-xs text-stone-500 dark:text-slate-400">{roleLabel}</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="text-right">
-            <p className="text-sm font-medium text-slate-900">{displayName}</p>
+            <p className="text-sm font-medium text-stone-900 dark:text-stone-100">
+              {displayName}
+            </p>
             {userEmail && (
-              <p className="text-xs text-slate-500">{userEmail}</p>
+              <p className="text-xs text-stone-500 dark:text-slate-400">{userEmail}</p>
             )}
           </div>
           <form action="/auth/signout" method="POST">

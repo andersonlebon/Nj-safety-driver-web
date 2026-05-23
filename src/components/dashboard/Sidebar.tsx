@@ -21,21 +21,23 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   return (
-    <aside className="hidden md:flex md:flex-col w-64 bg-white border-r border-slate-200">
-      <div className="px-5 py-5 border-b border-slate-200">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-md bg-brand-700 text-white">
+    <aside className="hidden md:flex md:flex-col w-64 bg-white dark:bg-slate-900 border-r border-stone-200 dark:border-slate-800">
+      <div className="px-5 py-5 border-b border-stone-200 dark:border-slate-800">
+        <Link href="/" className="flex items-center gap-2.5">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-700 text-white shadow-sm ring-1 ring-brand-600/20">
             <ShieldCheck className="h-5 w-5" />
           </span>
           <div>
-            <p className="text-sm font-semibold text-slate-900 leading-tight">
-              NJ Safety Driver
+            <p className="text-sm font-bold text-stone-900 dark:text-stone-100 leading-tight tracking-tight">
+              NJ Safety
             </p>
-            <p className="text-xs text-slate-500">{workspaceLabel}</p>
+            <p className="text-xs text-stone-500 dark:text-slate-400 leading-tight">
+              {workspaceLabel}
+            </p>
           </div>
         </Link>
       </div>
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-4 space-y-0.5">
         {items.map((item) => {
           const isActive =
             pathname === item.href ||
@@ -45,16 +47,18 @@ export function Sidebar({
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150",
                 isActive
-                  ? "bg-brand-50 text-brand-800"
-                  : "text-slate-700 hover:bg-slate-100"
+                  ? "bg-brand-50 text-brand-800 dark:bg-brand-950/50 dark:text-brand-300"
+                  : "text-stone-600 dark:text-slate-400 hover:bg-stone-100 dark:hover:bg-slate-800 hover:text-stone-900 dark:hover:text-slate-200"
               )}
             >
               <span
                 className={cn(
-                  "flex h-5 w-5 items-center justify-center",
-                  isActive ? "text-brand-700" : "text-slate-500"
+                  "flex h-4 w-4 items-center justify-center flex-shrink-0",
+                  isActive
+                    ? "text-brand-700 dark:text-brand-400"
+                    : "text-stone-400 dark:text-slate-500"
                 )}
               >
                 {item.icon}
@@ -64,6 +68,10 @@ export function Sidebar({
           );
         })}
       </nav>
+      {/* Gabon flag accent stripe at sidebar bottom */}
+      <div className="px-5 py-4 border-t border-stone-200 dark:border-slate-800">
+        <div className="h-0.5 w-full rounded-full bg-gradient-to-r from-brand-600/60 via-gold-500/60 to-navy-700/60" />
+      </div>
     </aside>
   );
 }
