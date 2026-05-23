@@ -24,7 +24,7 @@ export default async function AdminLayout({
 }) {
   const profile = await requireRole(["admin"]);
   return (
-    <div className="min-h-screen flex bg-slate-50">
+    <div className="min-h-screen flex bg-stone-50 dark:bg-slate-950">
       <Sidebar items={navItems} workspaceLabel="Administrator" />
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar

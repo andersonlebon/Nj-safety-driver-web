@@ -70,7 +70,7 @@ export default async function DriverOverviewPage() {
             <CardTitle>Recent infractions</CardTitle>
             <Link
               href="/driver/infractions"
-              className="text-sm font-medium text-brand-700 hover:underline"
+              className="text-sm font-medium text-brand-700 dark:text-brand-400 hover:underline"
             >
               View all
             </Link>
@@ -84,7 +84,7 @@ export default async function DriverOverviewPage() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="text-left text-slate-500 border-b border-slate-200">
+                  <thead className="text-left text-stone-500 dark:text-slate-400 border-b border-stone-200 dark:border-slate-800">
                     <tr>
                       <th className="py-2 pr-4 font-medium">Date</th>
                       <th className="py-2 pr-4 font-medium">Plate</th>
@@ -95,11 +95,11 @@ export default async function DriverOverviewPage() {
                   </thead>
                   <tbody>
                     {infractions.map((i) => (
-                      <tr key={i.id} className="border-b border-slate-100 last:border-0">
-                        <td className="py-2 pr-4 text-slate-700">{formatDate(i.created_at)}</td>
-                        <td className="py-2 pr-4 font-medium text-slate-900">{i.plate_number}</td>
-                        <td className="py-2 pr-4 text-slate-700">{i.infraction_type}</td>
-                        <td className="py-2 pr-4 text-slate-700">{formatCurrency(Number(i.fine_amount))}</td>
+                      <tr key={i.id} className="border-b border-stone-100 dark:border-slate-800 last:border-0">
+                        <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">{formatDate(i.created_at)}</td>
+                        <td className="py-2 pr-4 font-medium text-stone-900 dark:text-stone-100">{i.plate_number}</td>
+                        <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">{i.infraction_type}</td>
+                        <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">{formatCurrency(Number(i.fine_amount))}</td>
                         <td className="py-2 pr-4"><StatusBadge status={i.status} /></td>
                       </tr>
                     ))}
