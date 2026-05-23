@@ -1,10 +1,10 @@
-import { getCurrentProfile } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Card, CardBody } from "@/components/ui/Card";
 import { ProfileForm } from "./ProfileForm";
 
 export default async function DriverProfilePage() {
-  const profile = await getCurrentProfile();
+  const profile = await requireRole(["driver", "admin"]);
   return (
     <div>
       <PageHeader
@@ -13,7 +13,7 @@ export default async function DriverProfilePage() {
       />
       <Card>
         <CardBody>
-          <ProfileForm profile={profile!} />
+          <ProfileForm profile={profile} />
         </CardBody>
       </Card>
     </div>

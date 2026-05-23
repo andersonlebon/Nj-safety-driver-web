@@ -4,8 +4,14 @@ import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Card, CardBody } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDate } from "@/lib/utils";
+import { requireRole } from "@/lib/auth";
+import { RoleBadge, RoleChanger } from "../RoleChanger";
+import type { UserRole } from "@/lib/types/database";
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminDriversPage() {
+  const me = await requireRole(["admin"]);
   const supabase = createClient();
   const { data: drivers } = await supabase
     .from("profiles")
@@ -15,7 +21,10 @@ export default async function AdminDriversPage() {
 
   return (
     <div>
-      <PageHeader title="Drivers" description="All registered driver accounts." />
+      <PageHeader
+        title="Drivers"
+        description="All registered driver accounts. Use the role selector to promote a driver to agent or admin."
+      />
       <Card>
         <CardBody>
           {!drivers || drivers.length === 0 ? (
@@ -27,23 +36,48 @@ export default async function AdminDriversPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="text-left text-slate-500 border-b border-slate-200">
+                <thead className="text-left text-stone-500 dark:text-slate-400 border-b border-stone-200 dark:border-slate-800">
                   <tr>
                     <th className="py-2 pr-4 font-medium">Name</th>
                     <th className="py-2 pr-4 font-medium">Email</th>
                     <th className="py-2 pr-4 font-medium">Phone</th>
                     <th className="py-2 pr-4 font-medium">License #</th>
                     <th className="py-2 pr-4 font-medium">Joined</th>
+                    <th className="py-2 pr-4 font-medium">Role</th>
+                    <th className="py-2 pr-4 font-medium">Change</th>
                   </tr>
                 </thead>
                 <tbody>
                   {drivers.map((d) => (
-                    <tr key={d.id} className="border-b border-slate-100 last:border-0">
-                      <td className="py-2 pr-4 font-medium text-slate-900">{d.full_name || "—"}</td>
-                      <td className="py-2 pr-4 text-slate-700">{d.email || "—"}</td>
-                      <td className="py-2 pr-4 text-slate-700">{d.phone || "—"}</td>
-                      <td className="py-2 pr-4 text-slate-700">{d.driver_license || "—"}</td>
-                      <td className="py-2 pr-4 text-slate-700">{formatDate(d.created_at)}</td>
+                    <tr
+                      key={d.id}
+                      className="border-b border-stone-100 dark:border-slate-800 last:border-0"
+                    >
+                      <td className="py-2 pr-4 font-medium text-stone-900 dark:text-stone-100">
+                        {d.full_name || "—"}
+                      </td>
+                      <td className="py-2 pr-4 text-stone-700 dark:text-slate-300">
+                        {d.email || "—"}
+                      </td>
+                      <td className="py-2 pr-4 text-stone-700 dark:text-slate-300">
+                        {d.phone || "—"}
+                      </td>
+                      <td className="py-2 pr-4 text-stone-700 dark:text-slate-300">
+                        {d.driver_license || "—"}
+                      </td>
+                      <td className="py-2 pr-4 text-stone-700 dark:text-slate-300">
+                        {formatDate(d.created_at)}
+                      </td>
+                      <td className="py-2 pr-4">
+                        <RoleBadge role={d.role as UserRole} />
+                      </td>
+                      <td className="py-2 pr-4">
+                        <RoleChanger
+                          userId={d.id}
+                          currentRole={d.role as UserRole}
+                          isSelf={d.id === me.id}
+                        />
+                      </td>
                     </tr>
                   ))}
                 </tbody>

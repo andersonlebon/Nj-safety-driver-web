@@ -106,22 +106,41 @@ npm run dev
 
 Visit [http://localhost:3000](http://localhost:3000).
 
-### 7. Create your first admin
+### 7. First-time setup — create the first admin
 
-1. Register a regular account at `/register` (this creates a `driver` profile).
-2. In the Supabase SQL Editor, promote the user to admin:
+After `npm run db:push` succeeds and your dev server is running, visit
+[http://localhost:3000/setup](http://localhost:3000/setup) **once**. This is a
+public one-time route that creates the very first administrator account:
 
-   ```sql
-   update public.profiles set role = 'admin' where email = 'you@example.com';
-   ```
+1. Fill in full name, email, and password (minimum 8 characters).
+2. Submit — the user is created via the Supabase Admin API (no inbox
+   confirmation needed), the matching `profiles` row is written with
+   `role='admin'`, and you're signed in and redirected to `/admin`.
+3. The route then locks itself: as long as at least one admin exists in
+   `public.profiles`, both the page and the server action refuse to run
+   again (the action re-checks the count server-side, so hitting it
+   directly also fails).
 
-3. Sign in again — you will be routed to `/admin`.
+Requires `SUPABASE_SERVICE_ROLE_KEY` to be set in `.env.local` — without it
+the page will throw a clear error explaining what's missing.
 
-To promote agents:
+> If you ever need to start over, clear the admin row in Supabase (or run
+> `npm run db:reset`) and the `/setup` route unlocks itself automatically.
 
-```sql
-update public.profiles set role = 'agent' where email = 'agent@example.com';
-```
+#### Promoting more agents/admins
+
+Once you have an admin, additional staff are created through the dashboard
+itself — no more SQL required:
+
+1. Ask the person to register at `/register` (they'll land in the system as
+   a `driver`).
+2. Sign in as admin and open **Drivers** (or **Agents**).
+3. Pick the new role from the "Change" dropdown on their row — it applies
+   immediately.
+
+You **cannot** demote your own account from the UI (this prevents the
+"locked myself out" mistake); ask another admin or change the row directly
+in the database.
 
 ## Roles & access control
 

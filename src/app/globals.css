@@ -8,8 +8,29 @@ body {
 }
 
 body {
+  font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv11", "ss01", "ss03";
+}
+
+/* Reserve the display serif for large, marketing-style headings.
+   Card titles (h3/h4) stay in the sans family so the UI keeps its tight feel. */
+h1,
+h2 {
+  font-family: var(--font-display), ui-serif, Georgia, Cambria,
+    "Times New Roman", Times, serif;
+  letter-spacing: -0.02em;
+  font-feature-settings: "ss01", "ss02";
+}
+
+code,
+kbd,
+samp,
+pre {
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, monospace;
 }
 
 @layer components {

@@ -1,6 +1,6 @@
 import { Car } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentProfile } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Card, CardBody } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -8,13 +8,13 @@ import { VehicleForm } from "./VehicleForm";
 import { VehicleList } from "./VehicleList";
 
 export default async function DriverVehiclesPage() {
-  const profile = await getCurrentProfile();
+  const profile = await requireRole(["driver", "admin"]);
   const supabase = createClient();
 
   const { data: vehicles } = await supabase
     .from("vehicles")
     .select("*")
-    .eq("owner_id", profile!.id)
+    .eq("owner_id", profile.id)
     .order("created_at", { ascending: false });
 
   return (
@@ -29,7 +29,7 @@ export default async function DriverVehiclesPage() {
           <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100 mb-4">
             Register a new vehicle
           </h3>
-          <VehicleForm ownerId={profile!.id} />
+          <VehicleForm ownerId={profile.id} />
         </CardBody>
       </Card>
 

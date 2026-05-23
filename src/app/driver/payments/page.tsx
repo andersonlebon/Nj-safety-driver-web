@@ -1,6 +1,6 @@
 import { Wallet } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentProfile } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Card, CardBody } from "@/components/ui/Card";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -10,13 +10,13 @@ import { Alert } from "@/components/ui/Alert";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 export default async function DriverPaymentsPage() {
-  const profile = await getCurrentProfile();
+  const profile = await requireRole(["driver", "admin"]);
   const supabase = createClient();
 
   const { data: infractions } = await supabase
     .from("infractions")
     .select("*")
-    .eq("driver_id", profile!.id)
+    .eq("driver_id", profile.id)
     .order("created_at", { ascending: false });
 
   const list = infractions || [];

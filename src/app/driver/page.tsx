@@ -1,38 +1,106 @@
 import Link from "next/link";
-import { Car, FileText, AlertTriangle, Wallet } from "lucide-react";
+import {
+  Car,
+  FileText,
+  AlertTriangle,
+  Wallet,
+  TrendingUp,
+  PieChart as PieIcon,
+  ShieldCheck,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentProfile } from "@/lib/auth";
-import { StatCard } from "@/components/dashboard/StatCard";
+import { requireRole } from "@/lib/auth";
+import { KpiCard } from "@/components/dashboard/KpiCard";
 import { PageHeader } from "@/components/dashboard/PageHeader";
+import { ScoreGauge } from "@/components/dashboard/ScoreGauge";
+import { LineChartCard } from "@/components/charts/LineChartCard";
+import {
+  DonutChartCard,
+  type DonutSlice,
+} from "@/components/charts/DonutChartCard";
+import { statusColor } from "@/components/charts/theme";
+import {
+  computeComplianceScore,
+  sumByMonth,
+} from "@/components/dashboard/analytics";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import type { PaymentStatus } from "@/lib/types/database";
+
+type InfractionRow = {
+  id: string;
+  plate_number: string;
+  infraction_type: string;
+  fine_amount: number | string;
+  status: PaymentStatus;
+  created_at: string;
+};
+
+type VehicleRow = {
+  id: string;
+  insurance_status: boolean;
+  inspection_status: boolean;
+};
 
 export default async function DriverOverviewPage() {
-  const profile = await getCurrentProfile();
+  const profile = await requireRole(["driver", "admin"]);
   const supabase = createClient();
 
-  const [{ count: vehicleCount }, { count: docCount }, { data: infractions }] =
-    await Promise.all([
-      supabase
-        .from("vehicles")
-        .select("id", { count: "exact", head: true })
-        .eq("owner_id", profile!.id),
-      supabase
-        .from("documents")
-        .select("id", { count: "exact", head: true })
-        .eq("owner_id", profile!.id),
-      supabase
-        .from("infractions")
-        .select("*")
-        .eq("driver_id", profile!.id)
-        .order("created_at", { ascending: false })
-        .limit(5),
-    ]);
+  const [
+    { count: docCount },
+    { data: vehicleRows },
+    { data: infractionRows },
+  ] = await Promise.all([
+    supabase
+      .from("documents")
+      .select("id", { count: "exact", head: true })
+      .eq("owner_id", profile.id),
+    supabase
+      .from("vehicles")
+      .select("id, insurance_status, inspection_status")
+      .eq("owner_id", profile.id),
+    supabase
+      .from("infractions")
+      .select(
+        "id, plate_number, infraction_type, fine_amount, status, created_at"
+      )
+      .eq("driver_id", profile.id)
+      .order("created_at", { ascending: false }),
+  ]);
 
-  const unpaid = (infractions || []).filter((i) => i.status === "unpaid");
-  const totalDue = unpaid.reduce((sum, i) => sum + Number(i.fine_amount), 0);
+  const vehicles: VehicleRow[] = vehicleRows ?? [];
+  const infractions: InfractionRow[] = (infractionRows ?? []).map((i) => ({
+    ...i,
+    fine_amount: Number(i.fine_amount),
+  }));
+
+  const unpaid = infractions.filter((i) => i.status === "unpaid");
+  const pending = infractions.filter((i) => i.status === "pending");
+  const paid = infractions.filter((i) => i.status === "paid");
+  const totalDue = unpaid.reduce((s, i) => s + Number(i.fine_amount), 0);
+
+  const monthly = sumByMonth(infractions, 6);
+  const recent = infractions.slice(0, 5);
+
+  const score = computeComplianceScore({
+    infractions,
+    vehicles,
+  });
+
+  const statusSlices: DonutSlice[] = [
+    { label: "Paid", value: paid.length, color: statusColor.paid },
+    { label: "Pending", value: pending.length, color: statusColor.pending },
+    { label: "Unpaid", value: unpaid.length, color: statusColor.unpaid },
+  ];
+
+  const scoreDescription =
+    score >= 80
+      ? "All clear. Keep it up — drive safely."
+      : score >= 50
+        ? "Action recommended. Resolve open items soon."
+        : "Critical. Address unpaid fines and vehicle status.";
 
   return (
     <div>
@@ -42,30 +110,128 @@ export default async function DriverOverviewPage() {
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
+        <KpiCard
           label="Vehicles"
-          value={vehicleCount ?? 0}
+          value={vehicles.length}
           icon={<Car className="h-4 w-4" />}
+          accent="brand"
+          hint={
+            vehicles.length === 0
+              ? "Register your first vehicle"
+              : `${vehicles.filter((v) => v.insurance_status).length} insured · ${vehicles.filter((v) => v.inspection_status).length} inspected`
+          }
         />
-        <StatCard
+        <KpiCard
           label="Documents"
           value={docCount ?? 0}
           icon={<FileText className="h-4 w-4" />}
+          accent="navy"
         />
-        <StatCard
+        <KpiCard
           label="Open infractions"
-          value={unpaid.length}
+          value={unpaid.length + pending.length}
           icon={<AlertTriangle className="h-4 w-4" />}
+          accent={unpaid.length + pending.length > 0 ? "red" : "stone"}
+          hint={
+            pending.length > 0
+              ? `${pending.length} pending review`
+              : "No outstanding fines"
+          }
         />
-        <StatCard
+        <KpiCard
           label="Total due"
           value={formatCurrency(totalDue)}
           icon={<Wallet className="h-4 w-4" />}
+          accent={totalDue > 0 ? "gold" : "stone"}
         />
       </div>
 
-      <div className="mt-8">
+      <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>
+              <span className="inline-flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-brand-700 dark:text-brand-400" />
+                Fines accumulated — last 6 months
+              </span>
+            </CardTitle>
+            <span className="text-xs text-stone-500 dark:text-slate-400">
+              Total: {formatCurrency(
+                monthly.reduce((s, m) => s + m.value, 0)
+              )}
+            </span>
+          </CardHeader>
+          <CardBody>
+            <LineChartCard
+              data={monthly}
+              valueFormat="currency-short"
+              tickFormat="month"
+              labelFormat="month"
+              tooltipSeriesName="Total"
+              ariaLabel="Total fines per month, last 6 months"
+            />
+          </CardBody>
+        </Card>
+
         <Card>
+          <CardHeader>
+            <CardTitle>
+              <span className="inline-flex items-center gap-2">
+                <PieIcon className="h-4 w-4 text-navy-700 dark:text-navy-300" />
+                Payment status
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardBody>
+            <DonutChartCard
+              data={statusSlices}
+              valueFormat="number"
+              ariaLabel="Distribution of payment statuses for your infractions"
+            />
+            <div className="mt-2 grid grid-cols-3 text-center text-xs">
+              <div>
+                <p className="font-semibold text-stone-900 dark:text-stone-100">
+                  {paid.length}
+                </p>
+                <p className="text-stone-500 dark:text-slate-400">Paid</p>
+              </div>
+              <div>
+                <p className="font-semibold text-stone-900 dark:text-stone-100">
+                  {pending.length}
+                </p>
+                <p className="text-stone-500 dark:text-slate-400">Pending</p>
+              </div>
+              <div>
+                <p className="font-semibold text-stone-900 dark:text-stone-100">
+                  {unpaid.length}
+                </p>
+                <p className="text-stone-500 dark:text-slate-400">Unpaid</p>
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <span className="inline-flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-brand-700 dark:text-brand-400" />
+                Compliance score
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardBody>
+            <ScoreGauge
+              score={score}
+              description={scoreDescription}
+              valueFormat="raw"
+            />
+          </CardBody>
+        </Card>
+
+        <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Recent infractions</CardTitle>
             <Link
@@ -76,7 +242,7 @@ export default async function DriverOverviewPage() {
             </Link>
           </CardHeader>
           <CardBody>
-            {(!infractions || infractions.length === 0) ? (
+            {recent.length === 0 ? (
               <EmptyState
                 title="No infractions"
                 description="You currently have no infractions on record."
@@ -94,13 +260,26 @@ export default async function DriverOverviewPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {infractions.map((i) => (
-                      <tr key={i.id} className="border-b border-stone-100 dark:border-slate-800 last:border-0">
-                        <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">{formatDate(i.created_at)}</td>
-                        <td className="py-2 pr-4 font-medium text-stone-900 dark:text-stone-100">{i.plate_number}</td>
-                        <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">{i.infraction_type}</td>
-                        <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">{formatCurrency(Number(i.fine_amount))}</td>
-                        <td className="py-2 pr-4"><StatusBadge status={i.status} /></td>
+                    {recent.map((i) => (
+                      <tr
+                        key={i.id}
+                        className="border-b border-stone-100 dark:border-slate-800 last:border-0"
+                      >
+                        <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">
+                          {formatDate(i.created_at)}
+                        </td>
+                        <td className="py-2 pr-4 font-mono font-medium text-stone-900 dark:text-stone-100">
+                          {i.plate_number}
+                        </td>
+                        <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">
+                          {i.infraction_type}
+                        </td>
+                        <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">
+                          {formatCurrency(Number(i.fine_amount))}
+                        </td>
+                        <td className="py-2 pr-4">
+                          <StatusBadge status={i.status} />
+                        </td>
                       </tr>
                     ))}
                   </tbody>
