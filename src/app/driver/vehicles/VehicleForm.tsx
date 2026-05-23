@@ -88,12 +88,27 @@ export function VehicleForm({ ownerId }: { ownerId: string }) {
           value={form.model}
           onChange={handleChange("model")}
         />
-        <Input
+        <Select
           label="Color"
           name="color"
           value={form.color}
           onChange={handleChange("color")}
-        />
+        >
+          <option value="">Select a color</option>
+          <option value="Black">Black</option>
+          <option value="White">White</option>
+          <option value="Silver">Silver</option>
+          <option value="Gray">Gray</option>
+          <option value="Red">Red</option>
+          <option value="Blue">Blue</option>
+          <option value="Green">Green</option>
+          <option value="Yellow">Yellow</option>
+          <option value="Orange">Orange</option>
+          <option value="Brown">Brown</option>
+          <option value="Beige">Beige</option>
+          <option value="Gold">Gold</option>
+          <option value="Other">Other</option>
+        </Select>
         <Input
           label="Year"
           type="number"

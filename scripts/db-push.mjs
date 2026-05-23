@@ -1,18 +1,24 @@
 #!/usr/bin/env node
 // =====================================================================
-// db:push — single command to sync EVERYTHING to Supabase
+// db:push — single command to sync EVERYTHING to Supabase.
 //
-// 1. Runs `drizzle-kit push` to apply the table schema from src/db/schema.ts.
-// 2. Applies every `.sql` file in `supabase/post-migrations/` in alphabetical
-//    order (RLS policies, triggers, helper functions, storage buckets — all
-//    the things Drizzle does NOT model).
+// Why this exists (and why we don't use `drizzle-kit push`):
+//   `drizzle-kit push` introspects the live database and computes a diff,
+//   which crashes on Supabase projects that already contain pre-existing
+//   CHECK constraints (auth schema, etc). We bypass that entirely by
+//   applying the SQL Drizzle has already generated under
+//   `supabase/migrations/` directly with `postgres-js`, then layering our
+//   own RLS / triggers / storage SQL from `supabase/post-migrations/`.
 //
-// All post-migration SQL files MUST be idempotent (use `create or replace`,
-// `drop … if exists`, `on conflict do nothing`) so re-running this script is
-// always safe.
+// Pipeline:
+//   1. `supabase/migrations/*.sql`       (tables, columns, FKs, enums)
+//      Each statement is executed independently; "already exists" errors
+//      are tolerated so re-running is always safe.
+//   2. `supabase/post-migrations/*.sql`  (RLS, triggers, helpers, storage)
+//      These files MUST be idempotent on their own (`drop … if exists`,
+//      `create or replace`, `on conflict do nothing`).
 // =====================================================================
 
-import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import postgres from "postgres";
@@ -27,52 +33,113 @@ if (!url) {
   process.exit(1);
 }
 
-// 1. Drizzle schema push -----------------------------------------------------
-console.log("▶ drizzle-kit push (tables, columns, FKs, enums)\n");
-const drizzle = spawnSync(
-  process.platform === "win32" ? "npx.cmd" : "npx",
-  ["drizzle-kit", "push"],
-  { stdio: "inherit" }
-);
-if (drizzle.status !== 0) {
-  console.error("\n✗ drizzle-kit push failed");
-  process.exit(drizzle.status ?? 1);
-}
+const root = process.cwd();
+const migrationsDir = join(root, "supabase", "migrations");
+const postMigrationsDir = join(root, "supabase", "post-migrations");
 
-// 2. Post-migration SQL ------------------------------------------------------
-const dir = join(process.cwd(), "supabase", "post-migrations");
-if (!existsSync(dir)) {
-  console.log("\n✔ No post-migrations folder, nothing else to apply.");
-  process.exit(0);
-}
-
-const files = readdirSync(dir)
-  .filter((f) => f.endsWith(".sql"))
-  .sort();
-
-if (files.length === 0) {
-  console.log("\n✔ No post-migration files, done.");
-  process.exit(0);
-}
-
-console.log(`\n▶ Applying ${files.length} post-migration file(s)\n`);
+/** Postgres error codes we treat as "already done, nothing to do". */
+const IDEMPOTENT_ERROR_CODES = new Set([
+  "42P07", // duplicate_table
+  "42710", // duplicate_object  (types, constraints, policies, triggers)
+  "42P06", // duplicate_schema
+  "42701", // duplicate_column
+  "42723", // duplicate_function
+]);
 
 const sql = postgres(url, {
   max: 1,
   ssl: "require",
   prepare: false,
+  onnotice: () => {},
 });
 
-try {
+/** Split a Drizzle migration file on its `--> statement-breakpoint` markers. */
+function splitStatements(content) {
+  return content
+    .split(/--> *statement-breakpoint/g)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+}
+
+async function applyTablesMigrations() {
+  if (!existsSync(migrationsDir)) {
+    console.log("• no supabase/migrations folder — skipping");
+    return;
+  }
+
+  const files = readdirSync(migrationsDir)
+    .filter((f) => f.endsWith(".sql"))
+    .sort();
+
+  if (files.length === 0) {
+    console.log("• supabase/migrations is empty — skipping");
+    return;
+  }
+
+  console.log(`▶ Applying ${files.length} schema migration(s)`);
+
   for (const file of files) {
     process.stdout.write(`  • ${file} ... `);
-    const content = readFileSync(join(dir, file), "utf8");
-    await sql.unsafe(content).simple();
-    console.log("ok");
+    const content = readFileSync(join(migrationsDir, file), "utf8");
+    const statements = splitStatements(content);
+
+    let applied = 0;
+    let skipped = 0;
+    for (const stmt of statements) {
+      try {
+        await sql.unsafe(stmt);
+        applied++;
+      } catch (err) {
+        if (IDEMPOTENT_ERROR_CODES.has(err.code)) {
+          skipped++;
+          continue;
+        }
+        console.log("FAIL");
+        throw err;
+      }
+    }
+    console.log(
+      `ok (${applied} applied${skipped ? `, ${skipped} already present` : ""})`
+    );
   }
+}
+
+async function applyPostMigrations() {
+  if (!existsSync(postMigrationsDir)) {
+    console.log("\n✔ no supabase/post-migrations folder — done");
+    return;
+  }
+
+  const files = readdirSync(postMigrationsDir)
+    .filter((f) => f.endsWith(".sql"))
+    .sort();
+
+  if (files.length === 0) {
+    console.log("\n✔ supabase/post-migrations is empty — done");
+    return;
+  }
+
+  console.log(`\n▶ Applying ${files.length} post-migration file(s)`);
+
+  for (const file of files) {
+    process.stdout.write(`  • ${file} ... `);
+    const content = readFileSync(join(postMigrationsDir, file), "utf8");
+    try {
+      await sql.unsafe(content);
+      console.log("ok");
+    } catch (err) {
+      console.log("FAIL");
+      throw err;
+    }
+  }
+}
+
+try {
+  await applyTablesMigrations();
+  await applyPostMigrations();
   console.log("\n✔ Database is fully up to date");
 } catch (err) {
-  console.error("\n✗ Failed to apply post-migration SQL");
+  console.error("\n✗ db:push failed");
   console.error(err);
   process.exitCode = 1;
 } finally {

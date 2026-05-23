@@ -34,14 +34,24 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
+  // Explicit public routes — never bounce unauthenticated visitors away from
+  // these. `/setup` is intentionally public because it is the one-time
+  // first-admin bootstrap (which gates itself server-side).
+  const isPublicRoute =
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/register") ||
+    pathname.startsWith("/setup");
+
   const isAuthRoute =
     pathname.startsWith("/login") || pathname.startsWith("/register");
+
   const isProtectedRoute =
     pathname.startsWith("/driver") ||
     pathname.startsWith("/agent") ||
-    pathname.startsWith("/admin");
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/onboarding");
 
-  if (!user && isProtectedRoute) {
+  if (!user && isProtectedRoute && !isPublicRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("redirect", pathname);

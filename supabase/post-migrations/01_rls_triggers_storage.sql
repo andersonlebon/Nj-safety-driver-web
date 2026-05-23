@@ -50,6 +50,13 @@ for each row execute function public.set_updated_at();
 -- ---------------------------------------------------------------------
 -- 3. handle_new_user() — seeds a profiles row when a new auth user signs up
 -- ---------------------------------------------------------------------
+-- SECURITY: this trigger intentionally IGNORES any `role` value sitting in
+-- `raw_user_meta_data`. Previously it honoured that value, which meant any
+-- caller of `supabase.auth.signUp({ options: { data: { role: 'admin' } } })`
+-- could self-promote on first sign-in. New rows are now always inserted as
+-- 'driver'. Staff roles ('agent', 'admin') are only ever granted by:
+--   1. the one-time `/setup` bootstrap (uses the Admin API + service role), or
+--   2. an existing admin via the admin role-promotion UI.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -62,7 +69,7 @@ begin
     new.id,
     new.email,
     coalesce(new.raw_user_meta_data->>'full_name', ''),
-    coalesce((new.raw_user_meta_data->>'role')::user_role, 'driver')
+    'driver'
   )
   on conflict (id) do nothing;
   return new;

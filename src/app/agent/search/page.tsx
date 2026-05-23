@@ -8,7 +8,7 @@ import { Alert } from "@/components/ui/Alert";
 import { formatCurrency, formatDate, normalizePlate } from "@/lib/utils";
 import { SearchForm } from "./SearchForm";
 import { CreateInfractionForm } from "./CreateInfractionForm";
-import { getCurrentProfile } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 
 export default async function AgentSearchPage({
   searchParams,
@@ -19,7 +19,7 @@ export default async function AgentSearchPage({
   const plate = rawPlate ? normalizePlate(rawPlate) : null;
 
   const supabase = createClient();
-  const profile = await getCurrentProfile();
+  const profile = await requireRole(["agent", "admin"]);
 
   const vehicle =
     plate
@@ -124,7 +124,7 @@ export default async function AgentSearchPage({
                 plate={plate}
                 vehicleId={vehicle?.id ?? null}
                 driverId={vehicle?.owner_id ?? null}
-                agentId={profile!.id}
+                agentId={profile.id}
               />
             </CardBody>
           </Card>

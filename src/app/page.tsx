@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import {
   ShieldCheck,
   Car,
@@ -46,6 +47,7 @@ export default function LandingPage() {
             </div>
           </Link>
           <nav className="flex items-center gap-2">
+            <ThemeToggle />
             <Link href="/login" className="btn-secondary text-sm">
               Connexion
             </Link>

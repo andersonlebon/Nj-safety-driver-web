@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   Wallet,
 } from "lucide-react";
+import { redirect } from "next/navigation";
 import { Sidebar, type NavItem } from "@/components/dashboard/Sidebar";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { requireRole } from "@/lib/auth";
@@ -25,6 +26,11 @@ export default async function DriverLayout({
   children: React.ReactNode;
 }) {
   const profile = await requireRole(["driver", "admin"]);
+
+  if (profile.role === "driver" && !profile.onboarded_at) {
+    redirect("/onboarding");
+  }
+
   return (
     <div className="min-h-screen flex bg-stone-50 dark:bg-slate-950">
       <Sidebar items={navItems} workspaceLabel="Driver workspace" />
