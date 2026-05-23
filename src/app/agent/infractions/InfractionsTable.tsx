@@ -51,7 +51,7 @@ export function InfractionsTable({
       {error && <Alert variant="error">{error}</Alert>}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="text-left text-slate-500 border-b border-slate-200">
+          <thead className="text-left text-stone-500 dark:text-slate-400 border-b border-stone-200 dark:border-slate-800">
             <tr>
               <th className="py-2 pr-4 font-medium">Date</th>
               <th className="py-2 pr-4 font-medium">Plate</th>
@@ -64,23 +64,23 @@ export function InfractionsTable({
           </thead>
           <tbody>
             {infractions.map((i) => (
-              <tr key={i.id} className="border-b border-slate-100 last:border-0 align-top">
-                <td className="py-2 pr-4 text-slate-700 whitespace-nowrap">
+              <tr key={i.id} className="border-b border-stone-100 dark:border-slate-800 last:border-0 align-top">
+                <td className="py-2 pr-4 text-stone-600 dark:text-slate-400 whitespace-nowrap">
                   {formatDate(i.created_at)}
                 </td>
-                <td className="py-2 pr-4 font-medium text-slate-900">
+                <td className="py-2 pr-4 font-medium text-stone-900 dark:text-stone-100">
                   {i.plate_number}
                 </td>
-                <td className="py-2 pr-4 text-slate-700">
+                <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">
                   {i.infraction_type}
                   {i.description && (
-                    <span className="block text-xs text-slate-500 mt-0.5">
+                    <span className="block text-xs text-stone-400 dark:text-slate-500 mt-0.5">
                       {i.description}
                     </span>
                   )}
                 </td>
-                <td className="py-2 pr-4 text-slate-700">{i.location || "—"}</td>
-                <td className="py-2 pr-4 text-slate-700">
+                <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">{i.location || "—"}</td>
+                <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">
                   {formatCurrency(Number(i.fine_amount))}
                 </td>
                 <td className="py-2 pr-4">
@@ -110,7 +110,7 @@ export function InfractionsTable({
                       <Eye className="h-4 w-4" /> View
                     </Button>
                   ) : (
-                    <span className="text-slate-400 text-xs">None</span>
+                    <span className="text-stone-400 dark:text-slate-500 text-xs">None</span>
                   )}
                 </td>
               </tr>

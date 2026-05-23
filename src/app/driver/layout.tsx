@@ -26,7 +26,7 @@ export default async function DriverLayout({
 }) {
   const profile = await requireRole(["driver", "admin"]);
   return (
-    <div className="min-h-screen flex bg-slate-50">
+    <div className="min-h-screen flex bg-stone-50 dark:bg-slate-950">
       <Sidebar items={navItems} workspaceLabel="Driver workspace" />
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar

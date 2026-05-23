@@ -53,12 +53,18 @@ export async function updateSession(request: NextRequest) {
       .from("profiles")
       .select("role")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
 
     const profile = data as { role?: string } | null;
-    const url = request.nextUrl.clone();
-    url.pathname = profile?.role ? `/${profile.role}` : "/driver";
-    return NextResponse.redirect(url);
+
+    // If the profiles row is genuinely missing, do NOT redirect: let the
+    // request continue so the destination page (or `getCurrentProfile`) can
+    // lazily create it. Redirecting here would loop with `requireRole`.
+    if (profile?.role) {
+      const url = request.nextUrl.clone();
+      url.pathname = `/${profile.role}`;
+      return NextResponse.redirect(url);
+    }
   }
 
   return response;

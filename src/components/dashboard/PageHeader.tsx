@@ -12,9 +12,13 @@ export function PageHeader({
   return (
     <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
       <div>
-        <h2 className="text-xl font-semibold text-slate-900">{title}</h2>
+        <h2 className="text-xl font-semibold tracking-tight text-stone-900 dark:text-stone-100">
+          {title}
+        </h2>
         {description && (
-          <p className="mt-1 text-sm text-slate-600">{description}</p>
+          <p className="mt-1 text-sm text-stone-600 dark:text-slate-400">
+            {description}
+          </p>
         )}
       </div>
       {actions && <div className="flex gap-2">{actions}</div>}

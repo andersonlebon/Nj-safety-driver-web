@@ -79,7 +79,7 @@ export default async function AgentSearchPage({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
             <CardBody>
-              <h3 className="text-sm font-semibold text-slate-900 mb-4">
+              <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100 mb-4">
                 Vehicle & owner
               </h3>
               {!vehicle ? (
@@ -103,7 +103,7 @@ export default async function AgentSearchPage({
                     label="Inspection"
                     value={vehicle.inspection_status ? "Valid" : "Missing"}
                   />
-                  <div className="col-span-2 mt-2 pt-2 border-t border-slate-200" />
+                  <div className="col-span-2 mt-2 pt-2 border-t border-stone-200 dark:border-slate-800" />
                   <DetailRow label="Owner" value={owner?.full_name || "—"} />
                   <DetailRow label="Email" value={owner?.email || "—"} />
                   <DetailRow label="Phone" value={owner?.phone || "—"} />
@@ -117,7 +117,7 @@ export default async function AgentSearchPage({
 
           <Card>
             <CardBody>
-              <h3 className="text-sm font-semibold text-slate-900 mb-4">
+              <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100 mb-4">
                 File new infraction
               </h3>
               <CreateInfractionForm
@@ -131,7 +131,7 @@ export default async function AgentSearchPage({
 
           <Card className="lg:col-span-2">
             <CardBody>
-              <h3 className="text-sm font-semibold text-slate-900 mb-4">
+              <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100 mb-4">
                 Infractions for {plate}
               </h3>
               {!infractions || infractions.length === 0 ? (
@@ -142,7 +142,7 @@ export default async function AgentSearchPage({
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="text-left text-slate-500 border-b border-slate-200">
+                    <thead className="text-left text-stone-500 dark:text-slate-400 border-b border-stone-200 dark:border-slate-800">
                       <tr>
                         <th className="py-2 pr-4 font-medium">Date</th>
                         <th className="py-2 pr-4 font-medium">Type</th>
@@ -153,11 +153,11 @@ export default async function AgentSearchPage({
                     </thead>
                     <tbody>
                       {infractions.map((i) => (
-                        <tr key={i.id} className="border-b border-slate-100 last:border-0">
-                          <td className="py-2 pr-4 text-slate-700">{formatDate(i.created_at)}</td>
-                          <td className="py-2 pr-4 text-slate-700">{i.infraction_type}</td>
-                          <td className="py-2 pr-4 text-slate-700">{i.location || "—"}</td>
-                          <td className="py-2 pr-4 text-slate-700">{formatCurrency(Number(i.fine_amount))}</td>
+                        <tr key={i.id} className="border-b border-stone-100 dark:border-slate-800 last:border-0">
+                          <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">{formatDate(i.created_at)}</td>
+                          <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">{i.infraction_type}</td>
+                          <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">{i.location || "—"}</td>
+                          <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">{formatCurrency(Number(i.fine_amount))}</td>
                           <td className="py-2 pr-4"><StatusBadge status={i.status} /></td>
                         </tr>
                       ))}
@@ -182,8 +182,8 @@ function DetailRow({
 }) {
   return (
     <>
-      <dt className="text-slate-500">{label}</dt>
-      <dd className="text-slate-900 font-medium break-all">{value}</dd>
+      <dt className="text-stone-500 dark:text-slate-400">{label}</dt>
+      <dd className="text-stone-900 dark:text-stone-100 font-medium break-all">{value}</dd>
     </>
   );
 }
