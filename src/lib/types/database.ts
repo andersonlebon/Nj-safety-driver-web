@@ -5,6 +5,8 @@ export type DocumentType =
   | "driver_license"
   | "insurance"
   | "technical_inspection"
+  | "vehicle_photo"
+  | "vehicle_registration"
   | "other";
 
 export type Json =
@@ -28,6 +30,7 @@ export type Database = {
           driver_license: string | null;
           address: string | null;
           email: string | null;
+          onboarded_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -40,6 +43,7 @@ export type Database = {
           driver_license?: string | null;
           address?: string | null;
           email?: string | null;
+          onboarded_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -52,6 +56,7 @@ export type Database = {
           driver_license?: string | null;
           address?: string | null;
           email?: string | null;
+          onboarded_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -103,7 +108,9 @@ export type Database = {
         Row: {
           id: string;
           owner_id: string;
+          vehicle_id: string | null;
           doc_type: DocumentType;
+          label: string | null;
           file_path: string;
           file_name: string | null;
           uploaded_at: string;
@@ -111,7 +118,9 @@ export type Database = {
         Insert: {
           id?: string;
           owner_id: string;
+          vehicle_id?: string | null;
           doc_type: DocumentType;
+          label?: string | null;
           file_path: string;
           file_name?: string | null;
           uploaded_at?: string;
@@ -119,7 +128,9 @@ export type Database = {
         Update: {
           id?: string;
           owner_id?: string;
+          vehicle_id?: string | null;
           doc_type?: DocumentType;
+          label?: string | null;
           file_path?: string;
           file_name?: string | null;
           uploaded_at?: string;

@@ -1,4 +1,5 @@
 import { LogOut } from "lucide-react";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 export function Topbar({
   title,
@@ -30,6 +31,7 @@ export function Topbar({
               <p className="text-xs text-stone-500 dark:text-slate-400">{userEmail}</p>
             )}
           </div>
+          <ThemeToggle />
           <form action="/auth/signout" method="POST">
             <button
               type="submit"

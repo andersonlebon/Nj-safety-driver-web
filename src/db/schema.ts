@@ -21,6 +21,8 @@ export const documentType = pgEnum("document_type", [
   "driver_license",
   "insurance",
   "technical_inspection",
+  "vehicle_photo",
+  "vehicle_registration",
   "other",
 ]);
 
@@ -33,6 +35,7 @@ export const profiles = pgTable("profiles", {
   driverLicense: text("driver_license").unique(),
   address: text("address"),
   email: text("email"),
+  onboardedAt: timestamp("onboarded_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .default(sql`now()`),
@@ -66,7 +69,11 @@ export const documents = pgTable("documents", {
   ownerId: uuid("owner_id")
     .notNull()
     .references(() => profiles.id, { onDelete: "cascade" }),
+  vehicleId: uuid("vehicle_id").references(() => vehicles.id, {
+    onDelete: "cascade",
+  }),
   docType: documentType("doc_type").notNull(),
+  label: text("label"),
   filePath: text("file_path").notNull(),
   fileName: text("file_name"),
   uploadedAt: timestamp("uploaded_at", { withTimezone: true })

@@ -15,10 +15,15 @@ export function formatDate(date: string | Date): string {
 }
 
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(amount);
+  // Central African CFA franc — Gabon's official currency.
+  // We intentionally render the symbol as "FCFA" (the colloquial in-country
+  // notation) instead of the ISO "XAF" because that's what users see on
+  // receipts and tickets.
+  const formatted = new Intl.NumberFormat("fr-FR", {
+    style: "decimal",
+    maximumFractionDigits: 0,
+  }).format(Math.round(amount));
+  return `${formatted} FCFA`;
 }
 
 export function normalizePlate(plate: string): string {

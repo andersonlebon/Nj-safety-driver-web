@@ -7,23 +7,59 @@ import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
-import type { DocumentType } from "@/lib/types/database";
+import type { Database, DocumentType } from "@/lib/types/database";
 
-const docTypes: { value: DocumentType; label: string }[] = [
-  { value: "identity", label: "Identity document" },
-  { value: "driver_license", label: "Driving license" },
-  { value: "insurance", label: "Insurance" },
-  { value: "technical_inspection", label: "Technical inspection" },
-  { value: "other", label: "Other" },
+type VehicleOption = Pick<
+  Database["public"]["Tables"]["vehicles"]["Row"],
+  "id" | "plate_number"
+>;
+
+const docTypes: { value: DocumentType; label: string; scope: "driver" | "vehicle" }[] = [
+  { value: "identity", label: "Identity document", scope: "driver" },
+  { value: "driver_license", label: "Driving license", scope: "driver" },
+  { value: "vehicle_photo", label: "Vehicle photo", scope: "vehicle" },
+  { value: "vehicle_registration", label: "Vehicle registration (carte grise)", scope: "vehicle" },
+  { value: "insurance", label: "Insurance certificate", scope: "vehicle" },
+  { value: "technical_inspection", label: "Technical inspection", scope: "vehicle" },
+  { value: "other", label: "Other", scope: "driver" },
 ];
 
-export function DocumentUploader({ ownerId }: { ownerId: string }) {
+function folderFor(docType: DocumentType, vehicleId: string | null): string {
+  if (vehicleId) return `vehicles/${vehicleId}`;
+  switch (docType) {
+    case "identity":
+      return "identity";
+    case "driver_license":
+      return "license";
+    case "vehicle_photo":
+    case "vehicle_registration":
+    case "insurance":
+    case "technical_inspection":
+      return "vehicles/_unassigned";
+    case "other":
+    default:
+      return "other";
+  }
+}
+
+export function DocumentUploader({
+  ownerId,
+  vehicles,
+}: {
+  ownerId: string;
+  vehicles: VehicleOption[];
+}) {
   const router = useRouter();
   const [docType, setDocType] = useState<DocumentType>("identity");
+  const [vehicleId, setVehicleId] = useState<string>("");
+  const [label, setLabel] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const currentScope =
+    docTypes.find((d) => d.value === docType)?.scope ?? "driver";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,9 +70,17 @@ export function DocumentUploader({ ownerId }: { ownerId: string }) {
     setLoading(true);
     setError(null);
 
+    const effectiveVehicleId = currentScope === "vehicle" ? vehicleId || null : null;
+    if (currentScope === "vehicle" && !effectiveVehicleId && vehicles.length > 0) {
+      setError("Please pick a vehicle for this document.");
+      setLoading(false);
+      return;
+    }
+
     const supabase = createClient();
     const ext = file.name.split(".").pop() || "bin";
-    const path = `${ownerId}/${docType}-${Date.now()}.${ext}`;
+    const folder = folderFor(docType, effectiveVehicleId);
+    const path = `${ownerId}/${folder}/${docType}-${Date.now()}.${ext}`;
 
     const { error: uploadError } = await supabase.storage
       .from("documents")
@@ -50,18 +94,22 @@ export function DocumentUploader({ ownerId }: { ownerId: string }) {
 
     const { error: dbError } = await supabase.from("documents").insert({
       owner_id: ownerId,
+      vehicle_id: effectiveVehicleId,
       doc_type: docType,
+      label: label.trim() || null,
       file_path: path,
       file_name: file.name,
     });
 
     if (dbError) {
+      await supabase.storage.from("documents").remove([path]);
       setError(dbError.message);
       setLoading(false);
       return;
     }
 
     setFile(null);
+    setLabel("");
     if (fileInputRef.current) fileInputRef.current.value = "";
     setLoading(false);
     router.refresh();
@@ -83,12 +131,34 @@ export function DocumentUploader({ ownerId }: { ownerId: string }) {
             </option>
           ))}
         </Select>
+        {currentScope === "vehicle" && vehicles.length > 0 && (
+          <Select
+            label="Vehicle"
+            name="vehicle_id"
+            value={vehicleId}
+            onChange={(e) => setVehicleId(e.target.value)}
+          >
+            <option value="">— select a vehicle —</option>
+            {vehicles.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.plate_number}
+              </option>
+            ))}
+          </Select>
+        )}
+        <Input
+          label="Label (optional)"
+          name="label"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          placeholder="e.g. front, back, 2025"
+        />
         <Input
           ref={fileInputRef}
           label="File"
           type="file"
           name="file"
-          accept="image/*,application/pdf"
+          accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
           onChange={(e) => setFile(e.target.files?.[0] || null)}
           required
         />
