@@ -78,23 +78,39 @@ export function CreateInfractionForm({
       evidencePath = path;
     }
 
-    const { error: insertError } = await supabase.from("infractions").insert({
-      plate_number: plate,
-      vehicle_id: vehicleId,
-      driver_id: driverId,
-      agent_id: agentId,
-      infraction_type: form.infraction_type,
-      description: form.description || null,
-      location: form.location || null,
-      fine_amount: form.fine_amount ? Number(form.fine_amount) : 0,
-      status: form.status,
-      evidence_path: evidencePath,
-    });
+    const { data: inserted, error: insertError } = await supabase
+      .from("infractions")
+      .insert({
+        plate_number: plate,
+        vehicle_id: vehicleId,
+        driver_id: driverId,
+        agent_id: agentId,
+        infraction_type: form.infraction_type,
+        description: form.description || null,
+        location: form.location || null,
+        fine_amount: form.fine_amount ? Number(form.fine_amount) : 0,
+        status: form.status,
+        evidence_path: evidencePath,
+      })
+      .select("id")
+      .single();
 
     if (insertError) {
       setError(friendlyError(insertError));
       setLoading(false);
       return;
+    }
+
+    if (inserted?.id) {
+      await supabase.from("vehicle_tracking_events").insert({
+        vehicle_id: vehicleId,
+        plate_number: plate,
+        event_type: "infraction",
+        location: form.location || null,
+        recorded_by: agentId,
+        infraction_id: inserted.id,
+        notes: form.infraction_type,
+      });
     }
 
     setForm({

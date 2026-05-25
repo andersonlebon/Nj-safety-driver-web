@@ -6,6 +6,7 @@ import { Card, CardBody } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { DocumentUploader } from "./DocumentUploader";
 import { DocumentList } from "./DocumentList";
+import { SubmitForReviewButton } from "./SubmitForReviewButton";
 
 export default async function DriverDocumentsPage() {
   const profile = await requireRole(["driver", "admin"]);
@@ -28,7 +29,8 @@ export default async function DriverDocumentsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Documents"
-        description="Upload identity, license, vehicle photos, and certificates."
+        description="Upload identity, license, vehicle photos, and certificates. Set expiration dates so we can remind you before they expire."
+        actions={<SubmitForReviewButton />}
       />
 
       <Card>

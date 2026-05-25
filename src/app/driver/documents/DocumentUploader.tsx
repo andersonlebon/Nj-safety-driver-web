@@ -54,6 +54,7 @@ export function DocumentUploader({
   const [docType, setDocType] = useState<DocumentType>("identity");
   const [vehicleId, setVehicleId] = useState<string>("");
   const [label, setLabel] = useState<string>("");
+  const [expiresAt, setExpiresAt] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -100,6 +101,8 @@ export function DocumentUploader({
       label: label.trim() || null,
       file_path: path,
       file_name: file.name,
+      expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+      verification_status: "pending_review",
     });
 
     if (dbError) {
@@ -111,6 +114,7 @@ export function DocumentUploader({
 
     setFile(null);
     setLabel("");
+    setExpiresAt("");
     if (fileInputRef.current) fileInputRef.current.value = "";
     setLoading(false);
     router.refresh();
@@ -153,6 +157,14 @@ export function DocumentUploader({
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           placeholder="e.g. front, back, 2025"
+        />
+        <Input
+          label="Expiration date"
+          type="date"
+          name="expires_at"
+          value={expiresAt}
+          onChange={(e) => setExpiresAt(e.target.value)}
+          min={new Date().toISOString().slice(0, 10)}
         />
         <Input
           ref={fileInputRef}

@@ -1,23 +1,24 @@
 import Link from "next/link";
-import { RegisterForm } from "./RegisterForm";
 import { Card, CardBody } from "@/components/ui/Card";
+import { AgentRegisterForm } from "./AgentRegisterForm";
 
 export const metadata = {
-  title: "Create account | NJ Safety Driver",
+  title: "Agent application | NJ Safety Driver",
 };
 
-export default function RegisterPage() {
+export default function AgentRegisterPage() {
   return (
     <Card>
       <CardBody>
         <h1 className="text-xl font-semibold text-stone-900 dark:text-stone-100">
-          Create your account
+          Apply as a field agent
         </h1>
         <p className="mt-1 text-sm text-stone-600 dark:text-slate-400">
-          Register as a driver to manage your vehicles and documents.
+          Create your account and submit an application. An administrator will
+          review and approve access to the agent workspace.
         </p>
         <div className="mt-6">
-          <RegisterForm />
+          <AgentRegisterForm />
         </div>
         <p className="mt-6 text-sm text-stone-600 dark:text-slate-400">
           Already have an account?{" "}
@@ -26,15 +27,6 @@ export default function RegisterPage() {
             className="text-brand-700 dark:text-brand-300 font-medium hover:underline"
           >
             Sign in
-          </Link>
-        </p>
-        <p className="mt-3 text-sm text-stone-600 dark:text-slate-400">
-          Field agent?{" "}
-          <Link
-            href="/register/agent"
-            className="text-brand-700 dark:text-brand-300 font-medium hover:underline"
-          >
-            Apply as an agent
           </Link>
         </p>
       </CardBody>

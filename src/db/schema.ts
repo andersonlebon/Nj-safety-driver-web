@@ -25,6 +25,24 @@ export const documentType = pgEnum("document_type", [
   "vehicle_registration",
   "other",
 ]);
+export const verificationStatus = pgEnum("verification_status", [
+  "pending_documents",
+  "pending_review",
+  "active",
+  "rejected",
+]);
+export const trackingEventType = pgEnum("tracking_event_type", [
+  "infraction",
+  "agent_checkin",
+  "registration",
+  "verification",
+  "note",
+]);
+export const agentApplicationStatus = pgEnum("agent_application_status", [
+  "pending",
+  "approved",
+  "rejected",
+]);
 
 export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey().notNull(),
@@ -36,6 +54,13 @@ export const profiles = pgTable("profiles", {
   address: text("address"),
   email: text("email"),
   onboardedAt: timestamp("onboarded_at", { withTimezone: true }),
+  verificationStatus: verificationStatus("verification_status")
+    .notNull()
+    .default("pending_documents"),
+  adminMessage: text("admin_message"),
+  agentApplicationStatus: agentApplicationStatus("agent_application_status"),
+  agentBadgeId: text("agent_badge_id"),
+  agentApplicationNote: text("agent_application_note"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .default(sql`now()`),
@@ -56,6 +81,9 @@ export const vehicles = pgTable("vehicles", {
   year: integer("year"),
   insuranceStatus: boolean("insurance_status").notNull().default(false),
   inspectionStatus: boolean("inspection_status").notNull().default(false),
+  verificationStatus: verificationStatus("verification_status")
+    .notNull()
+    .default("pending_review"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .default(sql`now()`),
@@ -76,6 +104,10 @@ export const documents = pgTable("documents", {
   label: text("label"),
   filePath: text("file_path").notNull(),
   fileName: text("file_name"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  verificationStatus: verificationStatus("verification_status")
+    .notNull()
+    .default("pending_review"),
   uploadedAt: timestamp("uploaded_at", { withTimezone: true })
     .notNull()
     .default(sql`now()`),
@@ -105,6 +137,28 @@ export const infractions = pgTable("infractions", {
     .notNull()
     .default(sql`now()`),
   updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .default(sql`now()`),
+});
+
+export const vehicleTrackingEvents = pgTable("vehicle_tracking_events", {
+  id: uuid("id").primaryKey().default(sql`uuid_generate_v4()`),
+  vehicleId: uuid("vehicle_id").references(() => vehicles.id, {
+    onDelete: "set null",
+  }),
+  plateNumber: text("plate_number").notNull(),
+  eventType: trackingEventType("event_type").notNull(),
+  location: text("location"),
+  latitude: numeric("latitude", { precision: 10, scale: 7 }),
+  longitude: numeric("longitude", { precision: 10, scale: 7 }),
+  recordedBy: uuid("recorded_by").references(() => profiles.id, {
+    onDelete: "set null",
+  }),
+  infractionId: uuid("infraction_id").references(() => infractions.id, {
+    onDelete: "set null",
+  }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .default(sql`now()`),
 });

@@ -33,7 +33,9 @@ export type CompletePayload = {
     vehicle_id: string | null;
     file_path: string;
     file_name: string | null;
+    expires_at: string | null;
   }>;
+  skip_documents?: boolean;
 };
 
 export async function savePersonalInfo(formData: FormData): Promise<ActionResult> {
@@ -111,7 +113,44 @@ export async function completeOnboarding(
   }
 
   if (!payload.documents || payload.documents.length === 0) {
-    return { ok: false, error: "At least one evidence file is required." };
+    // Finishing without uploads is allowed — profile stays pending_documents.
+  }
+
+  const hasIdentityFront = payload.documents.some(
+    (d) => d.doc_type === "identity" && d.label === "front"
+  );
+  const hasIdentityBack = payload.documents.some(
+    (d) => d.doc_type === "identity" && d.label === "back"
+  );
+  const hasLicenseFront = payload.documents.some(
+    (d) => d.doc_type === "driver_license" && d.label === "front"
+  );
+  const hasLicenseBack = payload.documents.some(
+    (d) => d.doc_type === "driver_license" && d.label === "back"
+  );
+  const hasVehiclePhoto = payload.documents.some(
+    (d) =>
+      d.vehicle_id === payload.vehicle.id &&
+      d.doc_type === "vehicle_photo" &&
+      d.label === "front"
+  );
+  const hasRegistration = payload.documents.some(
+    (d) =>
+      d.vehicle_id === payload.vehicle.id &&
+      d.doc_type === "vehicle_registration"
+  );
+
+  let profileVerification: "pending_documents" | "pending_review" =
+    "pending_documents";
+  if (
+    hasIdentityFront &&
+    hasIdentityBack &&
+    hasLicenseFront &&
+    hasLicenseBack &&
+    hasVehiclePhoto &&
+    hasRegistration
+  ) {
+    profileVerification = "pending_review";
   }
 
   // Defensive: every storage path must be scoped under the user's id, otherwise
@@ -154,12 +193,20 @@ export async function completeOnboarding(
     year: vehicle.year,
     insurance_status: vehicle.insurance_status,
     inspection_status: vehicle.inspection_status,
+    verification_status: "pending_review",
   });
 
   if (vehicleError) {
     await deleteStoragePaths(supabase, uploadedPaths);
     return { ok: false, error: friendlyError(vehicleError) };
   }
+
+  await supabase.from("vehicle_tracking_events").insert({
+    vehicle_id: vehicle.id,
+    plate_number,
+    event_type: "registration",
+    notes: `Vehicle registered: ${vehicle.brand ?? ""} ${vehicle.model ?? ""}`.trim(),
+  });
 
   const documentRows = payload.documents.map((d) => ({
     owner_id: user.id,
@@ -168,11 +215,14 @@ export async function completeOnboarding(
     label: d.label,
     file_path: d.file_path,
     file_name: d.file_name,
+    expires_at: d.expires_at,
+    verification_status: "pending_review" as const,
   }));
 
-  const { error: docsError } = await supabase
-    .from("documents")
-    .insert(documentRows);
+  const { error: docsError } =
+    documentRows.length > 0
+      ? await supabase.from("documents").insert(documentRows)
+      : { error: null };
 
   if (docsError) {
     // Roll back the vehicle row + uploaded files so the user can retry cleanly.
@@ -181,9 +231,16 @@ export async function completeOnboarding(
     return { ok: false, error: friendlyError(docsError) };
   }
 
+  if (documentRows.length === 0) {
+    // No documents inserted — that's OK when skipping uploads.
+  }
+
   const { error: markOnboardedError } = await supabase
     .from("profiles")
-    .update({ onboarded_at: new Date().toISOString() })
+    .update({
+      onboarded_at: new Date().toISOString(),
+      verification_status: profileVerification,
+    })
     .eq("id", user.id);
 
   if (markOnboardedError) {

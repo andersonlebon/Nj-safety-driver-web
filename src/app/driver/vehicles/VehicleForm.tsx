@@ -10,7 +10,13 @@ import { Select } from "@/components/ui/Select";
 import { Alert } from "@/components/ui/Alert";
 import { normalizePlate } from "@/lib/utils";
 
-export function VehicleForm({ ownerId }: { ownerId: string }) {
+export function VehicleForm({
+  ownerId,
+  onSuccess,
+}: {
+  ownerId: string;
+  onSuccess?: () => void;
+}) {
   const router = useRouter();
   const [form, setForm] = useState({
     plate_number: "",
@@ -45,6 +51,7 @@ export function VehicleForm({ ownerId }: { ownerId: string }) {
       year: form.year ? Number(form.year) : null,
       insurance_status: form.insurance_status === "true",
       inspection_status: form.inspection_status === "true",
+      verification_status: "pending_review",
     });
 
     if (insertError) {
@@ -64,6 +71,7 @@ export function VehicleForm({ ownerId }: { ownerId: string }) {
     });
     setLoading(false);
     router.refresh();
+    onSuccess?.();
   };
 
   return (
