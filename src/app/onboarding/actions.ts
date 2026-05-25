@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { friendlyError } from "@/lib/errors";
 import { normalizePlate } from "@/lib/utils";
 import type { DocumentType } from "@/lib/types/database";
 
@@ -63,7 +64,7 @@ export async function savePersonalInfo(formData: FormData): Promise<ActionResult
     })
     .eq("id", user.id);
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: friendlyError(error) };
 
   revalidatePath("/onboarding");
   return { ok: true };
@@ -140,7 +141,7 @@ export async function completeOnboarding(
 
   if (profileUpdateError) {
     await deleteStoragePaths(supabase, uploadedPaths);
-    return { ok: false, error: profileUpdateError.message };
+    return { ok: false, error: friendlyError(profileUpdateError) };
   }
 
   const { error: vehicleError } = await supabase.from("vehicles").insert({
@@ -157,7 +158,7 @@ export async function completeOnboarding(
 
   if (vehicleError) {
     await deleteStoragePaths(supabase, uploadedPaths);
-    return { ok: false, error: vehicleError.message };
+    return { ok: false, error: friendlyError(vehicleError) };
   }
 
   const documentRows = payload.documents.map((d) => ({
@@ -177,7 +178,7 @@ export async function completeOnboarding(
     // Roll back the vehicle row + uploaded files so the user can retry cleanly.
     await supabase.from("vehicles").delete().eq("id", vehicle.id);
     await deleteStoragePaths(supabase, uploadedPaths);
-    return { ok: false, error: docsError.message };
+    return { ok: false, error: friendlyError(docsError) };
   }
 
   const { error: markOnboardedError } = await supabase
@@ -186,7 +187,7 @@ export async function completeOnboarding(
     .eq("id", user.id);
 
   if (markOnboardedError) {
-    return { ok: false, error: markOnboardedError.message };
+    return { ok: false, error: friendlyError(markOnboardedError) };
   }
 
   revalidatePath("/driver");

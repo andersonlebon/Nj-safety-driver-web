@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { friendlyError } from "@/lib/errors";
 
 export type SetupResult =
   | { ok: true }
@@ -60,7 +61,7 @@ export async function bootstrapAdmin(formData: FormData): Promise<SetupResult> {
   if (createErr || !created.user) {
     return {
       ok: false,
-      error: createErr?.message ?? "Failed to create user.",
+      error: createErr ? friendlyError(createErr) : "Failed to create user.",
     };
   }
 
@@ -87,7 +88,7 @@ export async function bootstrapAdmin(formData: FormData): Promise<SetupResult> {
     await admin.auth.admin.deleteUser(userId).catch(() => {});
     return {
       ok: false,
-      error: `Created auth user but failed to write profile: ${upsertErr.message}`,
+      error: `We couldn't finish creating your admin account. ${friendlyError(upsertErr)}`,
     };
   }
 
@@ -103,7 +104,7 @@ export async function bootstrapAdmin(formData: FormData): Promise<SetupResult> {
     // can just visit /login.
     return {
       ok: false,
-      error: `Admin account created. Please sign in at /login. (${signInErr.message})`,
+      error: `Admin account created. Please sign in at /login. (${friendlyError(signInErr)})`,
     };
   }
 

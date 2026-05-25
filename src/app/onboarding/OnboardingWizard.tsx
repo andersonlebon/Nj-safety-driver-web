@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { Camera, Car, Check, User } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -16,6 +16,7 @@ import {
   type EvidenceSlotValue,
 } from "@/components/uploads/EvidenceSlot";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyError } from "@/lib/errors";
 import { cn, normalizePlate } from "@/lib/utils";
 import type { DocumentType } from "@/lib/types/database";
 import {
@@ -273,19 +274,27 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
 
   const submitStep1 = (formData: FormData) => {
     setError(null);
+    // Trim every text field so an empty-string-after-whitespace submission
+    // can be rejected by HTML5 `required` and so server-side trimming and
+    // client-side state stay in sync.
+    const trimmed = {
+      full_name: String(formData.get("full_name") ?? "").trim(),
+      phone: String(formData.get("phone") ?? "").trim(),
+      national_id: String(formData.get("national_id") ?? "").trim(),
+      driver_license: String(formData.get("driver_license") ?? "").trim(),
+      address: String(formData.get("address") ?? "").trim(),
+    };
+    const trimmedFormData = new FormData();
+    for (const [k, v] of Object.entries(trimmed)) {
+      trimmedFormData.set(k, v);
+    }
     startTransition(async () => {
-      const result = await savePersonalInfo(formData);
+      const result = await savePersonalInfo(trimmedFormData);
       if (!result.ok) {
         setError(result.error);
         return;
       }
-      setPersonal({
-        full_name: String(formData.get("full_name") ?? ""),
-        phone: String(formData.get("phone") ?? ""),
-        national_id: String(formData.get("national_id") ?? ""),
-        driver_license: String(formData.get("driver_license") ?? ""),
-        address: String(formData.get("address") ?? ""),
-      });
+      setPersonal(trimmed);
       setStep(2);
     });
   };
@@ -358,12 +367,13 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
       });
 
     if (uploadError) {
+      const friendly = friendlyError(uploadError);
       setSlotStatus((prev) => ({ ...prev, [slot.key]: "error" }));
       setSlotErrors((prev) => ({
         ...prev,
-        [slot.key]: uploadError.message,
+        [slot.key]: friendly,
       }));
-      throw new Error(`Upload failed for "${slot.title}": ${uploadError.message}`);
+      throw new Error(`Upload failed for "${slot.title}": ${friendly}`);
     }
 
     setSlotStatus((prev) => ({ ...prev, [slot.key]: "uploaded" }));
@@ -433,9 +443,7 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
           setError(result.error);
         }
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Something went wrong.";
-        setError(message);
+        setError(friendlyError(err));
       }
     });
   };
@@ -463,6 +471,7 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
           <PersonalInfoStep
             defaults={personal}
             pending={pending}
+            userId={userId}
             onSubmit={submitStep1}
           />
         )}
@@ -568,19 +577,41 @@ function StepIndicator({ current }: { current: StepId }) {
 function PersonalInfoStep({
   defaults,
   pending,
+  userId,
   onSubmit,
 }: {
   defaults: PersonalInfo;
   pending: boolean;
+  userId: string;
   onSubmit: (data: FormData) => void;
 }) {
+  const [fullName, setFullName] = useState(defaults.full_name);
+  const [phone, setPhone] = useState(defaults.phone);
+  const [nationalId, setNationalId] = useState(defaults.national_id);
+  const [driverLicense, setDriverLicense] = useState(defaults.driver_license);
+  const [address, setAddress] = useState(defaults.address);
+
+  const nationalIdWarning = useDuplicateCheck({
+    field: "national_id",
+    value: nationalId,
+    userId,
+    message: "This National ID is already registered.",
+  });
+  const driverLicenseWarning = useDuplicateCheck({
+    field: "driver_license",
+    value: driverLicense,
+    userId,
+    message: "This driver's license is already registered.",
+  });
+
   return (
     <form action={onSubmit} className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Input
           label="Full name"
           name="full_name"
-          defaultValue={defaults.full_name}
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
           required
           autoComplete="name"
         />
@@ -588,7 +619,8 @@ function PersonalInfoStep({
           label="Phone number"
           name="phone"
           type="tel"
-          defaultValue={defaults.phone}
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
           required
           autoComplete="tel"
           placeholder="+241 ..."
@@ -596,20 +628,33 @@ function PersonalInfoStep({
         <Input
           label="National ID number"
           name="national_id"
-          defaultValue={defaults.national_id}
+          value={nationalId}
+          onChange={(e) => setNationalId(e.target.value)}
           required
         />
         <Input
           label="Driver license number"
           name="driver_license"
-          defaultValue={defaults.driver_license}
+          value={driverLicense}
+          onChange={(e) => setDriverLicense(e.target.value)}
           required
         />
       </div>
+      {(nationalIdWarning || driverLicenseWarning) && (
+        <div className="space-y-2">
+          {nationalIdWarning && (
+            <Alert variant="warning">{nationalIdWarning}</Alert>
+          )}
+          {driverLicenseWarning && (
+            <Alert variant="warning">{driverLicenseWarning}</Alert>
+          )}
+        </div>
+      )}
       <Textarea
         label="Address"
         name="address"
-        defaultValue={defaults.address}
+        value={address}
+        onChange={(e) => setAddress(e.target.value)}
         required
         rows={3}
       />
@@ -620,6 +665,65 @@ function PersonalInfoStep({
       </div>
     </form>
   );
+}
+
+/**
+ * Debounced lookup against `profiles` so the user gets an inline warning
+ * BEFORE they click Continue — the unique_violation friendly error is a
+ * good safety net, but catching this client-side feels much nicer.
+ *
+ * Returns the warning string when a row already exists for someone *else*,
+ * or `null` otherwise. Network errors are swallowed silently: this is a
+ * convenience, not a gate, and we never want it to disrupt the form.
+ */
+function useDuplicateCheck({
+  field,
+  value,
+  userId,
+  message,
+}: {
+  field: "national_id" | "driver_license";
+  value: string;
+  userId: string;
+  message: string;
+}): string | null {
+  const [warning, setWarning] = useState<string | null>(null);
+
+  useEffect(() => {
+    const trimmed = value.trim();
+    if (trimmed.length < 4) {
+      setWarning(null);
+      return;
+    }
+    let cancelled = false;
+    const handle = window.setTimeout(async () => {
+      try {
+        const supabase = createClient();
+        const { data, error: queryError } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq(field, trimmed)
+          .neq("id", userId)
+          .limit(1)
+          .maybeSingle();
+        if (cancelled) return;
+        if (queryError) {
+          setWarning(null);
+          return;
+        }
+        setWarning(data ? message : null);
+      } catch {
+        if (!cancelled) setWarning(null);
+      }
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(handle);
+    };
+  }, [field, message, userId, value]);
+
+  return warning;
 }
 
 function DocumentsStep({

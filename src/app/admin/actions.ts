@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { friendlyError } from "@/lib/errors";
 import { requireRole } from "@/lib/auth";
 import type { UserRole } from "@/lib/types/database";
 
@@ -49,7 +50,7 @@ export async function updateUserRole(
     .eq("id", userId);
 
   if (error) {
-    return { ok: false, error: error.message };
+    return { ok: false, error: friendlyError(error) };
   }
 
   revalidatePath("/admin");

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyError } from "@/lib/errors";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
@@ -49,7 +50,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
       .eq("id", profile.id);
 
     if (updateError) {
-      setError(updateError.message);
+      setError(friendlyError(updateError));
       setLoading(false);
       return;
     }

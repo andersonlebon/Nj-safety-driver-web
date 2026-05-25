@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyError } from "@/lib/errors";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
 import type { Database } from "@/lib/types/database";
@@ -24,7 +25,7 @@ export function VehicleList({ vehicles }: { vehicles: Vehicle[] }) {
       .from("vehicles")
       .delete()
       .eq("id", id);
-    if (deleteError) setError(deleteError.message);
+    if (deleteError) setError(friendlyError(deleteError));
     setDeletingId(null);
     router.refresh();
   };

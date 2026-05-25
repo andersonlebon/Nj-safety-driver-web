@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyError } from "@/lib/errors";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
@@ -28,7 +29,7 @@ export function LoginForm() {
     });
 
     if (signInError) {
-      setError(signInError.message);
+      setError(friendlyError(signInError));
       setLoading(false);
       return;
     }

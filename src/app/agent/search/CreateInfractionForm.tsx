@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyError } from "@/lib/errors";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -70,7 +71,7 @@ export function CreateInfractionForm({
         .from("evidence")
         .upload(path, evidence, { cacheControl: "3600", upsert: false });
       if (uploadError) {
-        setError(uploadError.message);
+        setError(friendlyError(uploadError));
         setLoading(false);
         return;
       }
@@ -91,7 +92,7 @@ export function CreateInfractionForm({
     });
 
     if (insertError) {
-      setError(insertError.message);
+      setError(friendlyError(insertError));
       setLoading(false);
       return;
     }

@@ -13,6 +13,7 @@ import {
   Upload,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyError } from "@/lib/errors";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
 import { formatDate } from "@/lib/utils";
@@ -110,7 +111,7 @@ export function DocumentList({ documents }: { documents: Doc[] }) {
       .from("documents")
       .createSignedUrl(doc.file_path, 60);
     if (signError) {
-      setError(signError.message);
+      setError(friendlyError(signError));
       setBusyId(null);
       return;
     }
@@ -130,7 +131,7 @@ export function DocumentList({ documents }: { documents: Doc[] }) {
       storageError &&
       !storageError.message.toLowerCase().includes("not found")
     ) {
-      setError(storageError.message);
+      setError(friendlyError(storageError));
       setBusyId(null);
       return;
     }
@@ -139,7 +140,7 @@ export function DocumentList({ documents }: { documents: Doc[] }) {
       .delete()
       .eq("id", doc.id);
     if (dbError) {
-      setError(dbError.message);
+      setError(friendlyError(dbError));
       setBusyId(null);
       return;
     }
@@ -176,7 +177,7 @@ export function DocumentList({ documents }: { documents: Doc[] }) {
       .from("documents")
       .upload(newPath, file, { cacheControl: "3600", upsert: false });
     if (uploadError) {
-      setError(uploadError.message);
+      setError(friendlyError(uploadError));
       setBusyId(null);
       return;
     }
@@ -191,7 +192,7 @@ export function DocumentList({ documents }: { documents: Doc[] }) {
     });
     if (insertError) {
       await supabase.storage.from("documents").remove([newPath]);
-      setError(insertError.message);
+      setError(friendlyError(insertError));
       setBusyId(null);
       return;
     }

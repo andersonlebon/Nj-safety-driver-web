@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyError } from "@/lib/errors";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
@@ -35,7 +36,7 @@ export function RegisterForm() {
     });
 
     if (signUpError) {
-      setError(signUpError.message);
+      setError(friendlyError(signUpError));
       setLoading(false);
       return;
     }

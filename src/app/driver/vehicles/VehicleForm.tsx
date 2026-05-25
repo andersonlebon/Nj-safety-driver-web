@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyError } from "@/lib/errors";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -47,7 +48,7 @@ export function VehicleForm({ ownerId }: { ownerId: string }) {
     });
 
     if (insertError) {
-      setError(insertError.message);
+      setError(friendlyError(insertError));
       setLoading(false);
       return;
     }

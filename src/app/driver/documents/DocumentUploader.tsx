@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyError } from "@/lib/errors";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
@@ -87,7 +88,7 @@ export function DocumentUploader({
       .upload(path, file, { cacheControl: "3600", upsert: false });
 
     if (uploadError) {
-      setError(uploadError.message);
+      setError(friendlyError(uploadError));
       setLoading(false);
       return;
     }
@@ -103,7 +104,7 @@ export function DocumentUploader({
 
     if (dbError) {
       await supabase.storage.from("documents").remove([path]);
-      setError(dbError.message);
+      setError(friendlyError(dbError));
       setLoading(false);
       return;
     }
