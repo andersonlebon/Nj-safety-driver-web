@@ -38,6 +38,9 @@ type Props = {
   onChange: (next: EvidenceSlotValue) => void;
   status?: EvidenceSlotStatus;
   errorMessage?: string;
+  expiresAt?: string;
+  onExpiresAtChange?: (value: string) => void;
+  showExpiry?: boolean;
   disabled?: boolean;
 };
 
@@ -64,6 +67,9 @@ export function EvidenceSlot({
   onChange,
   status = "idle",
   errorMessage,
+  expiresAt,
+  onExpiresAtChange,
+  showExpiry = true,
   disabled,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -273,6 +279,29 @@ export function EvidenceSlot({
 
         {shownError && (
           <p className="text-xs text-red-600 dark:text-red-400">{shownError}</p>
+        )}
+
+        {showExpiry && hasFile && onExpiresAtChange && (
+          <div>
+            <label className="block text-xs font-medium text-stone-700 dark:text-slate-300 mb-1">
+              Expiration date
+              {required ? (
+                <span className="text-red-500 ml-1">*</span>
+              ) : (
+                <span className="text-stone-400 dark:text-slate-500 font-normal ml-1">
+                  (recommended)
+                </span>
+              )}
+            </label>
+            <input
+              type="date"
+              value={expiresAt ?? ""}
+              onChange={(e) => onExpiresAtChange(e.target.value)}
+              disabled={isBusy}
+              className="input w-full text-sm"
+              min={new Date().toISOString().slice(0, 10)}
+            />
+          </div>
         )}
       </div>
 

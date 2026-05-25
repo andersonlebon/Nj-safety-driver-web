@@ -1,12 +1,12 @@
 import { ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/dashboard/PageHeader";
-import { Card, CardBody } from "@/components/ui/Card";
+import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Alert } from "@/components/ui/Alert";
 import { formatDate } from "@/lib/utils";
 import { requireRole } from "@/lib/auth";
 import { RoleBadge, RoleChanger } from "../RoleChanger";
+import { AgentApplicationReview } from "../AgentApplicationReview";
 import type { UserRole } from "@/lib/types/database";
 
 export const dynamic = "force-dynamic";
@@ -14,33 +14,45 @@ export const dynamic = "force-dynamic";
 export default async function AdminAgentsPage() {
   const me = await requireRole(["admin"]);
   const supabase = createClient();
-  const { data: agents } = await supabase
-    .from("profiles")
-    .select("*")
-    .in("role", ["agent", "admin"])
-    .order("created_at", { ascending: false });
+
+  const [{ data: pending }, { data: agents }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("*")
+      .eq("agent_application_status", "pending")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("profiles")
+      .select("*")
+      .in("role", ["agent", "admin"])
+      .order("created_at", { ascending: false }),
+  ]);
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Agents & administrators"
-        description="Field agents and admins. Change a role from the dropdown to promote or demote."
+        description="Review agent applications and manage field agent accounts."
       />
-      <Alert variant="info">
-        To recruit a new agent, ask the person to register as a regular user
-        first, then find them on the{" "}
-        <a href="/admin/drivers" className="font-medium underline">
-          Drivers
-        </a>{" "}
-        page and switch their role to <strong>Agent</strong>.
-      </Alert>
+
+      {(pending?.length ?? 0) > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Pending agent applications ({pending!.length})</CardTitle>
+          </CardHeader>
+          <CardBody>
+            <AgentApplicationReview applicants={pending ?? []} />
+          </CardBody>
+        </Card>
+      )}
+
       <Card>
         <CardBody>
           {!agents || agents.length === 0 ? (
             <EmptyState
               icon={<ShieldCheck className="h-8 w-8" />}
-              title="No agents"
-              description="Promote a registered user to agent role to see them here."
+              title="No agents yet"
+              description="Approved applications and promoted users appear here."
             />
           ) : (
             <div className="overflow-x-auto">

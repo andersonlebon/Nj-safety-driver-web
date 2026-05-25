@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyError } from "@/lib/errors";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -29,7 +30,7 @@ export function InfractionsTable({
       .from("infractions")
       .update({ status })
       .eq("id", id);
-    if (updateError) setError(updateError.message);
+    if (updateError) setError(friendlyError(updateError));
     setBusyId(null);
     router.refresh();
   };
@@ -40,7 +41,7 @@ export function InfractionsTable({
       .from("evidence")
       .createSignedUrl(path, 60);
     if (signError) {
-      setError(signError.message);
+      setError(friendlyError(signError));
       return;
     }
     if (data?.signedUrl) window.open(data.signedUrl, "_blank");

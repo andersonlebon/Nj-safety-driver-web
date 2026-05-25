@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyError } from "@/lib/errors";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
@@ -53,6 +54,7 @@ export function DocumentUploader({
   const [docType, setDocType] = useState<DocumentType>("identity");
   const [vehicleId, setVehicleId] = useState<string>("");
   const [label, setLabel] = useState<string>("");
+  const [expiresAt, setExpiresAt] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,7 +89,7 @@ export function DocumentUploader({
       .upload(path, file, { cacheControl: "3600", upsert: false });
 
     if (uploadError) {
-      setError(uploadError.message);
+      setError(friendlyError(uploadError));
       setLoading(false);
       return;
     }
@@ -99,17 +101,20 @@ export function DocumentUploader({
       label: label.trim() || null,
       file_path: path,
       file_name: file.name,
+      expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+      verification_status: "pending_review",
     });
 
     if (dbError) {
       await supabase.storage.from("documents").remove([path]);
-      setError(dbError.message);
+      setError(friendlyError(dbError));
       setLoading(false);
       return;
     }
 
     setFile(null);
     setLabel("");
+    setExpiresAt("");
     if (fileInputRef.current) fileInputRef.current.value = "";
     setLoading(false);
     router.refresh();
@@ -152,6 +157,14 @@ export function DocumentUploader({
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           placeholder="e.g. front, back, 2025"
+        />
+        <Input
+          label="Expiration date"
+          type="date"
+          name="expires_at"
+          value={expiresAt}
+          onChange={(e) => setExpiresAt(e.target.value)}
+          min={new Date().toISOString().slice(0, 10)}
         />
         <Input
           ref={fileInputRef}

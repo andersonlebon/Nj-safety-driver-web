@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { Camera, Car, Check, User } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -16,6 +16,7 @@ import {
   type EvidenceSlotValue,
 } from "@/components/uploads/EvidenceSlot";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyError } from "@/lib/errors";
 import { cn, normalizePlate } from "@/lib/utils";
 import type { DocumentType } from "@/lib/types/database";
 import {
@@ -244,6 +245,8 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
   );
   const [slotStatus, setSlotStatus] = useState<SlotStatusState>({});
   const [slotErrors, setSlotErrors] = useState<SlotErrorState>({});
+  const [slotExpiries, setSlotExpiries] = useState<Record<string, string>>({});
+  const [skipDocuments, setSkipDocuments] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [vehicleId] = useState<string>(() => generateVehicleId());
   const [pending, startTransition] = useTransition();
@@ -273,19 +276,27 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
 
   const submitStep1 = (formData: FormData) => {
     setError(null);
+    // Trim every text field so an empty-string-after-whitespace submission
+    // can be rejected by HTML5 `required` and so server-side trimming and
+    // client-side state stay in sync.
+    const trimmed = {
+      full_name: String(formData.get("full_name") ?? "").trim(),
+      phone: String(formData.get("phone") ?? "").trim(),
+      national_id: String(formData.get("national_id") ?? "").trim(),
+      driver_license: String(formData.get("driver_license") ?? "").trim(),
+      address: String(formData.get("address") ?? "").trim(),
+    };
+    const trimmedFormData = new FormData();
+    for (const [k, v] of Object.entries(trimmed)) {
+      trimmedFormData.set(k, v);
+    }
     startTransition(async () => {
-      const result = await savePersonalInfo(formData);
+      const result = await savePersonalInfo(trimmedFormData);
       if (!result.ok) {
         setError(result.error);
         return;
       }
-      setPersonal({
-        full_name: String(formData.get("full_name") ?? ""),
-        phone: String(formData.get("phone") ?? ""),
-        national_id: String(formData.get("national_id") ?? ""),
-        driver_license: String(formData.get("driver_license") ?? ""),
-        address: String(formData.get("address") ?? ""),
-      });
+      setPersonal(trimmed);
       setStep(2);
     });
   };
@@ -293,10 +304,17 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
   const goToStep3 = () => {
     if (!canAdvanceFromStep2) {
       setError(
-        "Please upload the four required identity & license photos before continuing."
+        "Please upload the four required identity & license photos, or use “Skip for now” if you will upload them later."
       );
       return;
     }
+    setSkipDocuments(false);
+    setError(null);
+    setStep(3);
+  };
+
+  const skipDocumentsForNow = () => {
+    setSkipDocuments(true);
     setError(null);
     setStep(3);
   };
@@ -324,15 +342,6 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
         return "Year must be a valid 4-digit number.";
       }
     }
-    const missing = vehicleRequiredSlots.find(
-      (s) => !vehicleSlots[s.key]?.file
-    );
-    if (missing) {
-      return `Please upload "${missing.title}" before activating your profile.`;
-    }
-    if (!canAdvanceFromStep2) {
-      return "Some personal documents are missing — go back to step 2 to finish them.";
-    }
     return null;
   };
 
@@ -358,12 +367,13 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
       });
 
     if (uploadError) {
+      const friendly = friendlyError(uploadError);
       setSlotStatus((prev) => ({ ...prev, [slot.key]: "error" }));
       setSlotErrors((prev) => ({
         ...prev,
-        [slot.key]: uploadError.message,
+        [slot.key]: friendly,
       }));
-      throw new Error(`Upload failed for "${slot.title}": ${uploadError.message}`);
+      throw new Error(`Upload failed for "${slot.title}": ${friendly}`);
     }
 
     setSlotStatus((prev) => ({ ...prev, [slot.key]: "uploaded" }));
@@ -391,6 +401,9 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
             vehicle_id: null,
             file_path: path,
             file_name: fileName,
+            expires_at: slotExpiries[slot.key]
+              ? new Date(slotExpiries[slot.key]).toISOString()
+              : null,
           });
         }
 
@@ -404,6 +417,9 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
             vehicle_id: vehicleId,
             file_path: path,
             file_name: fileName,
+            expires_at: slotExpiries[slot.key]
+              ? new Date(slotExpiries[slot.key]).toISOString()
+              : null,
           });
         }
 
@@ -426,6 +442,7 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
             inspection_status: vehicle.inspection_status === "true",
           },
           documents: uploadedDocs,
+          skip_documents: skipDocuments || uploadedDocs.length === 0,
         };
 
         const result = await completeOnboarding(payload);
@@ -433,9 +450,7 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
           setError(result.error);
         }
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Something went wrong.";
-        setError(message);
+        setError(friendlyError(err));
       }
     });
   };
@@ -463,6 +478,7 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
           <PersonalInfoStep
             defaults={personal}
             pending={pending}
+            userId={userId}
             onSubmit={submitStep1}
           />
         )}
@@ -472,12 +488,17 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
             slots={driverSlots}
             slotStatus={slotStatus}
             slotErrors={slotErrors}
+            slotExpiries={slotExpiries}
             done={driverDoneCount}
             total={driverRequiredCount}
             disabled={pending}
             onChange={setDriverSlot}
+            onExpiryChange={(key, value) =>
+              setSlotExpiries((prev) => ({ ...prev, [key]: value }))
+            }
             onBack={() => goTo(1)}
             onNext={goToStep3}
+            onSkip={skipDocumentsForNow}
             canAdvance={canAdvanceFromStep2}
           />
         )}
@@ -489,10 +510,15 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
             slots={vehicleSlots}
             slotStatus={slotStatus}
             slotErrors={slotErrors}
+            slotExpiries={slotExpiries}
             done={vehicleDoneCount}
             total={vehicleRequiredCount}
             pending={pending}
+            skippedDocs={skipDocuments}
             onSlotChange={setVehicleSlot}
+            onExpiryChange={(key, value) =>
+              setSlotExpiries((prev) => ({ ...prev, [key]: value }))
+            }
             onBack={() => goTo(2)}
             onSubmit={submitFinal}
           />
@@ -568,19 +594,41 @@ function StepIndicator({ current }: { current: StepId }) {
 function PersonalInfoStep({
   defaults,
   pending,
+  userId,
   onSubmit,
 }: {
   defaults: PersonalInfo;
   pending: boolean;
+  userId: string;
   onSubmit: (data: FormData) => void;
 }) {
+  const [fullName, setFullName] = useState(defaults.full_name);
+  const [phone, setPhone] = useState(defaults.phone);
+  const [nationalId, setNationalId] = useState(defaults.national_id);
+  const [driverLicense, setDriverLicense] = useState(defaults.driver_license);
+  const [address, setAddress] = useState(defaults.address);
+
+  const nationalIdWarning = useDuplicateCheck({
+    field: "national_id",
+    value: nationalId,
+    userId,
+    message: "This National ID is already registered.",
+  });
+  const driverLicenseWarning = useDuplicateCheck({
+    field: "driver_license",
+    value: driverLicense,
+    userId,
+    message: "This driver's license is already registered.",
+  });
+
   return (
     <form action={onSubmit} className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Input
           label="Full name"
           name="full_name"
-          defaultValue={defaults.full_name}
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
           required
           autoComplete="name"
         />
@@ -588,7 +636,8 @@ function PersonalInfoStep({
           label="Phone number"
           name="phone"
           type="tel"
-          defaultValue={defaults.phone}
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
           required
           autoComplete="tel"
           placeholder="+241 ..."
@@ -596,20 +645,33 @@ function PersonalInfoStep({
         <Input
           label="National ID number"
           name="national_id"
-          defaultValue={defaults.national_id}
+          value={nationalId}
+          onChange={(e) => setNationalId(e.target.value)}
           required
         />
         <Input
           label="Driver license number"
           name="driver_license"
-          defaultValue={defaults.driver_license}
+          value={driverLicense}
+          onChange={(e) => setDriverLicense(e.target.value)}
           required
         />
       </div>
+      {(nationalIdWarning || driverLicenseWarning) && (
+        <div className="space-y-2">
+          {nationalIdWarning && (
+            <Alert variant="warning">{nationalIdWarning}</Alert>
+          )}
+          {driverLicenseWarning && (
+            <Alert variant="warning">{driverLicenseWarning}</Alert>
+          )}
+        </div>
+      )}
       <Textarea
         label="Address"
         name="address"
-        defaultValue={defaults.address}
+        value={address}
+        onChange={(e) => setAddress(e.target.value)}
         required
         rows={3}
       />
@@ -622,39 +684,110 @@ function PersonalInfoStep({
   );
 }
 
+/**
+ * Debounced lookup against `profiles` so the user gets an inline warning
+ * BEFORE they click Continue — the unique_violation friendly error is a
+ * good safety net, but catching this client-side feels much nicer.
+ *
+ * Returns the warning string when a row already exists for someone *else*,
+ * or `null` otherwise. Network errors are swallowed silently: this is a
+ * convenience, not a gate, and we never want it to disrupt the form.
+ */
+function useDuplicateCheck({
+  field,
+  value,
+  userId,
+  message,
+}: {
+  field: "national_id" | "driver_license";
+  value: string;
+  userId: string;
+  message: string;
+}): string | null {
+  const [warning, setWarning] = useState<string | null>(null);
+
+  useEffect(() => {
+    const trimmed = value.trim();
+    if (trimmed.length < 4) {
+      setWarning(null);
+      return;
+    }
+    let cancelled = false;
+    const handle = window.setTimeout(async () => {
+      try {
+        const supabase = createClient();
+        const { data, error: queryError } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq(field, trimmed)
+          .neq("id", userId)
+          .limit(1)
+          .maybeSingle();
+        if (cancelled) return;
+        if (queryError) {
+          setWarning(null);
+          return;
+        }
+        setWarning(data ? message : null);
+      } catch {
+        if (!cancelled) setWarning(null);
+      }
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(handle);
+    };
+  }, [field, message, userId, value]);
+
+  return warning;
+}
+
 function DocumentsStep({
   slots,
   slotStatus,
   slotErrors,
+  slotExpiries,
   done,
   total,
   disabled,
   onChange,
+  onExpiryChange,
   onBack,
   onNext,
+  onSkip,
   canAdvance,
 }: {
   slots: SlotsState;
   slotStatus: SlotStatusState;
   slotErrors: SlotErrorState;
+  slotExpiries: Record<string, string>;
   done: number;
   total: number;
   disabled: boolean;
   onChange: (key: string, value: EvidenceSlotValue) => void;
+  onExpiryChange: (key: string, value: string) => void;
   onBack: () => void;
   onNext: () => void;
+  onSkip: () => void;
   canAdvance: boolean;
 }) {
   return (
     <div className="space-y-5">
+      <Alert variant="warning">
+        You can upload documents now or skip and add them later from your
+        dashboard. Your profile stays <strong>inactive</strong> until an
+        administrator verifies your documents.
+      </Alert>
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
           <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
             Personal documents
           </h4>
           <p className="text-xs text-stone-500 dark:text-slate-400 mt-0.5">
-            Upload clear, well-lit photos of your ID & driver&apos;s license — front and
-            back. Files up to 10&nbsp;MB; JPG, PNG, WEBP or HEIC.
+            Tap a card to upload. Use good lighting and show all four corners of
+            each document.
           </p>
         </div>
         <span className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-full bg-brand-50 dark:bg-brand-950/40 px-3 py-1 text-xs font-medium text-brand-700 dark:text-brand-300">
@@ -663,7 +796,7 @@ function DocumentsStep({
         </span>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {DRIVER_SLOTS.map((slot) => (
           <EvidenceSlot
             key={slot.key}
@@ -675,6 +808,9 @@ function DocumentsStep({
             onChange={(next) => onChange(slot.key, next)}
             status={slotStatus[slot.key] ?? "idle"}
             errorMessage={slotErrors[slot.key]}
+            expiresAt={slotExpiries[slot.key]}
+            onExpiresAtChange={(value) => onExpiryChange(slot.key, value)}
+            showExpiry={Boolean(slots[slot.key]?.file)}
             disabled={disabled}
           />
         ))}
@@ -689,13 +825,23 @@ function DocumentsStep({
         >
           Back
         </Button>
-        <Button
-          type="button"
-          onClick={onNext}
-          disabled={disabled || !canAdvance}
-        >
-          Continue
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onSkip}
+            disabled={disabled}
+          >
+            Skip for now
+          </Button>
+          <Button
+            type="button"
+            onClick={onNext}
+            disabled={disabled || !canAdvance}
+          >
+            Continue with uploads
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -707,10 +853,13 @@ function VehicleStep({
   slots,
   slotStatus,
   slotErrors,
+  slotExpiries,
   done,
   total,
   pending,
+  skippedDocs,
   onSlotChange,
+  onExpiryChange,
   onBack,
   onSubmit,
 }: {
@@ -719,10 +868,13 @@ function VehicleStep({
   slots: SlotsState;
   slotStatus: SlotStatusState;
   slotErrors: SlotErrorState;
+  slotExpiries: Record<string, string>;
   done: number;
   total: number;
   pending: boolean;
+  skippedDocs: boolean;
   onSlotChange: (key: string, value: EvidenceSlotValue) => void;
+  onExpiryChange: (key: string, value: string) => void;
   onBack: () => void;
   onSubmit: () => void;
 }) {
@@ -820,34 +972,47 @@ function VehicleStep({
 
       <div className="pt-2 border-t border-stone-200 dark:border-slate-800" />
 
+      {skippedDocs && (
+        <Alert variant="warning">
+          Document uploads were skipped. You can add them later under{" "}
+          <strong>Documents</strong> in your dashboard, then submit for
+          verification.
+        </Alert>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
           <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
-            Evidence
+            Vehicle evidence {skippedDocs ? "(optional now)" : ""}
           </h4>
           <p className="text-xs text-stone-500 dark:text-slate-400 mt-0.5">
-            Photos and certificates linked to this vehicle. Photos accept JPG, PNG,
-            WEBP, HEIC; certificates also accept PDF. Max 10&nbsp;MB per file.
+            Photos and certificates for this vehicle. You can upload these later
+            if you prefer to finish quickly.
           </p>
         </div>
-        <span className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-full bg-brand-50 dark:bg-brand-950/40 px-3 py-1 text-xs font-medium text-brand-700 dark:text-brand-300">
-          <Check className="h-3.5 w-3.5" />
-          {done}/{total} required uploaded
-        </span>
+        {!skippedDocs && (
+          <span className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-full bg-brand-50 dark:bg-brand-950/40 px-3 py-1 text-xs font-medium text-brand-700 dark:text-brand-300">
+            <Check className="h-3.5 w-3.5" />
+            {done}/{total} required uploaded
+          </span>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {VEHICLE_SLOTS.map((slot) => (
           <EvidenceSlot
             key={slot.key}
             title={slot.title}
             description={slot.description}
-            required={isSlotRequired(slot, vehicle)}
+            required={!skippedDocs && isSlotRequired(slot, vehicle)}
             accept={slot.accept}
             value={slots[slot.key] ?? { file: null, previewUrl: null }}
             onChange={(next) => onSlotChange(slot.key, next)}
             status={slotStatus[slot.key] ?? "idle"}
             errorMessage={slotErrors[slot.key]}
+            expiresAt={slotExpiries[slot.key]}
+            onExpiresAtChange={(value) => onExpiryChange(slot.key, value)}
+            showExpiry={Boolean(slots[slot.key]?.file)}
             disabled={pending}
           />
         ))}
@@ -863,7 +1028,9 @@ function VehicleStep({
           Back
         </Button>
         <Button type="button" onClick={onSubmit} loading={pending}>
-          Finish &amp; activate my profile
+          {skippedDocs
+            ? "Finish setup (documents pending)"
+            : "Finish & submit for verification"}
         </Button>
       </div>
     </div>
