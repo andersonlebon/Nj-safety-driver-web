@@ -3,13 +3,20 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyError } from "@/lib/errors";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Alert } from "@/components/ui/Alert";
 import { normalizePlate } from "@/lib/utils";
 
-export function VehicleForm({ ownerId }: { ownerId: string }) {
+export function VehicleForm({
+  ownerId,
+  onSuccess,
+}: {
+  ownerId: string;
+  onSuccess?: () => void;
+}) {
   const router = useRouter();
   const [form, setForm] = useState({
     plate_number: "",
@@ -44,10 +51,11 @@ export function VehicleForm({ ownerId }: { ownerId: string }) {
       year: form.year ? Number(form.year) : null,
       insurance_status: form.insurance_status === "true",
       inspection_status: form.inspection_status === "true",
+      verification_status: "pending_review",
     });
 
     if (insertError) {
-      setError(insertError.message);
+      setError(friendlyError(insertError));
       setLoading(false);
       return;
     }
@@ -63,6 +71,7 @@ export function VehicleForm({ ownerId }: { ownerId: string }) {
     });
     setLoading(false);
     router.refresh();
+    onSuccess?.();
   };
 
   return (

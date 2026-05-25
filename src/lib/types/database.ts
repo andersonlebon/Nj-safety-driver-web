@@ -1,5 +1,17 @@
 export type UserRole = "driver" | "agent" | "admin";
 export type PaymentStatus = "unpaid" | "paid" | "pending";
+export type VerificationStatus =
+  | "pending_documents"
+  | "pending_review"
+  | "active"
+  | "rejected";
+export type TrackingEventType =
+  | "infraction"
+  | "agent_checkin"
+  | "registration"
+  | "verification"
+  | "note";
+export type AgentApplicationStatus = "pending" | "approved" | "rejected";
 export type DocumentType =
   | "identity"
   | "driver_license"
@@ -31,6 +43,11 @@ export type Database = {
           address: string | null;
           email: string | null;
           onboarded_at: string | null;
+          verification_status: VerificationStatus;
+          admin_message: string | null;
+          agent_application_status: AgentApplicationStatus | null;
+          agent_badge_id: string | null;
+          agent_application_note: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -44,6 +61,11 @@ export type Database = {
           address?: string | null;
           email?: string | null;
           onboarded_at?: string | null;
+          verification_status?: VerificationStatus;
+          admin_message?: string | null;
+          agent_application_status?: AgentApplicationStatus | null;
+          agent_badge_id?: string | null;
+          agent_application_note?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -57,6 +79,11 @@ export type Database = {
           address?: string | null;
           email?: string | null;
           onboarded_at?: string | null;
+          verification_status?: VerificationStatus;
+          admin_message?: string | null;
+          agent_application_status?: AgentApplicationStatus | null;
+          agent_badge_id?: string | null;
+          agent_application_note?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -73,6 +100,7 @@ export type Database = {
           year: number | null;
           insurance_status: boolean;
           inspection_status: boolean;
+          verification_status: VerificationStatus;
           created_at: string;
           updated_at: string;
         };
@@ -86,6 +114,7 @@ export type Database = {
           year?: number | null;
           insurance_status?: boolean;
           inspection_status?: boolean;
+          verification_status?: VerificationStatus;
           created_at?: string;
           updated_at?: string;
         };
@@ -99,6 +128,7 @@ export type Database = {
           year?: number | null;
           insurance_status?: boolean;
           inspection_status?: boolean;
+          verification_status?: VerificationStatus;
           created_at?: string;
           updated_at?: string;
         };
@@ -113,6 +143,8 @@ export type Database = {
           label: string | null;
           file_path: string;
           file_name: string | null;
+          expires_at: string | null;
+          verification_status: VerificationStatus;
           uploaded_at: string;
         };
         Insert: {
@@ -123,6 +155,8 @@ export type Database = {
           label?: string | null;
           file_path: string;
           file_name?: string | null;
+          expires_at?: string | null;
+          verification_status?: VerificationStatus;
           uploaded_at?: string;
         };
         Update: {
@@ -133,7 +167,51 @@ export type Database = {
           label?: string | null;
           file_path?: string;
           file_name?: string | null;
+          expires_at?: string | null;
+          verification_status?: VerificationStatus;
           uploaded_at?: string;
+        };
+        Relationships: [];
+      };
+      vehicle_tracking_events: {
+        Row: {
+          id: string;
+          vehicle_id: string | null;
+          plate_number: string;
+          event_type: TrackingEventType;
+          location: string | null;
+          latitude: number | null;
+          longitude: number | null;
+          recorded_by: string | null;
+          infraction_id: string | null;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          vehicle_id?: string | null;
+          plate_number: string;
+          event_type: TrackingEventType;
+          location?: string | null;
+          latitude?: number | null;
+          longitude?: number | null;
+          recorded_by?: string | null;
+          infraction_id?: string | null;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          vehicle_id?: string | null;
+          plate_number?: string;
+          event_type?: TrackingEventType;
+          location?: string | null;
+          latitude?: number | null;
+          longitude?: number | null;
+          recorded_by?: string | null;
+          infraction_id?: string | null;
+          notes?: string | null;
+          created_at?: string;
         };
         Relationships: [];
       };
@@ -196,6 +274,9 @@ export type Database = {
       user_role: UserRole;
       payment_status: PaymentStatus;
       document_type: DocumentType;
+      verification_status: VerificationStatus;
+      tracking_event_type: TrackingEventType;
+      agent_application_status: AgentApplicationStatus;
     };
     CompositeTypes: {
       [_ in never]: never;

@@ -13,9 +13,11 @@ import {
   Upload,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyError } from "@/lib/errors";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
 import { formatDate } from "@/lib/utils";
+import { documentExpiryState } from "@/lib/verification";
 import type { Database, DocumentType } from "@/lib/types/database";
 
 type Doc = Database["public"]["Tables"]["documents"]["Row"];
@@ -110,7 +112,7 @@ export function DocumentList({ documents }: { documents: Doc[] }) {
       .from("documents")
       .createSignedUrl(doc.file_path, 60);
     if (signError) {
-      setError(signError.message);
+      setError(friendlyError(signError));
       setBusyId(null);
       return;
     }
@@ -130,7 +132,7 @@ export function DocumentList({ documents }: { documents: Doc[] }) {
       storageError &&
       !storageError.message.toLowerCase().includes("not found")
     ) {
-      setError(storageError.message);
+      setError(friendlyError(storageError));
       setBusyId(null);
       return;
     }
@@ -139,7 +141,7 @@ export function DocumentList({ documents }: { documents: Doc[] }) {
       .delete()
       .eq("id", doc.id);
     if (dbError) {
-      setError(dbError.message);
+      setError(friendlyError(dbError));
       setBusyId(null);
       return;
     }
@@ -176,7 +178,7 @@ export function DocumentList({ documents }: { documents: Doc[] }) {
       .from("documents")
       .upload(newPath, file, { cacheControl: "3600", upsert: false });
     if (uploadError) {
-      setError(uploadError.message);
+      setError(friendlyError(uploadError));
       setBusyId(null);
       return;
     }
@@ -188,10 +190,12 @@ export function DocumentList({ documents }: { documents: Doc[] }) {
       label: target.label,
       file_path: newPath,
       file_name: file.name,
+      expires_at: target.expires_at,
+      verification_status: "pending_review",
     });
     if (insertError) {
       await supabase.storage.from("documents").remove([newPath]);
-      setError(insertError.message);
+      setError(friendlyError(insertError));
       setBusyId(null);
       return;
     }
@@ -239,6 +243,7 @@ export function DocumentList({ documents }: { documents: Doc[] }) {
                     <th className="py-2 px-3 font-medium">Label</th>
                     <th className="py-2 px-3 font-medium">File</th>
                     <th className="py-2 px-3 font-medium">Uploaded</th>
+                    <th className="py-2 px-3 font-medium">Expiry</th>
                     <th className="py-2 px-3 font-medium text-right">Actions</th>
                   </tr>
                 </thead>
@@ -259,6 +264,26 @@ export function DocumentList({ documents }: { documents: Doc[] }) {
                       </td>
                       <td className="py-2 px-3 text-stone-700 dark:text-slate-300">
                         {formatDate(d.uploaded_at)}
+                      </td>
+                      <td className="py-2 px-3">
+                        {(() => {
+                          const exp = documentExpiryState(d.expires_at);
+                          return (
+                            <span
+                              className={
+                                exp.variant === "error"
+                                  ? "badge-unpaid"
+                                  : exp.variant === "warning"
+                                    ? "badge-pending"
+                                    : exp.variant === "success"
+                                      ? "badge-paid"
+                                      : "text-stone-500 dark:text-slate-400 text-xs"
+                              }
+                            >
+                              {exp.label}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="py-2 px-3">
                         <div className="flex justify-end gap-2">

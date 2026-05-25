@@ -9,6 +9,7 @@ import {
 import { redirect } from "next/navigation";
 import { Sidebar, type NavItem } from "@/components/dashboard/Sidebar";
 import { Topbar } from "@/components/dashboard/Topbar";
+import { DriverStatusBanner } from "@/components/dashboard/DriverStatusBanner";
 import { requireRole } from "@/lib/auth";
 
 const navItems: NavItem[] = [
@@ -27,6 +28,13 @@ export default async function DriverLayout({
 }) {
   const profile = await requireRole(["driver", "admin"]);
 
+  if (
+    profile.role === "driver" &&
+    profile.agent_application_status === "pending"
+  ) {
+    redirect("/register/agent/pending");
+  }
+
   if (profile.role === "driver" && !profile.onboarded_at) {
     redirect("/onboarding");
   }
@@ -41,7 +49,15 @@ export default async function DriverLayout({
           userEmail={profile.email}
           roleLabel="Driver account"
         />
-        <main className="flex-1 px-6 py-6">{children}</main>
+        <main className="flex-1 px-6 py-6">
+          {profile.role === "driver" && (
+            <DriverStatusBanner
+              verificationStatus={profile.verification_status ?? "pending_documents"}
+              adminMessage={profile.admin_message}
+            />
+          )}
+          {children}
+        </main>
       </div>
     </div>
   );

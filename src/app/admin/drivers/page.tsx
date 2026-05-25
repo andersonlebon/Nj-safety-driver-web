@@ -6,6 +6,10 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDate } from "@/lib/utils";
 import { requireRole } from "@/lib/auth";
 import { RoleBadge, RoleChanger } from "../RoleChanger";
+import {
+  DriverVerificationPanel,
+  VerificationStatusBadge,
+} from "../DriverVerificationPanel";
 import type { UserRole } from "@/lib/types/database";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +27,7 @@ export default async function AdminDriversPage() {
     <div>
       <PageHeader
         title="Drivers"
-        description="All registered driver accounts. Use the role selector to promote a driver to agent or admin."
+        description="Review driver accounts, verification status, and role assignments."
       />
       <Card>
         <CardBody>
@@ -43,6 +47,7 @@ export default async function AdminDriversPage() {
                     <th className="py-2 pr-4 font-medium">Phone</th>
                     <th className="py-2 pr-4 font-medium">License #</th>
                     <th className="py-2 pr-4 font-medium">Joined</th>
+                    <th className="py-2 pr-4 font-medium">Verification</th>
                     <th className="py-2 pr-4 font-medium">Role</th>
                     <th className="py-2 pr-4 font-medium">Change</th>
                   </tr>
@@ -69,14 +74,26 @@ export default async function AdminDriversPage() {
                         {formatDate(d.created_at)}
                       </td>
                       <td className="py-2 pr-4">
+                        <VerificationStatusBadge
+                          status={d.verification_status ?? "pending_documents"}
+                        />
+                      </td>
+                      <td className="py-2 pr-4">
                         <RoleBadge role={d.role as UserRole} />
                       </td>
                       <td className="py-2 pr-4">
-                        <RoleChanger
-                          userId={d.id}
-                          currentRole={d.role as UserRole}
-                          isSelf={d.id === me.id}
-                        />
+                        <div className="flex flex-col gap-2">
+                          <RoleChanger
+                            userId={d.id}
+                            currentRole={d.role as UserRole}
+                            isSelf={d.id === me.id}
+                          />
+                          <DriverVerificationPanel
+                            userId={d.id}
+                            status={d.verification_status ?? "pending_documents"}
+                            adminMessage={d.admin_message}
+                          />
+                        </div>
                       </td>
                     </tr>
                   ))}

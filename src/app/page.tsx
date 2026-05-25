@@ -106,8 +106,11 @@ export default function LandingPage() {
                   Portail conducteur
                   <ArrowRight className="h-4 w-4" />
                 </Link>
+                <Link href="/register/agent" className="btn-secondary px-6 text-base">
+                  Devenir agent
+                </Link>
                 <Link href="/login?role=agent" className="btn-secondary px-6 text-base">
-                  Espace agent
+                  Connexion agent
                 </Link>
               </div>
 
@@ -323,18 +326,19 @@ export default function LandingPage() {
                 variant="brand"
               />
               <Portal
-                href="/login?role=agent"
+                href="/register/agent"
                 icon={<ShieldCheck className="h-6 w-6" />}
                 role="Agent de Sécurité"
                 subtitle="Agent Workspace"
                 items={[
+                  "Candidature en ligne — validation par un administrateur",
                   "Connexion sécurisée NIP + OTP (Ministère de l'Intérieur)",
                   "Scan de plaque ANPR / OCR — précision 98,5 %",
                   "Profil complet conducteur et antécédents en temps réel",
                   "Émission de procès-verbal numérique (barème officiel)",
                   "Upload de preuves photographiques géolocalisées",
                 ]}
-                cta="Connexion agent"
+                cta="Postuler comme agent"
                 variant="navy"
               />
               <Portal

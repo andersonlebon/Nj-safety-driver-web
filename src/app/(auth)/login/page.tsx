@@ -74,6 +74,15 @@ export default async function LoginPage() {
             Create one
           </Link>
         </p>
+        <p className="mt-3 text-sm text-stone-600 dark:text-slate-400">
+          Field agent?{" "}
+          <Link
+            href="/register/agent"
+            className="text-brand-700 dark:text-brand-300 font-medium hover:underline"
+          >
+            Apply as an agent
+          </Link>
+        </p>
       </CardBody>
     </Card>
   );

@@ -58,18 +58,31 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  if (user && pathname.startsWith("/register/agent/pending")) {
+    return response;
+  }
+
   if (user && isAuthRoute) {
     const { data } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, agent_application_status")
       .eq("id", user.id)
       .maybeSingle();
 
-    const profile = data as { role?: string } | null;
+    const profile = data as {
+      role?: string;
+      agent_application_status?: string | null;
+    } | null;
 
-    // If the profiles row is genuinely missing, do NOT redirect: let the
-    // request continue so the destination page (or `getCurrentProfile`) can
-    // lazily create it. Redirecting here would loop with `requireRole`.
+    if (
+      profile?.role === "driver" &&
+      profile.agent_application_status === "pending"
+    ) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/register/agent/pending";
+      return NextResponse.redirect(url);
+    }
+
     if (profile?.role) {
       const url = request.nextUrl.clone();
       url.pathname = `/${profile.role}`;
