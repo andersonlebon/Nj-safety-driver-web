@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Fraunces, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { GabonBackdrop } from "@/components/theme/GabonBackdrop";
 import "./globals.css";
 
 const sans = Plus_Jakarta_Sans({
@@ -44,8 +45,10 @@ export default function RootLayout({
       className={`${sans.variable} ${display.variable} ${mono.variable}`}
       suppressHydrationWarning
     >
-      <body className="min-h-screen bg-stone-50 dark:bg-slate-950 text-stone-900 dark:text-stone-100 antialiased">
-        <ThemeProvider>{children}</ThemeProvider>
+      <body className="min-h-screen antialiased">
+        <ThemeProvider>
+          <GabonBackdrop>{children}</GabonBackdrop>
+        </ThemeProvider>
       </body>
     </html>
   );

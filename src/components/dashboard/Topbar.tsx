@@ -14,7 +14,7 @@ export function Topbar({
 }) {
   const displayName = userName?.trim() || userEmail || "User";
   return (
-    <header className="border-b border-stone-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+    <header className="glass-panel border-b border-stone-200/80 dark:border-slate-800/80">
       <div className="flex items-center justify-between px-6 py-4">
         <div>
           <h1 className="text-lg font-semibold tracking-tight text-stone-900 dark:text-stone-100">

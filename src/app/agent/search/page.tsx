@@ -12,8 +12,8 @@ import {
   VehicleTrackingTimeline,
 } from "@/components/tracking/VehicleTrackingTimeline";
 import { LogVehicleCheckIn } from "@/components/tracking/LogVehicleCheckIn";
-import { SearchForm } from "./SearchForm";
-import { CreateInfractionForm } from "./CreateInfractionForm";
+import { SearchPlateDialog } from "./SearchPlateDialog";
+import { CreateInfractionDialog } from "./CreateInfractionDialog";
 import { requireRole } from "@/lib/auth";
 
 export default async function AgentSearchPage({
@@ -88,19 +88,34 @@ export default async function AgentSearchPage({
       <PageHeader
         title="Plate search"
         description="Look up a vehicle by plate number to view details, tracking history, and file infractions."
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <SearchPlateDialog initialPlate={rawPlate} />
+            {plate && (
+              <CreateInfractionDialog
+                plate={plate}
+                vehicleId={vehicle?.id ?? null}
+                driverId={vehicle?.owner_id ?? null}
+                agentId={profile.id}
+              />
+            )}
+          </div>
+        }
       />
-
-      <Card>
-        <CardBody>
-          <SearchForm initialPlate={rawPlate} />
-        </CardBody>
-      </Card>
 
       {plate && !vehicle && (
         <Alert variant="warning">
           No registered vehicle found for plate <strong>{plate}</strong>. You can
           still file an infraction and log a check-in for this plate.
         </Alert>
+      )}
+
+      {!plate && (
+        <EmptyState
+          icon={<Search className="h-8 w-8" />}
+          title="Search for a plate"
+          description='Click "Search plate" above to look up a vehicle and its history.'
+        />
       )}
 
       {plate && lastLocation && (
@@ -159,20 +174,6 @@ export default async function AgentSearchPage({
                   <DetailRow label="Address" value={owner?.address || "—"} />
                 </dl>
               )}
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardBody>
-              <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100 mb-4">
-                File new infraction
-              </h3>
-              <CreateInfractionForm
-                plate={plate}
-                vehicleId={vehicle?.id ?? null}
-                driverId={vehicle?.owner_id ?? null}
-                agentId={profile.id}
-              />
             </CardBody>
           </Card>
 

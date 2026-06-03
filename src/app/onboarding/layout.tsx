@@ -6,7 +6,7 @@ export default function OnboardingLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen flex flex-col bg-stone-50 dark:bg-slate-950">
+    <div className="min-h-screen flex flex-col">
       <div className="absolute top-4 right-4 z-10">
         <ThemeToggle size="sm" />
       </div>

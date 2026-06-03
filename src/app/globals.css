@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --gabon-green: #006b3f;
+  --gabon-gold: #fcd116;
+  --gabon-blue: #121d4e;
+  --gabon-surface: rgba(255, 255, 255, 0.92);
+  --gabon-surface-dark: rgba(15, 23, 42, 0.92);
+}
+
+.dark {
+  --gabon-surface: rgba(15, 23, 42, 0.94);
+  --gabon-surface-dark: rgba(15, 23, 42, 0.94);
+}
+
 html,
 body {
   height: 100%;
@@ -13,6 +26,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-feature-settings: "cv11", "ss01", "ss03";
+  @apply text-stone-900 dark:text-stone-100;
 }
 
 /* Reserve the display serif for large, marketing-style headings.
@@ -63,8 +77,76 @@ pre {
 
   /* ─── Cards ───────────────────────────────────────────── */
   .card {
-    @apply bg-white rounded-xl border border-stone-200/80 shadow-card
-           dark:bg-slate-900 dark:border-slate-800;
+    @apply rounded-xl border border-stone-200/80 shadow-card
+           bg-white/90 backdrop-blur-sm
+           dark:bg-slate-900/90 dark:border-slate-800/90;
+  }
+
+  /* ─── Gabon flag backdrop ─────────────────────────────── */
+  .gabon-backdrop {
+    @apply bg-stone-50/80 dark:bg-slate-950/90;
+  }
+  .gabon-backdrop-prominent {
+    @apply bg-stone-50/70 dark:bg-slate-950/85;
+  }
+  .gabon-flag-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      var(--gabon-green) 0%,
+      var(--gabon-green) 33.33%,
+      var(--gabon-gold) 33.33%,
+      var(--gabon-gold) 66.66%,
+      var(--gabon-blue) 66.66%,
+      var(--gabon-blue) 100%
+    );
+    opacity: 0.07;
+  }
+  .dark .gabon-flag-layer {
+    opacity: 0.14;
+  }
+  .gabon-flag-shine {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: radial-gradient(
+        ellipse 80% 50% at 50% 0%,
+        rgba(252, 209, 22, 0.12),
+        transparent 55%
+      ),
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.4) 0%,
+        transparent 40%,
+        rgba(0, 0, 0, 0.08) 100%
+      );
+  }
+  .dark .gabon-flag-shine {
+    background: radial-gradient(
+        ellipse 70% 40% at 50% 0%,
+        rgba(252, 209, 22, 0.08),
+        transparent 50%
+      ),
+      linear-gradient(180deg, rgba(0, 0, 0, 0.25) 0%, transparent 50%);
+  }
+  .gabon-dialog-accent {
+    @apply absolute top-0 left-0 right-0 h-1 rounded-t-2xl;
+    background: linear-gradient(
+      90deg,
+      var(--gabon-green) 0%,
+      var(--gabon-green) 33%,
+      var(--gabon-gold) 33%,
+      var(--gabon-gold) 66%,
+      var(--gabon-blue) 66%,
+      var(--gabon-blue) 100%
+    );
+  }
+  .glass-panel {
+    @apply bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-stone-200/70 dark:border-slate-800/80;
   }
 
   /* ─── Badges ──────────────────────────────────────────── */

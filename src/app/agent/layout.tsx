@@ -16,7 +16,7 @@ export default async function AgentLayout({
 }) {
   const profile = await requireRole(["agent", "admin"]);
   return (
-    <div className="min-h-screen flex bg-stone-50 dark:bg-slate-950">
+    <div className="min-h-screen flex">
       <Sidebar items={navItems} workspaceLabel="Agent workspace" />
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar

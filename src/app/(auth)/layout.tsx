@@ -8,8 +8,8 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen flex flex-col bg-stone-50 dark:bg-slate-950">
-      <header className="border-b border-stone-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+    <div className="min-h-screen flex flex-col">
+      <header className="glass-panel border-b border-stone-200/80 dark:border-slate-800/80">
         <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <span className="flex h-9 w-9 items-center justify-center rounded-md bg-brand-700 text-white shadow-sm ring-1 ring-brand-600/20">
@@ -17,6 +17,9 @@ export default function AuthLayout({
             </span>
             <span className="font-semibold text-stone-900 dark:text-stone-100 tracking-tight">
               NJ Safety Driver
+            </span>
+            <span className="hidden sm:inline text-xs text-stone-500 dark:text-slate-400 ml-1">
+              — République Gabonaise
             </span>
           </Link>
           <ThemeToggle />
