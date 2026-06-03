@@ -8,6 +8,48 @@
       "when": 1779352713358,
       "tag": "0000_deep_star_brand",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779360000000,
+      "tag": "0001_add_onboarded_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779361000000,
+      "tag": "0002_documents_evidence",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1779362000000,
+      "tag": "0003_verification_expiry",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1779363000000,
+      "tag": "0004_vehicle_tracking",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1779364000000,
+      "tag": "0005_agent_application",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1779365000000,
+      "tag": "0006_foreign_vehicles",
+      "breakpoints": true
     }
   ]
 }

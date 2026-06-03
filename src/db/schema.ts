@@ -61,6 +61,7 @@ export const profiles = pgTable("profiles", {
   agentApplicationStatus: agentApplicationStatus("agent_application_status"),
   agentBadgeId: text("agent_badge_id"),
   agentApplicationNote: text("agent_application_note"),
+  nationalityCountry: text("nationality_country").default("GA"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .default(sql`now()`),
@@ -71,10 +72,17 @@ export const profiles = pgTable("profiles", {
 
 export const vehicles = pgTable("vehicles", {
   id: uuid("id").primaryKey().default(sql`uuid_generate_v4()`),
-  ownerId: uuid("owner_id")
-    .notNull()
-    .references(() => profiles.id, { onDelete: "cascade" }),
-  plateNumber: text("plate_number").notNull().unique(),
+  ownerId: uuid("owner_id").references(() => profiles.id, { onDelete: "cascade" }),
+  plateNumber: text("plate_number").notNull(),
+  registrationCountry: text("registration_country").notNull().default("GA"),
+  isForeign: boolean("is_foreign").notNull().default(false),
+  isBorderTransit: boolean("is_border_transit").notNull().default(false),
+  borderCheckpoint: text("border_checkpoint"),
+  borderEntryAt: timestamp("border_entry_at", { withTimezone: true }),
+  transitDriverName: text("transit_driver_name"),
+  transitDriverPhone: text("transit_driver_phone"),
+  transitPassportId: text("transit_passport_id"),
+  foreignNotes: text("foreign_notes"),
   brand: text("brand"),
   model: text("model"),
   color: text("color"),

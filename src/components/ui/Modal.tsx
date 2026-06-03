@@ -50,11 +50,13 @@ export function Modal({
         aria-labelledby="modal-title"
         className={cn(
           "relative z-10 w-full max-w-lg max-h-[90vh] overflow-y-auto",
-          "rounded-2xl border border-stone-200 dark:border-slate-800",
-          "bg-white dark:bg-slate-900 shadow-luxury",
+          "rounded-2xl border border-stone-200/80 dark:border-slate-700/80",
+          "bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-luxury",
+          "ring-1 ring-brand-600/10 dark:ring-brand-500/15",
           className
         )}
       >
+        <div className="gabon-dialog-accent" aria-hidden />
         <div className="flex items-start justify-between gap-3 border-b border-stone-200 dark:border-slate-800 px-5 py-4">
           <div>
             <h2

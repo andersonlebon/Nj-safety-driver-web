@@ -11,6 +11,8 @@ import type { ReactNode } from "react";
  *                                    explicitly toggles
  *   - enableSystem                → still expose "system" as a third option
  *   - disableTransitionOnChange   → avoid flashing transitions during swap
+ *   - storageKey                  → persisted preference (do not use empty
+ *                                    strings in `value` — breaks classList)
  *
  * Persistence (localStorage) is handled automatically by next-themes.
  */
@@ -20,7 +22,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       attribute="class"
       defaultTheme="system"
       enableSystem
+      enableColorScheme
       disableTransitionOnChange
+      storageKey="nj-safety-theme"
     >
       {children}
     </NextThemesProvider>

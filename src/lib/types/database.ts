@@ -48,6 +48,7 @@ export type Database = {
           agent_application_status: AgentApplicationStatus | null;
           agent_badge_id: string | null;
           agent_application_note: string | null;
+          nationality_country: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -66,6 +67,7 @@ export type Database = {
           agent_application_status?: AgentApplicationStatus | null;
           agent_badge_id?: string | null;
           agent_application_note?: string | null;
+          nationality_country?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -84,6 +86,7 @@ export type Database = {
           agent_application_status?: AgentApplicationStatus | null;
           agent_badge_id?: string | null;
           agent_application_note?: string | null;
+          nationality_country?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -92,8 +95,17 @@ export type Database = {
       vehicles: {
         Row: {
           id: string;
-          owner_id: string;
+          owner_id: string | null;
           plate_number: string;
+          registration_country: string;
+          is_foreign: boolean;
+          is_border_transit: boolean;
+          border_checkpoint: string | null;
+          border_entry_at: string | null;
+          transit_driver_name: string | null;
+          transit_driver_phone: string | null;
+          transit_passport_id: string | null;
+          foreign_notes: string | null;
           brand: string | null;
           model: string | null;
           color: string | null;
@@ -106,8 +118,17 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          owner_id: string;
+          owner_id?: string | null;
           plate_number: string;
+          registration_country?: string;
+          is_foreign?: boolean;
+          is_border_transit?: boolean;
+          border_checkpoint?: string | null;
+          border_entry_at?: string | null;
+          transit_driver_name?: string | null;
+          transit_driver_phone?: string | null;
+          transit_passport_id?: string | null;
+          foreign_notes?: string | null;
           brand?: string | null;
           model?: string | null;
           color?: string | null;
@@ -120,8 +141,17 @@ export type Database = {
         };
         Update: {
           id?: string;
-          owner_id?: string;
+          owner_id?: string | null;
           plate_number?: string;
+          registration_country?: string;
+          is_foreign?: boolean;
+          is_border_transit?: boolean;
+          border_checkpoint?: string | null;
+          border_entry_at?: string | null;
+          transit_driver_name?: string | null;
+          transit_driver_phone?: string | null;
+          transit_passport_id?: string | null;
+          foreign_notes?: string | null;
           brand?: string | null;
           model?: string | null;
           color?: string | null;

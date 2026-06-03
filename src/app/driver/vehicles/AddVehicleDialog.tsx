@@ -19,7 +19,8 @@ export function AddVehicleDialog({ ownerId }: { ownerId: string }) {
         open={open}
         onClose={() => setOpen(false)}
         title="Register a vehicle"
-        description="Add a new vehicle to your profile. Upload photos and papers from the Documents page."
+        description="Add a new vehicle in two quick steps. Upload photos from Documents afterward."
+        className="max-w-xl"
       >
         <VehicleForm
           ownerId={ownerId}

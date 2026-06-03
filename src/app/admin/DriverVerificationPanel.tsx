@@ -36,42 +36,35 @@ export function DriverVerificationPanel({
   };
 
   return (
-    <div className="flex flex-col gap-2 min-w-[140px]">
-      <span className="text-xs text-stone-500 dark:text-slate-400">
-        {VERIFICATION_LABELS[status]}
-      </span>
-      <div className="flex flex-wrap gap-1">
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap gap-2">
         <Button
           type="button"
-          variant="secondary"
-          className="text-xs py-1.5 px-2"
           loading={pending}
           onClick={() => run("active")}
-          title="Approve driver"
         >
-          <Check className="h-3.5 w-3.5" />
+          <Check className="h-4 w-4 mr-1.5" />
+          Approve driver
         </Button>
         <Button
           type="button"
           variant="danger"
-          className="text-xs py-1.5 px-2"
           loading={pending}
           onClick={() => setMessageOpen(true)}
-          title="Reject or send message"
         >
-          <X className="h-3.5 w-3.5" />
+          <X className="h-4 w-4 mr-1.5" />
+          Reject / message
         </Button>
         <Button
           type="button"
           variant="secondary"
-          className="text-xs py-1.5 px-2"
           onClick={() => {
             setMessage(adminMessage ?? "");
             setMessageOpen(true);
           }}
-          title="Send required action message"
         >
-          <MessageSquare className="h-3.5 w-3.5" />
+          <MessageSquare className="h-4 w-4 mr-1.5" />
+          Send message
         </Button>
       </div>
 

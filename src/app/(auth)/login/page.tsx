@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { ShieldCheck } from "lucide-react";
 import { LoginForm } from "./LoginForm";
 import { Card, CardBody } from "@/components/ui/Card";
+import { AuthDialogCard } from "@/components/ui/AuthDialogCard";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const metadata = {
@@ -33,8 +34,7 @@ export default async function LoginPage() {
   const hasAdmin = await adminExists();
 
   return (
-    <Card>
-      <CardBody>
+    <AuthDialogCard>
         {!hasAdmin && (
           <Link
             href="/setup"
@@ -83,7 +83,6 @@ export default async function LoginPage() {
             Apply as an agent
           </Link>
         </p>
-      </CardBody>
-    </Card>
+    </AuthDialogCard>
   );
 }
