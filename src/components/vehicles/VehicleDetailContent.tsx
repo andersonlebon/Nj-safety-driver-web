@@ -1,0 +1,190 @@
+"use client";
+
+import Link from "next/link";
+import { AlertTriangle, Car, MapPin, QrCode, Wallet } from "lucide-react";
+import { CountryBadge } from "@/components/vehicles/CountryBadge";
+import { VehicleTrackingTimeline } from "@/components/tracking/VehicleTrackingTimeline";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { VERIFICATION_LABELS } from "@/lib/verification";
+import { formatCurrency, formatDate } from "@/lib/utils";
+import { isForeignVehicle } from "@/lib/vehicles";
+import type { TrackingEvent } from "@/lib/tracking";
+import type { Database, VerificationStatus } from "@/lib/types/database";
+
+type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
+type Infraction = Database["public"]["Tables"]["infractions"]["Row"];
+
+type Props = {
+  vehicle: Vehicle;
+  photoUrl?: string | null;
+  owner?: { full_name: string | null; email: string | null; phone: string | null } | null;
+  infractions?: Infraction[];
+  trackingEvents?: TrackingEvent[];
+  agentSearchUrl?: string;
+  showOwner?: boolean;
+};
+
+export function VehicleDetailContent({
+  vehicle,
+  photoUrl,
+  owner,
+  infractions = [],
+  trackingEvents = [],
+  agentSearchUrl,
+  showOwner = true,
+}: Props) {
+  const status = (vehicle.verification_status ?? "pending_review") as VerificationStatus;
+  const unpaid = infractions.filter((i) => i.status === "unpaid");
+  const unpaidTotal = unpaid.reduce((s, i) => s + Number(i.fine_amount ?? 0), 0);
+  const foreign = isForeignVehicle(
+    vehicle.registration_country,
+    vehicle.is_foreign
+  );
+
+  const statusClass =
+    status === "active"
+      ? "badge-paid"
+      : status === "rejected"
+        ? "badge-unpaid"
+        : "badge-pending";
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-start gap-3">
+        <div className="aspect-video w-full sm:w-48 rounded-lg overflow-hidden bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700">
+          {photoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={photoUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="h-full min-h-[8rem] grid place-items-center text-stone-400">
+              <Car className="h-10 w-10" />
+            </div>
+          )}
+        </div>
+        <div className="flex-1 min-w-0 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-mono text-lg font-bold text-stone-900 dark:text-stone-100">
+              {vehicle.plate_number}
+            </p>
+            <CountryBadge code={vehicle.registration_country} />
+            {foreign && (
+              <span className="badge-pending text-[10px]">Foreign / transit</span>
+            )}
+            <span className={statusClass}>{VERIFICATION_LABELS[status]}</span>
+          </div>
+          <p className="text-sm text-stone-600 dark:text-slate-400">
+            {[vehicle.brand, vehicle.model, vehicle.color, vehicle.year]
+              .filter(Boolean)
+              .join(" · ") || "No vehicle details"}
+          </p>
+          {agentSearchUrl && (
+            <Link
+              href={agentSearchUrl}
+              className="inline-flex items-center gap-1 text-xs text-brand-700 dark:text-brand-300 hover:underline"
+            >
+              <QrCode className="h-3.5 w-3.5" />
+              Agent search link
+            </Link>
+          )}
+        </div>
+      </div>
+
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm rounded-lg border border-stone-200 dark:border-slate-800 p-4 bg-stone-50/50 dark:bg-slate-900/40">
+        <dt className="text-stone-500 dark:text-slate-400">Registered</dt>
+        <dd>{formatDate(vehicle.created_at)}</dd>
+        <dt className="text-stone-500 dark:text-slate-400">Insurance</dt>
+        <dd>{vehicle.insurance_status ? "Valid" : "Missing"}</dd>
+        <dt className="text-stone-500 dark:text-slate-400">Inspection</dt>
+        <dd>{vehicle.inspection_status ? "Valid" : "Missing"}</dd>
+        {vehicle.border_checkpoint && (
+          <>
+            <dt className="text-stone-500 dark:text-slate-400">Border checkpoint</dt>
+            <dd>{vehicle.border_checkpoint}</dd>
+          </>
+        )}
+        {vehicle.border_entry_at && (
+          <>
+            <dt className="text-stone-500 dark:text-slate-400">Border entry</dt>
+            <dd>{formatDate(vehicle.border_entry_at)}</dd>
+          </>
+        )}
+        {vehicle.transit_driver_name && (
+          <>
+            <dt className="text-stone-500 dark:text-slate-400">Transit driver</dt>
+            <dd>{vehicle.transit_driver_name}</dd>
+          </>
+        )}
+        {vehicle.transit_driver_phone && (
+          <>
+            <dt className="text-stone-500 dark:text-slate-400">Transit phone</dt>
+            <dd>{vehicle.transit_driver_phone}</dd>
+          </>
+        )}
+        {vehicle.foreign_notes && (
+          <>
+            <dt className="text-stone-500 dark:text-slate-400 col-span-2">Notes</dt>
+            <dd className="col-span-2">{vehicle.foreign_notes}</dd>
+          </>
+        )}
+      </dl>
+
+      {showOwner && owner && (
+        <div className="text-sm">
+          <p className="font-medium text-stone-900 dark:text-stone-100 mb-1">Owner</p>
+          <p className="text-stone-600 dark:text-slate-400">
+            {owner.full_name || owner.email || "—"}
+            {owner.phone ? ` · ${owner.phone}` : ""}
+          </p>
+        </div>
+      )}
+
+      <div className="rounded-lg border border-stone-200 dark:border-slate-800 p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Wallet className="h-4 w-4 text-stone-500" />
+          <p className="text-sm font-semibold text-stone-900 dark:text-stone-100">
+            Outstanding fines
+          </p>
+        </div>
+        <p className="text-2xl font-bold text-stone-900 dark:text-stone-100">
+          {formatCurrency(unpaidTotal)}
+        </p>
+        <p className="text-xs text-stone-500 dark:text-slate-400 mt-1">
+          {unpaid.length} unpaid infraction{unpaid.length !== 1 ? "s" : ""} of{" "}
+          {infractions.length} total
+        </p>
+      </div>
+
+      {infractions.length > 0 && (
+        <div>
+          <p className="text-sm font-semibold text-stone-900 dark:text-stone-100 mb-2 flex items-center gap-1.5">
+            <AlertTriangle className="h-4 w-4" />
+            Recent infractions
+          </p>
+          <ul className="space-y-2 text-sm max-h-40 overflow-y-auto">
+            {infractions.slice(0, 5).map((i) => (
+              <li
+                key={i.id}
+                className="flex justify-between gap-2 border-b border-stone-100 dark:border-slate-800 pb-2 last:border-0"
+              >
+                <span className="text-stone-700 dark:text-slate-300">
+                  {i.infraction_type} · {formatDate(i.created_at)}
+                </span>
+                <StatusBadge status={i.status} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {trackingEvents.length > 0 && (
+        <div>
+          <p className="text-sm font-semibold text-stone-900 dark:text-stone-100 mb-2 flex items-center gap-1.5">
+            <MapPin className="h-4 w-4" />
+            Tracking
+          </p>
+          <VehicleTrackingTimeline events={trackingEvents.slice(0, 8)} />
+        </div>
+      )}
+    </div>
+  );
+}

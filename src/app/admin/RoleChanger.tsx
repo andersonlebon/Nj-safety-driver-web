@@ -81,7 +81,7 @@ export function RoleChanger({
         disabled={pending}
         onChange={(e) => handleChange(e.target.value as UserRole)}
         className={cn(
-          "input h-9 py-1 text-xs w-32",
+          "input h-9 py-1 text-sm w-full max-w-xs",
           pending && "opacity-60 cursor-progress"
         )}
         aria-label="Change role"

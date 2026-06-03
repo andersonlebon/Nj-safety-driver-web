@@ -4,19 +4,30 @@ import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { FormDialog } from "@/components/ui/FormDialog";
-import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
-import { normalizePlate } from "@/lib/utils";
+import { PlateScanField } from "@/components/camera/PlateScanField";
+import { COUNTRIES, DEFAULT_COUNTRY } from "@/lib/countries";
+import { normalizePlateForCountry } from "@/lib/vehicles";
 
-export function SearchPlateDialog({ initialPlate }: { initialPlate?: string }) {
+export function SearchPlateDialog({
+  initialPlate,
+  initialCountry,
+}: {
+  initialPlate?: string;
+  initialCountry?: string;
+}) {
   const router = useRouter();
   const [plate, setPlate] = useState(initialPlate ?? "");
+  const [country, setCountry] = useState(initialCountry ?? DEFAULT_COUNTRY);
 
   const search = (close: () => void) => {
-    const q = normalizePlate(plate.trim());
+    const q = normalizePlateForCountry(plate.trim(), country);
     if (!q) return;
     close();
-    router.push(`/agent/search?plate=${encodeURIComponent(q)}`);
+    router.push(
+      `/agent/search?plate=${encodeURIComponent(q)}&country=${encodeURIComponent(country)}`
+    );
   };
 
   return (
@@ -24,11 +35,12 @@ export function SearchPlateDialog({ initialPlate }: { initialPlate?: string }) {
       triggerLabel={
         <>
           <Search className="h-4 w-4 mr-1.5" />
-          Search plate
+          Scan / search plate
         </>
       }
-      title="Vehicle plate search"
-      description="Enter a plate number to view the driver, vehicle, and infraction history."
+      title="Plate search & scan"
+      description="Use the camera to capture a plate, then check fines and vehicle history."
+      modalClassName="max-w-md"
     >
       {({ close }) => (
         <form
@@ -38,17 +50,20 @@ export function SearchPlateDialog({ initialPlate }: { initialPlate?: string }) {
             search(close);
           }}
         >
-          <Input
-            label="Plate number"
-            name="plate"
-            value={plate}
-            onChange={(e) => setPlate(e.target.value)}
-            placeholder="e.g. AB-123-CD"
-            autoFocus
-            required
-          />
+          <Select
+            label="Plate country"
+            value={country}
+            onChange={(e) => setCountry(e.target.value)}
+          >
+            {COUNTRIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.flag} {c.name}
+              </option>
+            ))}
+          </Select>
+          <PlateScanField value={plate} onChange={setPlate} />
           <Button type="submit" className="w-full">
-            Search
+            Search & check fines
           </Button>
         </form>
       )}

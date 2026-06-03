@@ -1,0 +1,194 @@
+"use client";
+
+import { useState } from "react";
+import { Eye } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
+import { formatDate } from "@/lib/utils";
+import { RoleBadge, RoleChanger } from "./RoleChanger";
+import {
+  DriverVerificationPanel,
+  VerificationStatusBadge,
+} from "./DriverVerificationPanel";
+import type { Database, UserRole } from "@/lib/types/database";
+
+type Driver = Database["public"]["Tables"]["profiles"]["Row"];
+
+export function AdminDriversTable({
+  drivers,
+  adminId,
+}: {
+  drivers: Driver[];
+  adminId: string;
+}) {
+  const [selected, setSelected] = useState<Driver | null>(null);
+
+  const open = (driver: Driver) => setSelected(driver);
+  const close = () => setSelected(null);
+
+  return (
+    <>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="text-left text-stone-500 dark:text-slate-400 border-b border-stone-200 dark:border-slate-800">
+            <tr>
+              <th className="py-2 pr-4 font-medium">Name</th>
+              <th className="py-2 pr-4 font-medium">Email</th>
+              <th className="py-2 pr-4 font-medium">Phone</th>
+              <th className="py-2 pr-4 font-medium">License #</th>
+              <th className="py-2 pr-4 font-medium">Joined</th>
+              <th className="py-2 pr-4 font-medium">Verification</th>
+              <th className="py-2 pr-4 font-medium">Role</th>
+              <th className="py-2 pr-4 font-medium w-28">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {drivers.map((d) => (
+              <tr
+                key={d.id}
+                className="border-b border-stone-100 dark:border-slate-800 last:border-0 cursor-pointer hover:bg-stone-50/80 dark:hover:bg-slate-800/40 transition-colors"
+                onClick={() => open(d)}
+              >
+                <td className="py-2 pr-4 font-medium text-stone-900 dark:text-stone-100">
+                  {d.full_name || "—"}
+                </td>
+                <td className="py-2 pr-4 text-stone-700 dark:text-slate-300">
+                  {d.email || "—"}
+                </td>
+                <td className="py-2 pr-4 text-stone-700 dark:text-slate-300">
+                  {d.phone || "—"}
+                </td>
+                <td className="py-2 pr-4 text-stone-700 dark:text-slate-300">
+                  {d.driver_license || "—"}
+                </td>
+                <td className="py-2 pr-4 text-stone-700 dark:text-slate-300">
+                  {formatDate(d.created_at)}
+                </td>
+                <td className="py-2 pr-4">
+                  <VerificationStatusBadge
+                    status={d.verification_status ?? "pending_documents"}
+                  />
+                </td>
+                <td className="py-2 pr-4">
+                  <RoleBadge role={d.role as UserRole} />
+                </td>
+                <td className="py-2 pr-4" onClick={(e) => e.stopPropagation()}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="text-xs py-1.5 px-2.5"
+                    onClick={() => open(d)}
+                  >
+                    <Eye className="h-3.5 w-3.5 mr-1" />
+                    View details
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {selected && (
+        <Modal
+          open={Boolean(selected)}
+          onClose={close}
+          title={selected.full_name || selected.email || "Driver details"}
+          description="Review account information and apply verification or role changes."
+          className="max-w-lg"
+        >
+          <DriverDetailModalBody
+            driver={selected}
+            adminId={adminId}
+            onClose={close}
+          />
+        </Modal>
+      )}
+    </>
+  );
+}
+
+function DriverDetailModalBody({
+  driver,
+  adminId,
+  onClose,
+}: {
+  driver: Driver;
+  adminId: string;
+  onClose: () => void;
+}) {
+  return (
+    <div className="space-y-6">
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm rounded-lg border border-stone-200 dark:border-slate-800 p-4 bg-stone-50/50 dark:bg-slate-900/40">
+        <dt className="text-stone-500 dark:text-slate-400">Email</dt>
+        <dd className="font-medium text-stone-900 dark:text-stone-100 break-all">
+          {driver.email || "—"}
+        </dd>
+        <dt className="text-stone-500 dark:text-slate-400">Phone</dt>
+        <dd className="font-medium text-stone-900 dark:text-stone-100">
+          {driver.phone || "—"}
+        </dd>
+        <dt className="text-stone-500 dark:text-slate-400">National ID</dt>
+        <dd className="font-medium text-stone-900 dark:text-stone-100">
+          {driver.national_id || "—"}
+        </dd>
+        <dt className="text-stone-500 dark:text-slate-400">License #</dt>
+        <dd className="font-medium text-stone-900 dark:text-stone-100">
+          {driver.driver_license || "—"}
+        </dd>
+        <dt className="text-stone-500 dark:text-slate-400">Joined</dt>
+        <dd className="font-medium text-stone-900 dark:text-stone-100">
+          {formatDate(driver.created_at)}
+        </dd>
+        <dt className="text-stone-500 dark:text-slate-400">Verification</dt>
+        <dd>
+          <VerificationStatusBadge
+            status={driver.verification_status ?? "pending_documents"}
+          />
+        </dd>
+        <dt className="text-stone-500 dark:text-slate-400">Current role</dt>
+        <dd>
+          <RoleBadge role={driver.role as UserRole} />
+        </dd>
+        {driver.admin_message && (
+          <>
+            <dt className="text-stone-500 dark:text-slate-400 col-span-2">
+              Last admin message
+            </dt>
+            <dd className="col-span-2 text-stone-700 dark:text-slate-300 italic">
+              {driver.admin_message}
+            </dd>
+          </>
+        )}
+      </dl>
+
+      <div className="space-y-3 border-t border-stone-200 dark:border-slate-800 pt-4">
+        <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
+          Change role
+        </h3>
+        <RoleChanger
+          userId={driver.id}
+          currentRole={driver.role as UserRole}
+          isSelf={driver.id === adminId}
+        />
+      </div>
+
+      <div className="space-y-3 border-t border-stone-200 dark:border-slate-800 pt-4">
+        <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
+          Driver verification
+        </h3>
+        <DriverVerificationPanel
+          userId={driver.id}
+          status={driver.verification_status ?? "pending_documents"}
+          adminMessage={driver.admin_message}
+        />
+      </div>
+
+      <div className="flex justify-end pt-2">
+        <Button type="button" variant="secondary" onClick={onClose}>
+          Close
+        </Button>
+      </div>
+    </div>
+  );
+}

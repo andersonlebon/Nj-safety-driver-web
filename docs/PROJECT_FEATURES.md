@@ -49,7 +49,7 @@ Road safety management platform for Gabon. Web MVP built with **Next.js 14**, **
 - **Status banner** — Shows verification state, admin messages, and **Submit for verification** button
 - **Overview** — KPIs, fines chart, payment donut, compliance score
 - **Personal info** — Edit profile fields
-- **Vehicles** — Card grid with **photo preview**, verification badge; **Add vehicle** opens a **dialog**
+- **Vehicles** — Card grid with **photo preview**, country badge, verification badge; click card for **detail modal** or full page; **Add vehicle** with country + plate scan/camera
 - **Documents** — Upload with **expiration date**; grouped list with expiry warnings; submit for admin review
 - **Infractions / Payments** — View fines and payment status (manual tracking: unpaid / paid / pending)
 
@@ -67,7 +67,8 @@ Road safety management platform for Gabon. Web MVP built with **Next.js 14**, **
 ## Agent dashboard
 
 - **Application** — Register at `/register/agent`; pending applicants see `/register/agent/pending` until approved
-- **Search** by plate — view driver & vehicle details
+- **Search / scan** by plate + **country** — camera capture (confirm manually; OCR Phase 2), view driver & vehicle details, **outstanding fines banner**
+- **Border transit** (`/agent/border`) — register foreign vehicles at checkpoints
 - **Create infraction** — type, description, location, fine, evidence photo
 - **Overview analytics** — weekly activity, top infraction types, resolution rate
 
@@ -76,12 +77,22 @@ Road safety management platform for Gabon. Web MVP built with **Next.js 14**, **
 ## Admin dashboard
 
 - **Overview analytics** — drivers, agents, vehicles, infractions, fines collected vs outstanding, charts
-- **Drivers** — List all drivers; **approve / reject / message**; promote roles (driver → agent → admin)
-- **Vehicles** — **Fixed listing** of all registered cars with **photo preview**, owner, filters (All / Pending / Approved / Rejected), approve/reject per vehicle
+- **Drivers** — Read-only table; **View details** modal for role change, approve/reject, admin messages
+- **Vehicles** — Read-only table with country badge; **View** modal for full details + approve/reject; filters (status + domestic/foreign)
 - **Agents** — Review **pending applications** (approve / reject); manage agent accounts and roles
 - **Infractions** — System-wide infraction list
 
 Admin actions use **dialog modals** for messages and rejections where appropriate.
+
+---
+
+## Foreign & border vehicles
+
+- **Registration country** on vehicles and infractions (unique plate per country)
+- **Foreign / border transit** — agents register vehicles without a local owner; transit driver contact fields
+- **Driver nationality** on profiles (`nationality_country`)
+- **Country badges** across driver, admin, and agent UIs
+- Plate **camera capture** on driver add-vehicle and agent search (manual confirm; AI OCR planned Phase 2)
 
 ---
 
@@ -154,7 +165,7 @@ Locations link to Google Maps when clicked. Existing infractions are backfilled 
 
 ## Out of scope (MVP)
 
-- OCR / AI plate recognition
+- **AI plate OCR** (camera capture works; recognition stub in `lib/plate-scan.ts`)
 - Mobile app
 - Real payment gateway (Airtel Money, etc.)
 - Radar hardware integration

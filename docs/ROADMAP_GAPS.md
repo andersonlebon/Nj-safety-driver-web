@@ -1,6 +1,6 @@
 # Roadmap — What’s built vs what’s missing
 
-This document maps the **national roadmap** (landing page phases + `PROJECT_FEATURES.md`) against the **current web MVP**.
+Maps the **national roadmap** (landing page phases + `PROJECT_FEATURES.md`) against the **current web MVP**.
 
 ---
 
@@ -9,86 +9,76 @@ This document maps the **national roadmap** (landing page phases + `PROJECT_FEAT
 | Roadmap item | MVP status | Gap |
 |--------------|------------|-----|
 | Pilote Libreville | Partial | Web app works; no city/region scoping in data |
-| 500 agents enrolled | Partial | Agent self-registration + admin approval ✅; no enrollment quotas or reporting |
+| 500 agents enrolled | Partial | Agent self-registration + admin approval ✅; no enrollment quotas |
 | 50 radars integrated | **Missing** | No radar hardware/API; no radar admin module |
 | Public driver portal | **Done** | Register, onboarding, documents, vehicles, infractions view |
+| Border / foreign vehicles | **Done (MVP)** | Country on plate, agent border registration, transit without local owner |
 
 ---
 
-## Product features — built in MVP
+## Recent product delivery (web MVP)
 
-- Driver / agent / admin roles with RLS  
-- 3-step driver onboarding (skip documents allowed)  
-- Admin driver & vehicle verification (approve / reject / message)  
-- Agent plate search, infraction filing, check-in tracking events  
-- Lightweight vehicle tracking (not GPS hardware)  
-- Agent application workflow (`/register/agent`)  
-- Gabon-themed UI, light/dark mode, dialog-based forms (in progress)  
-- Document uploads with expiry dates  
-- Analytics dashboards (Recharts) per role  
-
----
-
-## Explicitly out of scope (MVP) — still missing
-
-| Capability | Why it matters | Suggested phase |
-|------------|----------------|-----------------|
-| **OCR / ANPR plate scan** | Agent field speed & accuracy | Phase 2 |
-| **Native mobile apps (iOS/Android)** | Agents & drivers in the field | Phase 2 |
-| **Real payment gateways** (Mobile Money, cards, Trésor) | End-to-end fine collection | Phase 2 |
-| **Radar integration** | Automatic infractions | Phase 1 roadmap / Phase 2 tech |
-| **SMS / push notifications** | Driver alerts for infractions & expiry | Phase 2 |
-| **2FA / Ministry OTP** | Mentioned on marketing site | Phase 2 |
-| **RCCM / national DB interconnection** | Vehicle & owner verification | Phase 2 |
-| **PDF quittances (official receipts)** | Legal payment proof | Phase 2 |
-| **Predictive AI / national reporting** | Phase 3 vision | Phase 3 |
-
----
-
-## UX / UI gaps (your latest requests)
-
-| Request | Status |
+| Feature | Status |
 |---------|--------|
-| Gabon flag background on all pages | **Implemented** — global backdrop + glass panels |
-| Stronger light/dark with national colors | **Improved** — CSS variables, glass cards, dialog accent stripe |
-| All forms in dialogs/popups | **Mostly done** — profile, documents, vehicles, agent search/infraction; onboarding remains full-page wizard (already stepped) |
-| Step-based forms for long flows | **Improved** — document upload (3 steps), infraction (3 steps), vehicle register (2 steps); onboarding already 3 steps |
-| Richer media upload UX | **Improved** — drag/drop `EvidenceSlot`; more work possible (camera capture, batch upload, progress %) |
+| Sign out → home page | **Done** |
+| Agent self-register + admin approval | **Done** |
+| Gabon flag watermark background | **Done** |
+| Light / dark theme toggle | **Done** (fixed next-themes crash) |
+| Dialog + step forms (upload, infraction, vehicle) | **Done** |
+| Admin drivers — read-only table + detail modal | **Done** |
+| Admin vehicles — read-only table + detail modal | **Done** |
+| Vehicle detail modal + `/driver/vehicles/[id]` | **Done** |
+| Foreign / border vehicles + country badges | **Done** |
+| Agent border registration (`/agent/border`) | **Done** |
+| Camera capture + plate scan UX | **Done** (manual confirm; OCR stub) |
+| Driver/vehicle/admin verification workflows | **Done** |
+| Lightweight vehicle tracking | **Done** |
 
 ---
 
-## Remaining forms not yet in dialogs
+## UX / UI — remaining polish (non-blocking)
 
-- **Onboarding wizard** — intentional full-page multi-step flow  
-- **Login / register / setup** — dialog-*styled* panels (not modal triggers)  
-- **Admin inline actions** — role changer on agents table (could move to dialog)  
-- **Agent register** — full-page dialog card (could add internal steps)  
+| Item | Status |
+|------|--------|
+| Onboarding | Full-page 3-step wizard (intentional) |
+| Login / register / setup | Dialog-styled panels on flag backdrop |
+| Admin agents table | Inline role changer (could move to modal) |
+| Real plate OCR / ANPR | **Phase 2** — `lib/plate-scan.ts` stub only |
 
 ---
 
-## Operations & quality gaps
+## Explicitly out of scope (Phase 2+)
 
-- Automated tests (E2E / unit) — minimal or none  
-- CI may be blocked by GitHub billing (environment issue)  
-- Production `db:push` must be run per Supabase project  
-- Email templates / branded notifications — not configured  
-- French i18n — marketing FR, app mostly EN  
-- Accessibility audit (WCAG) — not done  
-- Audit trail / parliamentary reporting — Phase 3  
+| Capability | Phase |
+|------------|-------|
+| OCR / ANPR (production AI) | Phase 2 |
+| Native mobile apps | Phase 2 |
+| Real payment gateways (Mobile Money, Trésor) | Phase 2 |
+| Radar integration | Phase 1 national / Phase 2 tech |
+| SMS / push notifications | Phase 2 |
+| 2FA / Ministry OTP | Phase 2 |
+| RCCM / national DB interconnection | Phase 2 |
+| PDF quittances | Phase 2 |
+| Predictive AI / parliamentary reporting | Phase 3 |
+
+---
+
+## Operations
+
+| Item | Status |
+|------|--------|
+| Automated E2E tests | Minimal |
+| CI | May fail on GitHub billing (account issue) |
+| Production DB | Run `npm run db:push` per Supabase project |
+| French i18n | Marketing FR; app mostly EN |
 
 ---
 
 ## Recommended next engineering priorities
 
-1. **Payments** — integrate one Mobile Money provider + receipt PDF  
-2. **Notifications** — email/SMS on infraction + document expiry  
-3. **Mobile** — PWA first, then native shell  
-4. **OCR** — plate scan on agent search  
-5. **Radar feed** — ingestion API + admin radar dashboard  
-6. **i18n** — full French for government staff  
-
----
-
-## How to read the landing roadmap
-
-The homepage phases (2025 / 2026 / 2027) describe **national rollout**, not only this codebase. The web MVP covers the **driver portal** and **agent/admin workspaces** slice of Phase 1; hardware, payments, and mobile are still roadmap items above.
+1. Production plate OCR (on-device or API)
+2. Mobile Money + PDF receipts
+3. SMS/email on infraction + document expiry
+4. PWA / native mobile shell
+5. Radar ingestion API + admin dashboard
+6. Full French UI for government staff
