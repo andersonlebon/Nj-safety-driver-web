@@ -30,6 +30,11 @@ export function ThemeToggle({
   useEffect(() => setMounted(true), []);
 
   const isDark = mounted && resolvedTheme === "dark";
+
+  const toggleTheme = () => {
+    setTheme(isDark ? "light" : "dark");
+  };
+
   const nextLabel = isDark ? "Switch to light mode" : "Switch to dark mode";
 
   const sizeCls =
@@ -42,9 +47,9 @@ export function ThemeToggle({
       aria-checked={isDark}
       aria-label={mounted ? nextLabel : "Toggle theme"}
       title={mounted ? nextLabel : "Toggle theme"}
-      onClick={() => setTheme(isDark ? "light" : "dark")}
+      onClick={toggleTheme}
       className={cn(
-        "inline-flex items-center justify-center rounded-lg border transition-colors",
+        "relative z-20 inline-flex items-center justify-center rounded-lg border transition-colors",
         "border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:text-stone-900",
         "dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900",

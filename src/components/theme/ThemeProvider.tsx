@@ -20,7 +20,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       attribute="class"
       defaultTheme="system"
       enableSystem
+      enableColorScheme
       disableTransitionOnChange
+      storageKey="nj-safety-theme"
+      themes={["light", "dark"]}
+      value={{ light: "", dark: "dark" }}
     >
       {children}
     </NextThemesProvider>

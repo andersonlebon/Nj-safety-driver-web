@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Fraunces, JetBrains_Mono } from "next/font/google";
-import { ThemeProvider } from "@/components/theme/ThemeProvider";
-import { GabonBackdrop } from "@/components/theme/GabonBackdrop";
+import { AppProviders } from "@/components/providers/AppProviders";
 import "./globals.css";
 
 const sans = Plus_Jakarta_Sans({
@@ -40,15 +39,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="en"
-      className={`${sans.variable} ${display.variable} ${mono.variable}`}
-      suppressHydrationWarning
-    >
-      <body className="min-h-screen antialiased">
-        <ThemeProvider>
-          <GabonBackdrop variant="prominent">{children}</GabonBackdrop>
-        </ThemeProvider>
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={`${sans.variable} ${display.variable} ${mono.variable} min-h-screen antialiased`}
+      >
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );

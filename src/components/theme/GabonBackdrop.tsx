@@ -26,7 +26,7 @@ export function GabonBackdrop({
     >
       <div className="gabon-flag-layer" aria-hidden />
       <div className="gabon-flag-shine" aria-hidden />
-      <div className="relative z-[1] min-h-screen">{children}</div>
+      <div className="relative isolate z-10 min-h-screen">{children}</div>
     </div>
   );
 }
