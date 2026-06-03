@@ -47,7 +47,7 @@ export default function RootLayout({
     >
       <body className="min-h-screen antialiased">
         <ThemeProvider>
-          <GabonBackdrop>{children}</GabonBackdrop>
+          <GabonBackdrop variant="prominent">{children}</GabonBackdrop>
         </ThemeProvider>
       </body>
     </html>

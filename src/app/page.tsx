@@ -411,7 +411,7 @@ export default function LandingPage() {
         </section>
 
         {/* ── 8. CTA ── */}
-        <section className="relative bg-brand-700/90 dark:bg-brand-900/90 backdrop-blur-sm">
+        <section className="relative bg-brand-700/80 dark:bg-brand-900/75 backdrop-blur-sm">
           <div className="mx-auto max-w-7xl px-6 py-16 text-center">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-white/90 mb-5">
               <ShieldCheck className="h-3 w-3" />
