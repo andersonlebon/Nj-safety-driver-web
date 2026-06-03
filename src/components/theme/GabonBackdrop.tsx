@@ -8,8 +8,8 @@ type Props = {
 };
 
 /**
- * Official Gabon flag image watermark on all app surfaces (including landing).
- * Content uses glass panels so text stays readable over the flag.
+ * Gabon flag fabric image as a fixed watermark (filigrane) behind all pages.
+ * Blur + opacity soften the photo; glass panels keep foreground text readable.
  */
 export function GabonBackdrop({
   children,

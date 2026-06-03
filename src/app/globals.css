@@ -82,50 +82,57 @@ pre {
            dark:bg-slate-900/75 dark:border-slate-800/80;
   }
 
-  /* ─── Gabon flag backdrop ─────────────────────────────── */
+  /* ─── Gabon flag watermark (filigrane) ─────────────────── */
   .gabon-backdrop,
   .gabon-backdrop-prominent {
     background: transparent;
   }
   .gabon-flag-layer {
     position: fixed;
-    inset: 0;
+    inset: -2%;
     z-index: 0;
     pointer-events: none;
-    background-image: url("/images/gabon-flag.svg");
+    background-image: url("/images/gabon-flag.png");
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    opacity: 0.55;
+    opacity: 0.38;
+    filter: blur(10px) saturate(1.05) brightness(1.08);
+    transform: scale(1.06);
+    will-change: transform;
   }
   .gabon-backdrop-prominent .gabon-flag-layer {
-    opacity: 0.65;
+    opacity: 0.44;
+    filter: blur(8px) saturate(1.1) brightness(1.05);
   }
   .dark .gabon-flag-layer {
-    opacity: 0.7;
+    opacity: 0.42;
+    filter: blur(12px) saturate(0.95) brightness(0.72);
   }
   .dark .gabon-backdrop-prominent .gabon-flag-layer {
-    opacity: 0.78;
+    opacity: 0.48;
+    filter: blur(10px) saturate(1) brightness(0.78);
   }
-  /* Light scrim so text stays readable without hiding the flag */
+  /* Frosted scrim — keeps UI readable over the watermark */
   .gabon-flag-shine {
     position: fixed;
     inset: 0;
     z-index: 0;
     pointer-events: none;
+    backdrop-filter: blur(0px);
     background: linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.35) 0%,
-      rgba(255, 255, 255, 0.15) 45%,
-      rgba(255, 255, 255, 0.25) 100%
+      rgba(255, 255, 255, 0.55) 0%,
+      rgba(255, 255, 255, 0.38) 50%,
+      rgba(255, 255, 255, 0.5) 100%
     );
   }
   .dark .gabon-flag-shine {
     background: linear-gradient(
       180deg,
-      rgba(15, 23, 42, 0.35) 0%,
-      rgba(15, 23, 42, 0.2) 50%,
-      rgba(15, 23, 42, 0.4) 100%
+      rgba(15, 23, 42, 0.5) 0%,
+      rgba(15, 23, 42, 0.35) 50%,
+      rgba(15, 23, 42, 0.55) 100%
     );
   }
   .gabon-dialog-accent {
@@ -144,15 +151,15 @@ pre {
     @apply bg-white/80 dark:bg-slate-900/75 backdrop-blur-sm border border-stone-200/70 dark:border-slate-800/80;
   }
 
-  /* Landing / marketing — frosted panels; flag stays visible behind */
+  /* Landing / marketing — frosted glass over flag watermark */
   .landing-surface {
-    @apply bg-white/55 dark:bg-slate-900/50 backdrop-blur-sm;
+    @apply bg-white/60 dark:bg-slate-900/55 backdrop-blur-md;
   }
   .landing-surface-alt {
-    @apply bg-white/40 dark:bg-slate-950/40 backdrop-blur-sm;
+    @apply bg-white/50 dark:bg-slate-950/45 backdrop-blur-md;
   }
   .landing-hero {
-    @apply bg-white/30 dark:bg-slate-950/25 backdrop-blur-[2px];
+    @apply bg-white/45 dark:bg-slate-950/35 backdrop-blur-sm;
   }
 
   /* ─── Badges ──────────────────────────────────────────── */
