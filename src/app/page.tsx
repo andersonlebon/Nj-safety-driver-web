@@ -31,7 +31,7 @@ export default function LandingPage() {
       />
 
       {/* ── Header ── */}
-      <header className="sticky top-0 z-10 border-b border-stone-200/80 bg-white/95 backdrop-blur-sm dark:bg-slate-950/95 dark:border-slate-800/80">
+      <header className="sticky top-0 z-10 glass-panel border-b border-stone-200/80 dark:border-slate-800/80">
         <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-700 text-white shadow-sm ring-1 ring-brand-600/20">
@@ -60,7 +60,7 @@ export default function LandingPage() {
 
       <main className="flex-1">
         {/* ── 1. Hero ── */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-white via-stone-50/80 to-brand-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-brand-950/20">
+        <section className="relative overflow-hidden landing-hero">
           {/* Decorative background shield */}
           <div
             aria-hidden
@@ -133,7 +133,7 @@ export default function LandingPage() {
         </section>
 
         {/* ── 2. Stats bar ── */}
-        <section className="border-y border-stone-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+        <section className="border-y border-stone-200/70 dark:border-slate-800/70 landing-surface">
           <div className="mx-auto max-w-7xl px-6 py-8">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 divide-x-0 sm:divide-x divide-stone-100 dark:divide-slate-800">
               <Stat value="98.5 %" label="Précision OCR plaques (ANPR)" />
@@ -145,7 +145,7 @@ export default function LandingPage() {
         </section>
 
         {/* ── 3. Six modules ── */}
-        <section className="bg-stone-50 dark:bg-slate-950 border-b border-stone-200 dark:border-slate-800">
+        <section className="landing-surface-alt border-b border-stone-200/70 dark:border-slate-800/70">
           <div className="mx-auto max-w-7xl px-6 py-16 lg:py-20">
             <SectionHeader
               eyebrow="Sommaire de l'application"
@@ -201,7 +201,7 @@ export default function LandingPage() {
         </section>
 
         {/* ── 4. Infraction flow ── */}
-        <section className="bg-white dark:bg-slate-900 border-b border-stone-200 dark:border-slate-800">
+        <section className="landing-surface border-b border-stone-200/70 dark:border-slate-800/70">
           <div className="mx-auto max-w-7xl px-6 py-16 lg:py-20">
             <SectionHeader
               eyebrow="Cycle de l'amende"
@@ -264,7 +264,7 @@ export default function LandingPage() {
         </section>
 
         {/* ── 5. Payment methods ── */}
-        <section className="bg-stone-50 dark:bg-slate-950 border-b border-stone-200 dark:border-slate-800">
+        <section className="landing-surface-alt border-b border-stone-200/70 dark:border-slate-800/70">
           <div className="mx-auto max-w-7xl px-6 py-16 lg:py-20">
             <SectionHeader
               eyebrow="Système de paiement gouvernemental"
@@ -302,7 +302,7 @@ export default function LandingPage() {
         </section>
 
         {/* ── 6. Three portals ── */}
-        <section className="bg-white dark:bg-slate-900 border-b border-stone-200 dark:border-slate-800">
+        <section className="landing-surface border-b border-stone-200/70 dark:border-slate-800/70">
           <div className="mx-auto max-w-7xl px-6 py-16 lg:py-20">
             <SectionHeader
               eyebrow="Accès par rôle"
@@ -361,7 +361,7 @@ export default function LandingPage() {
         </section>
 
         {/* ── 7. Roadmap ── */}
-        <section className="bg-stone-50 dark:bg-slate-950 border-b border-stone-200 dark:border-slate-800">
+        <section className="landing-surface-alt border-b border-stone-200/70 dark:border-slate-800/70">
           <div className="mx-auto max-w-7xl px-6 py-16 lg:py-20">
             <SectionHeader
               eyebrow="Vision & Feuille de route"
@@ -411,7 +411,7 @@ export default function LandingPage() {
         </section>
 
         {/* ── 8. CTA ── */}
-        <section className="bg-brand-700 dark:bg-brand-900">
+        <section className="relative bg-brand-700/90 dark:bg-brand-900/90 backdrop-blur-sm">
           <div className="mx-auto max-w-7xl px-6 py-16 text-center">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-white/90 mb-5">
               <ShieldCheck className="h-3 w-3" />
@@ -450,7 +450,7 @@ export default function LandingPage() {
       </main>
 
       {/* ── Footer ── */}
-      <footer className="border-t border-stone-200 dark:border-slate-800 bg-white dark:bg-slate-950">
+      <footer className="border-t border-stone-200/70 dark:border-slate-800/70 landing-surface">
         <div className="mx-auto max-w-7xl px-6 py-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
             <div className="flex items-center gap-3">

@@ -8,8 +8,8 @@ type Props = {
 };
 
 /**
- * Official Gabon palette watermark (green · gold · blue) for all app surfaces.
- * Content sits above a fixed, non-interactive flag layer; panels use glass styling.
+ * Official Gabon flag image watermark on all app surfaces (including landing).
+ * Content uses glass panels so text stays readable over the flag.
  */
 export function GabonBackdrop({
   children,
