@@ -12,7 +12,13 @@ import type { Database } from "@/lib/types/database";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
-export function ProfileForm({ profile }: { profile: Profile }) {
+export function ProfileForm({
+  profile,
+  onSuccess,
+}: {
+  profile: Profile;
+  onSuccess?: () => void;
+}) {
   const router = useRouter();
   const [form, setForm] = useState({
     full_name: profile.full_name ?? "",
@@ -58,6 +64,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
     setSuccess("Profile updated successfully.");
     setLoading(false);
     router.refresh();
+    onSuccess?.();
   };
 
   return (

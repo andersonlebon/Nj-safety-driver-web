@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Fraunces, JetBrains_Mono } from "next/font/google";
-import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { AppProviders } from "@/components/providers/AppProviders";
 import "./globals.css";
 
 const sans = Plus_Jakarta_Sans({
@@ -39,13 +39,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="en"
-      className={`${sans.variable} ${display.variable} ${mono.variable}`}
-      suppressHydrationWarning
-    >
-      <body className="min-h-screen bg-stone-50 dark:bg-slate-950 text-stone-900 dark:text-stone-100 antialiased">
-        <ThemeProvider>{children}</ThemeProvider>
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={`${sans.variable} ${display.variable} ${mono.variable} min-h-screen antialiased`}
+      >
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );

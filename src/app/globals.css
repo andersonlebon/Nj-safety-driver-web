@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --gabon-green: #006b3f;
+  --gabon-gold: #fcd116;
+  --gabon-blue: #121d4e;
+  --gabon-surface: rgba(255, 255, 255, 0.92);
+  --gabon-surface-dark: rgba(15, 23, 42, 0.92);
+}
+
+.dark {
+  --gabon-surface: rgba(15, 23, 42, 0.94);
+  --gabon-surface-dark: rgba(15, 23, 42, 0.94);
+}
+
 html,
 body {
   height: 100%;
@@ -13,6 +26,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-feature-settings: "cv11", "ss01", "ss03";
+  @apply text-stone-900 dark:text-stone-100;
 }
 
 /* Reserve the display serif for large, marketing-style headings.
@@ -63,8 +77,88 @@ pre {
 
   /* ─── Cards ───────────────────────────────────────────── */
   .card {
-    @apply bg-white rounded-xl border border-stone-200/80 shadow-card
-           dark:bg-slate-900 dark:border-slate-800;
+    @apply rounded-xl border border-stone-200/80 shadow-card
+           bg-white/80 backdrop-blur-sm
+           dark:bg-slate-900/75 dark:border-slate-800/80;
+  }
+
+  /* ─── Gabon flag watermark (filigrane) ─────────────────── */
+  .gabon-backdrop,
+  .gabon-backdrop-prominent {
+    background: transparent;
+  }
+  .gabon-flag-layer {
+    position: fixed;
+    inset: -2%;
+    z-index: 0;
+    pointer-events: none;
+    background-image: url("/images/gabon-flag.png");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0.52;
+    filter: blur(6px) saturate(1.1) brightness(1.05);
+    transform: scale(1.04);
+    will-change: transform;
+  }
+  .gabon-backdrop-prominent .gabon-flag-layer {
+    opacity: 0.58;
+    filter: blur(5px) saturate(1.12) brightness(1.02);
+  }
+  .dark .gabon-flag-layer {
+    opacity: 0.56;
+    filter: blur(7px) saturate(1.05) brightness(0.82);
+  }
+  .dark .gabon-backdrop-prominent .gabon-flag-layer {
+    opacity: 0.62;
+    filter: blur(6px) saturate(1.08) brightness(0.88);
+  }
+  /* Light scrim — readability without hiding the flag */
+  .gabon-flag-shine {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.42) 0%,
+      rgba(255, 255, 255, 0.28) 50%,
+      rgba(255, 255, 255, 0.38) 100%
+    );
+  }
+  .dark .gabon-flag-shine {
+    background: linear-gradient(
+      180deg,
+      rgba(15, 23, 42, 0.38) 0%,
+      rgba(15, 23, 42, 0.22) 50%,
+      rgba(15, 23, 42, 0.42) 100%
+    );
+  }
+  .gabon-dialog-accent {
+    @apply absolute top-0 left-0 right-0 h-1 rounded-t-2xl;
+    background: linear-gradient(
+      90deg,
+      var(--gabon-green) 0%,
+      var(--gabon-green) 33%,
+      var(--gabon-gold) 33%,
+      var(--gabon-gold) 66%,
+      var(--gabon-blue) 66%,
+      var(--gabon-blue) 100%
+    );
+  }
+  .glass-panel {
+    @apply bg-white/80 dark:bg-slate-900/75 backdrop-blur-sm border border-stone-200/70 dark:border-slate-800/80;
+  }
+
+  /* Landing / marketing — frosted glass; flag visible between sections */
+  .landing-surface {
+    @apply bg-white/50 dark:bg-slate-900/45 backdrop-blur-sm;
+  }
+  .landing-surface-alt {
+    @apply bg-white/40 dark:bg-slate-950/35 backdrop-blur-sm;
+  }
+  .landing-hero {
+    @apply bg-white/35 dark:bg-slate-950/30 backdrop-blur-[2px];
   }
 
   /* ─── Badges ──────────────────────────────────────────── */

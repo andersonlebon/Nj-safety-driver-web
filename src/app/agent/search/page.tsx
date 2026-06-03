@@ -5,24 +5,30 @@ import { Card, CardBody } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Alert } from "@/components/ui/Alert";
-import { formatCurrency, formatDate, normalizePlate } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@/lib/utils";
+import { normalizePlateForCountry } from "@/lib/vehicles";
+import { DEFAULT_COUNTRY } from "@/lib/countries";
+import { CountryBadge } from "@/components/vehicles/CountryBadge";
 import { lastKnownLocation, type TrackingEvent } from "@/lib/tracking";
 import {
   LastKnownLocationBadge,
   VehicleTrackingTimeline,
 } from "@/components/tracking/VehicleTrackingTimeline";
 import { LogVehicleCheckIn } from "@/components/tracking/LogVehicleCheckIn";
-import { SearchForm } from "./SearchForm";
-import { CreateInfractionForm } from "./CreateInfractionForm";
+import { SearchPlateDialog } from "./SearchPlateDialog";
+import { CreateInfractionDialog } from "./CreateInfractionDialog";
 import { requireRole } from "@/lib/auth";
 
 export default async function AgentSearchPage({
   searchParams,
 }: {
-  searchParams: { plate?: string };
+  searchParams: { plate?: string; country?: string };
 }) {
   const rawPlate = searchParams.plate?.trim();
-  const plate = rawPlate ? normalizePlate(rawPlate) : null;
+  const country = searchParams.country?.trim() || DEFAULT_COUNTRY;
+  const plate = rawPlate
+    ? normalizePlateForCountry(rawPlate, country)
+    : null;
 
   const supabase = createClient();
   const profile = await requireRole(["agent", "admin"]);
@@ -35,10 +41,11 @@ export default async function AgentSearchPage({
       .from("vehicles")
       .select("*")
       .eq("plate_number", plate)
+      .eq("registration_country", country)
       .maybeSingle();
 
     vehicle = v;
-    if (v) {
+    if (v?.owner_id) {
       const { data: o } = await supabase
         .from("profiles")
         .select(
@@ -56,9 +63,17 @@ export default async function AgentSearchPage({
           .from("infractions")
           .select("*")
           .eq("plate_number", plate)
+          .eq("registration_country", country)
           .order("created_at", { ascending: false })
       ).data
     : null;
+
+  const unpaidTotal = (infractions ?? [])
+    .filter((i) => i.status === "unpaid")
+    .reduce((s, i) => s + Number(i.fine_amount ?? 0), 0);
+  const unpaidCount = (infractions ?? []).filter(
+    (i) => i.status === "unpaid"
+  ).length;
 
   const trackingRows = plate
     ? (
@@ -87,20 +102,47 @@ export default async function AgentSearchPage({
     <div className="space-y-6">
       <PageHeader
         title="Plate search"
-        description="Look up a vehicle by plate number to view details, tracking history, and file infractions."
+        description="Look up a vehicle by plate number and country to view details, fines, tracking, and file infractions."
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <SearchPlateDialog
+              initialPlate={rawPlate}
+              initialCountry={country}
+            />
+            {plate && (
+              <CreateInfractionDialog
+                plate={plate}
+                vehicleId={vehicle?.id ?? null}
+                driverId={vehicle?.owner_id ?? null}
+                agentId={profile.id}
+              />
+            )}
+          </div>
+        }
       />
-
-      <Card>
-        <CardBody>
-          <SearchForm initialPlate={rawPlate} />
-        </CardBody>
-      </Card>
 
       {plate && !vehicle && (
         <Alert variant="warning">
-          No registered vehicle found for plate <strong>{plate}</strong>. You can
-          still file an infraction and log a check-in for this plate.
+          No registered vehicle found for plate <strong>{plate}</strong> (
+          <CountryBadge code={country} />
+          ). You can still file an infraction and log a check-in for this plate.
         </Alert>
+      )}
+
+      {plate && unpaidCount > 0 && (
+        <Alert variant="error">
+          <strong>{unpaidCount} unpaid infraction{unpaidCount !== 1 ? "s" : ""}</strong>{" "}
+          — outstanding total {formatCurrency(unpaidTotal)} for plate{" "}
+          <strong>{plate}</strong>.
+        </Alert>
+      )}
+
+      {!plate && (
+        <EmptyState
+          icon={<Search className="h-8 w-8" />}
+          title="Search for a plate"
+          description='Click "Search plate" above to look up a vehicle and its history.'
+        />
       )}
 
       {plate && lastLocation && (
@@ -120,6 +162,7 @@ export default async function AgentSearchPage({
                 </h3>
                 <LogVehicleCheckIn
                   plate={plate}
+                  country={country}
                   vehicleId={vehicle?.id ?? null}
                 />
               </div>
@@ -132,6 +175,12 @@ export default async function AgentSearchPage({
               ) : (
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
                   <DetailRow label="Plate" value={vehicle.plate_number} />
+                  <DetailRow
+                    label="Country"
+                    value={
+                      <CountryBadge code={vehicle.registration_country} />
+                    }
+                  />
                   <DetailRow label="Brand" value={vehicle.brand || "—"} />
                   <DetailRow label="Model" value={vehicle.model || "—"} />
                   <DetailRow label="Color" value={vehicle.color || "—"} />
@@ -159,20 +208,6 @@ export default async function AgentSearchPage({
                   <DetailRow label="Address" value={owner?.address || "—"} />
                 </dl>
               )}
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardBody>
-              <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100 mb-4">
-                File new infraction
-              </h3>
-              <CreateInfractionForm
-                plate={plate}
-                vehicleId={vehicle?.id ?? null}
-                driverId={vehicle?.owner_id ?? null}
-                agentId={profile.id}
-              />
             </CardBody>
           </Card>
 
@@ -247,7 +282,7 @@ function DetailRow({
   value,
 }: {
   label: string;
-  value: string | number;
+  value: React.ReactNode;
 }) {
   return (
     <>

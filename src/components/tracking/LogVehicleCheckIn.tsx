@@ -11,9 +11,11 @@ import { logVehicleCheckIn } from "@/app/agent/actions";
 
 export function LogVehicleCheckIn({
   plate,
+  country = "GA",
   vehicleId,
 }: {
   plate: string;
+  country?: string;
   vehicleId: string | null;
 }) {
   const [open, setOpen] = useState(false);
@@ -31,6 +33,7 @@ export function LogVehicleCheckIn({
     startTransition(async () => {
       const result = await logVehicleCheckIn({
         plate,
+        country,
         vehicleId,
         location: location.trim(),
         notes: notes.trim() || null,
