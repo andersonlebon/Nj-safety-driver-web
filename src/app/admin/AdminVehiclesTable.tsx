@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Car, Eye } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { CountryBadge } from "@/components/vehicles/CountryBadge";
@@ -12,6 +13,13 @@ import { formatDate } from "@/lib/utils";
 import { VERIFICATION_LABELS } from "@/lib/verification";
 import { isForeignVehicle } from "@/lib/vehicles";
 import type { TrackingEvent } from "@/lib/tracking";
+import type { TransitIdDocRow, TransitIdDocUrls } from "@/lib/transit-id-documents";
+import {
+  assessTransitIdAuthenticity,
+  TRANSIT_ID_DOC_TYPE,
+  TRANSIT_ID_LABEL_BACK,
+  TRANSIT_ID_LABEL_FRONT,
+} from "@/lib/transit-id-documents";
 import type { Database, VerificationStatus } from "@/lib/types/database";
 
 type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
@@ -32,16 +40,23 @@ export function AdminVehiclesTable({
   const [selected, setSelected] = useState<Vehicle | null>(null);
   const [infractions, setInfractions] = useState<Infraction[]>([]);
   const [trackingEvents, setTrackingEvents] = useState<TrackingEvent[]>([]);
+  const [transitIdDocuments, setTransitIdDocuments] = useState<TransitIdDocRow[]>([]);
+  const [transitIdUrls, setTransitIdUrls] = useState<TransitIdDocUrls>({
+    front: null,
+    back: null,
+  });
   const [, startTransition] = useTransition();
 
   const open = (vehicle: Vehicle) => {
     setSelected(vehicle);
     setInfractions([]);
     setTrackingEvents([]);
+    setTransitIdDocuments([]);
+    setTransitIdUrls({ front: null, back: null });
     startTransition(async () => {
       const supabase = createClient();
       const country = vehicle.registration_country ?? "GA";
-      const [{ data: inf }, { data: tracking }] = await Promise.all([
+      const [{ data: inf }, { data: tracking }, { data: idDocs }] = await Promise.all([
         supabase
           .from("infractions")
           .select("*")
@@ -54,8 +69,31 @@ export function AdminVehiclesTable({
           .eq("plate_number", vehicle.plate_number)
           .order("created_at", { ascending: false })
           .limit(20),
+        supabase
+          .from("documents")
+          .select("label, file_path, file_name, verification_status")
+          .eq("vehicle_id", vehicle.id)
+          .eq("doc_type", TRANSIT_ID_DOC_TYPE),
       ]);
       setInfractions(inf ?? []);
+      const docs = (idDocs ?? []) as TransitIdDocRow[];
+      setTransitIdDocuments(docs);
+      const paths = docs.map((d) => d.file_path).filter(Boolean);
+      const signedEntries = await Promise.all(
+        paths.map(async (path) => {
+          const { data } = await supabase.storage
+            .from("documents")
+            .createSignedUrl(path, 3600);
+          return [path, data?.signedUrl ?? ""] as const;
+        })
+      );
+      const signed = Object.fromEntries(signedEntries);
+      const frontPath = docs.find((d) => d.label === TRANSIT_ID_LABEL_FRONT)?.file_path;
+      const backPath = docs.find((d) => d.label === TRANSIT_ID_LABEL_BACK)?.file_path;
+      setTransitIdUrls({
+        front: frontPath ? signed[frontPath] ?? null : null,
+        back: backPath ? signed[backPath] ?? null : null,
+      });
       setTrackingEvents(
         (tracking ?? []).map((e) => ({
           id: e.id,
@@ -227,7 +265,17 @@ export function AdminVehiclesTable({
               infractions={infractions}
               trackingEvents={trackingEvents}
               showOwner
+              transitIdDocuments={transitIdDocuments}
+              transitIdUrls={transitIdUrls}
+              showIdAuthenticityCheck
             />
+            {selected.is_border_transit &&
+              !assessTransitIdAuthenticity(transitIdDocuments).complete && (
+                <Alert variant="warning">
+                  Approve only after both front and back ID photos are on file and
+                  match the driver.
+                </Alert>
+              )}
             <div className="pt-2 border-t border-stone-200 dark:border-slate-800">
               <p className="text-sm font-medium text-stone-900 dark:text-stone-100 mb-2">
                 Verification

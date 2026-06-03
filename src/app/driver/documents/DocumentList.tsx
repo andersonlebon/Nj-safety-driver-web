@@ -29,6 +29,7 @@ const labels: Record<DocumentType, string> = {
   technical_inspection: "Technical inspection",
   vehicle_photo: "Vehicle photo",
   vehicle_registration: "Vehicle registration",
+  passport: "Passport / travel ID",
   other: "Other",
 };
 

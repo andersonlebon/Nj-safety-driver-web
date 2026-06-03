@@ -29,6 +29,8 @@ const UNIQUE_CONSTRAINT_MESSAGES: Record<string, string> = {
   users_email_key: "An account with that email already exists.",
   vehicles_plate_number_unique:
     "This plate number is already registered.",
+  vehicles_plate_country_unique:
+    "This plate is already registered for that country.",
   documents_pkey: "This document has already been uploaded.",
 };
 
@@ -270,6 +272,15 @@ export function friendlyError(err: unknown): string {
 
   const fromNetwork = handleNetworkMessage(name, message);
   if (fromNetwork) return fromNetwork;
+
+  const lower = message.toLowerCase();
+  if (
+    lower.includes("is_border_transit") ||
+    lower.includes("border_checkpoint") ||
+    lower.includes("registration_country")
+  ) {
+    return "Border transit database setup is incomplete. An admin must run npm run db:push on production.";
+  }
 
   if (typeof code === "string" && /^4\d\d$|^5\d\d$/.test(code)) {
     if (code === "404") return "We couldn't find what you were looking for.";

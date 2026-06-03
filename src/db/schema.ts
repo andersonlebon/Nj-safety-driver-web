@@ -23,6 +23,7 @@ export const documentType = pgEnum("document_type", [
   "technical_inspection",
   "vehicle_photo",
   "vehicle_registration",
+  "passport",
   "other",
 ]);
 export const verificationStatus = pgEnum("verification_status", [

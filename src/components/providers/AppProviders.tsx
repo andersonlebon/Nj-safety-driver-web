@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { ChunkLoadRecovery } from "@/components/ChunkLoadRecovery";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { GabonBackdrop } from "@/components/theme/GabonBackdrop";
 
@@ -11,6 +12,7 @@ import { GabonBackdrop } from "@/components/theme/GabonBackdrop";
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider>
+      <ChunkLoadRecovery />
       <GabonBackdrop variant="prominent">{children}</GabonBackdrop>
     </ThemeProvider>
   );

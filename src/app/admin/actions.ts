@@ -133,6 +133,34 @@ export async function updateVehicleVerification(
   if (!vehicleId) return { ok: false, error: "Missing vehicle id." };
 
   const supabase = createClient();
+
+  if (status === "active") {
+    const { data: vehicle } = await supabase
+      .from("vehicles")
+      .select("is_border_transit")
+      .eq("id", vehicleId)
+      .maybeSingle();
+
+    if (vehicle?.is_border_transit) {
+      const { data: idDocs } = await supabase
+        .from("documents")
+        .select("label, file_path, file_name")
+        .eq("vehicle_id", vehicleId)
+        .eq("doc_type", "passport");
+
+      const { assessTransitIdAuthenticity } = await import(
+        "@/lib/transit-id-documents"
+      );
+      if (!assessTransitIdAuthenticity(idDocs ?? []).complete) {
+        return {
+          ok: false,
+          error:
+            "Cannot approve until passport/ID front and back photos are on file.",
+        };
+      }
+    }
+  }
+
   const { error } = await supabase
     .from("vehicles")
     .update({ verification_status: status })

@@ -19,6 +19,7 @@ export type DocumentType =
   | "technical_inspection"
   | "vehicle_photo"
   | "vehicle_registration"
+  | "passport"
   | "other";
 
 export type Json =

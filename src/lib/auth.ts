@@ -80,3 +80,24 @@ export async function requireRole(allowed: UserRole[]): Promise<Profile> {
   }
   return profile;
 }
+
+/** For server actions — return an error instead of redirect (avoids client "Failed to fetch"). */
+export async function requireRoleForAction(
+  allowed: UserRole[]
+): Promise<Profile | { ok: false; error: string }> {
+  try {
+    const profile = await getCurrentProfile();
+    if (!profile) {
+      return { ok: false, error: "Your session expired. Please sign in again." };
+    }
+    if (!allowed.includes(profile.role)) {
+      return { ok: false, error: "You do not have permission to perform this action." };
+    }
+    return profile;
+  } catch {
+    return {
+      ok: false,
+      error: "Network problem. Please check your connection and try again.",
+    };
+  }
+}

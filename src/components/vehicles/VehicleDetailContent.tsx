@@ -8,7 +8,9 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { VERIFICATION_LABELS } from "@/lib/verification";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { isForeignVehicle } from "@/lib/vehicles";
+import { TransitIdDocumentGallery } from "@/components/vehicles/TransitIdDocumentGallery";
 import type { TrackingEvent } from "@/lib/tracking";
+import type { TransitIdDocRow, TransitIdDocUrls } from "@/lib/transit-id-documents";
 import type { Database, VerificationStatus } from "@/lib/types/database";
 
 type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
@@ -22,6 +24,9 @@ type Props = {
   trackingEvents?: TrackingEvent[];
   agentSearchUrl?: string;
   showOwner?: boolean;
+  transitIdDocuments?: TransitIdDocRow[];
+  transitIdUrls?: TransitIdDocUrls;
+  showIdAuthenticityCheck?: boolean;
 };
 
 export function VehicleDetailContent({
@@ -32,6 +37,9 @@ export function VehicleDetailContent({
   trackingEvents = [],
   agentSearchUrl,
   showOwner = true,
+  transitIdDocuments = [],
+  transitIdUrls = { front: null, back: null },
+  showIdAuthenticityCheck = false,
 }: Props) {
   const status = (vehicle.verification_status ?? "pending_review") as VerificationStatus;
   const unpaid = infractions.filter((i) => i.status === "unpaid");
@@ -120,6 +128,12 @@ export function VehicleDetailContent({
             <dd>{vehicle.transit_driver_phone}</dd>
           </>
         )}
+        {vehicle.transit_passport_id && (
+          <>
+            <dt className="text-stone-500 dark:text-slate-400">Passport / ID no.</dt>
+            <dd className="font-mono">{vehicle.transit_passport_id}</dd>
+          </>
+        )}
         {vehicle.foreign_notes && (
           <>
             <dt className="text-stone-500 dark:text-slate-400 col-span-2">Notes</dt>
@@ -127,6 +141,17 @@ export function VehicleDetailContent({
           </>
         )}
       </dl>
+
+      {(vehicle.is_border_transit ||
+        vehicle.transit_passport_id ||
+        transitIdDocuments.length > 0) && (
+        <TransitIdDocumentGallery
+          passportNumber={vehicle.transit_passport_id}
+          documents={transitIdDocuments}
+          urls={transitIdUrls}
+          showAuthenticityCheck={showIdAuthenticityCheck}
+        />
+      )}
 
       {showOwner && owner && (
         <div className="text-sm">

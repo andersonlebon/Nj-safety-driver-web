@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { FormDialog } from "@/components/ui/FormDialog";
 import { StepWizard, StepWizardFooter } from "@/components/ui/StepWizard";
 import { Input } from "@/components/ui/Input";
@@ -9,10 +10,23 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { Alert } from "@/components/ui/Alert";
 import { PlateScanField } from "@/components/camera/PlateScanField";
+import {
+  EvidenceSlot,
+  PHOTO_ACCEPT,
+  type EvidenceSlotValue,
+} from "@/components/uploads/EvidenceSlot";
 import { BORDER_CHECKPOINTS, COUNTRIES, type CountryCode, type BorderCheckpoint } from "@/lib/countries";
 import { registerBorderVehicle } from "@/app/agent/actions";
+import { friendlyError } from "@/lib/errors";
+import { uploadTransitIdPhoto, removeTransitIdPaths } from "@/lib/border-id-upload";
+import { sameIdFile } from "@/lib/transit-id-documents";
 
-const STEPS = ["Plate & country", "Driver & checkpoint", "Vehicle details"];
+const STEPS = [
+  "Plate & country",
+  "Driver & passport",
+  "ID front & back",
+  "Vehicle details",
+];
 
 type BorderForm = {
   registration_country: CountryCode;
@@ -28,6 +42,8 @@ type BorderForm = {
   foreign_notes: string;
 };
 
+const emptyEvidence = (): EvidenceSlotValue => ({ file: null, previewUrl: null });
+
 const emptyForm = (): BorderForm => ({
   registration_country: "CM",
   plate_number: "",
@@ -42,32 +58,94 @@ const emptyForm = (): BorderForm => ({
   foreign_notes: "",
 });
 
-export function BorderRegisterDialog() {
+export function BorderRegisterDialog({ agentId }: { agentId: string }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<BorderForm>(emptyForm);
+  const [idFront, setIdFront] = useState<EvidenceSlotValue>(emptyEvidence);
+  const [idBack, setIdBack] = useState<EvidenceSlotValue>(emptyEvidence);
+  const [passportExpires, setPassportExpires] = useState("");
 
   const reset = () => {
     setStep(0);
     setError(null);
     setForm(emptyForm());
+    setIdFront(emptyEvidence());
+    setIdBack(emptyEvidence());
+    setPassportExpires("");
   };
 
   const submit = (close: () => void) => {
+    setError(null);
     startTransition(async () => {
-      const result = await registerBorderVehicle(form);
-      if (!result.ok) {
-        setError(result.error);
-        return;
+      const supabase = createClient();
+      const uploadedPaths: string[] = [];
+
+      try {
+        if (!idFront.file || !idBack.file) {
+          setError("Upload photos of both the front and back of the passport or ID.");
+          return;
+        }
+        if (sameIdFile(idFront.file, idBack.file)) {
+          setError("Use two different photos — one for the front and one for the back.");
+          return;
+        }
+
+        const frontUp = await uploadTransitIdPhoto(supabase, agentId, "front", idFront.file);
+        if (!frontUp.ok) {
+          setError(frontUp.error);
+          return;
+        }
+        uploadedPaths.push(frontUp.path);
+
+        const backUp = await uploadTransitIdPhoto(supabase, agentId, "back", idBack.file);
+        if (!backUp.ok) {
+          await removeTransitIdPaths(supabase, uploadedPaths);
+          setError(backUp.error);
+          return;
+        }
+        uploadedPaths.push(backUp.path);
+
+        const expiresIso = passportExpires
+          ? new Date(passportExpires).toISOString()
+          : null;
+
+        const result = await registerBorderVehicle({
+          ...form,
+          id_documents: {
+            front: {
+              file_path: frontUp.path,
+              file_name: frontUp.fileName,
+              expires_at: expiresIso,
+            },
+            back: {
+              file_path: backUp.path,
+              file_name: backUp.fileName,
+              expires_at: expiresIso,
+            },
+          },
+        });
+
+        if (!result.ok) {
+          await removeTransitIdPaths(supabase, uploadedPaths);
+          setError(result.error);
+          return;
+        }
+
+        const plate = form.plate_number;
+        const country = form.registration_country;
+        reset();
+        close();
+        router.refresh();
+        router.push(
+          `/agent/search?plate=${encodeURIComponent(plate)}&country=${country}`
+        );
+      } catch (err) {
+        await removeTransitIdPaths(supabase, uploadedPaths);
+        setError(friendlyError(err));
       }
-      reset();
-      close();
-      router.refresh();
-      router.push(
-        `/agent/search?plate=${encodeURIComponent(form.plate_number)}&country=${form.registration_country}`
-      );
     });
   };
 
@@ -75,7 +153,7 @@ export function BorderRegisterDialog() {
     <FormDialog
       triggerLabel="Register border crossing"
       title="Border vehicle registration"
-      description="Register a foreign or transit vehicle entering Gabon without a full driver account."
+      description="Register a foreign vehicle with passport/ID verification (front and back)."
       modalClassName="max-w-xl"
     >
       {({ close }) => (
@@ -126,11 +204,13 @@ export function BorderRegisterDialog() {
                 }
               />
               <Input
-                label="Passport / ID"
+                label="Passport / national ID number"
                 value={form.transit_passport_id}
                 onChange={(e) =>
                   setForm((p) => ({ ...p, transit_passport_id: e.target.value }))
                 }
+                required
+                placeholder="As printed on the document"
               />
               <Select
                 label="Border checkpoint"
@@ -150,6 +230,40 @@ export function BorderRegisterDialog() {
           )}
 
           {step === 2 && (
+            <div className="space-y-4">
+              <Alert variant="info">
+                Photograph <strong>both sides</strong> of the passport or national ID.
+                Admins compare front and back to confirm authenticity before approval.
+              </Alert>
+              <EvidenceSlot
+                title="Front — photo page"
+                description="Name, photo, and document number must be readable."
+                required
+                accept={PHOTO_ACCEPT}
+                value={idFront}
+                onChange={setIdFront}
+                showExpiry={false}
+              />
+              <EvidenceSlot
+                title="Back — security / barcode side"
+                description="MRZ, hologram, or national ID security features."
+                required
+                accept={PHOTO_ACCEPT}
+                value={idBack}
+                onChange={setIdBack}
+                showExpiry={false}
+              />
+              <Input
+                label="Document expiry date"
+                type="date"
+                value={passportExpires}
+                onChange={(e) => setPassportExpires(e.target.value)}
+                required
+              />
+            </div>
+          )}
+
+          {step === 3 && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <Input label="Brand" value={form.brand} onChange={(e) => setForm((p) => ({ ...p, brand: e.target.value }))} />
@@ -176,9 +290,29 @@ export function BorderRegisterDialog() {
                 setError("Plate is required.");
                 return;
               }
-              if (step === 1 && !form.transit_driver_name.trim()) {
-                setError("Driver name is required.");
-                return;
+              if (step === 1) {
+                if (!form.transit_driver_name.trim()) {
+                  setError("Driver name is required.");
+                  return;
+                }
+                if (!form.transit_passport_id.trim()) {
+                  setError("Passport or ID number is required.");
+                  return;
+                }
+              }
+              if (step === 2) {
+                if (!idFront.file || !idBack.file) {
+                  setError("Upload both front and back photos of the ID.");
+                  return;
+                }
+                if (sameIdFile(idFront.file, idBack.file)) {
+                  setError("Front and back must be different photos.");
+                  return;
+                }
+                if (!passportExpires) {
+                  setError("Document expiry date is required.");
+                  return;
+                }
               }
               setError(null);
               setStep((s) => s + 1);
