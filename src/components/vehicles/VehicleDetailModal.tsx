@@ -1,7 +1,9 @@
 "use client";
 
 import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
 import { VehicleDetailContent } from "./VehicleDetailContent";
+import { vehicleDetailSectionLinks } from "@/lib/vehicle-detail-sections";
 import type { TrackingEvent } from "@/lib/tracking";
 import type { Database } from "@/lib/types/database";
 
@@ -34,8 +36,20 @@ export function VehicleDetailModal({
       open={open}
       onClose={onClose}
       title={`Vehicle ${vehicle.plate_number}`}
-      description="Full registration, fines, and activity history."
+      description="Use the section links to jump to registration, fines, or tracking."
       className="max-w-xl"
+      sectionNav={vehicleDetailSectionLinks({
+        showOwner,
+        hasInfractions: (infractions?.length ?? 0) > 0,
+        hasTracking: (trackingEvents?.length ?? 0) > 0,
+      })}
+      footer={
+        <div className="flex justify-end">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+      }
     >
       <VehicleDetailContent
         vehicle={vehicle}

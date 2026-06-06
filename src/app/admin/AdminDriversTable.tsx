@@ -75,8 +75,7 @@ export function AdminDriversTable({
                 <td className="py-2 pr-4" onClick={(e) => e.stopPropagation()}>
                   <Button
                     type="button"
-                    variant="secondary"
-                    className="text-xs py-1.5 px-2.5"
+                    className="text-xs py-1.5 px-3 min-w-[6.5rem] shadow-sm"
                     onClick={() => open(d)}
                   >
                     <Eye className="h-3.5 w-3.5 mr-1" />
@@ -94,14 +93,32 @@ export function AdminDriversTable({
           open={Boolean(selected)}
           onClose={close}
           title={selected.full_name || selected.email || "Driver details"}
-          description="Review account information and apply verification or role changes."
+          description="Jump to profile, role, or verification — actions stay pinned at the bottom."
           className="max-w-lg"
+          sectionNav={[
+            { id: "driver-detail-profile", label: "Profile" },
+            { id: "driver-detail-role", label: "Role" },
+            { id: "driver-detail-verification", label: "Verification" },
+          ]}
+          footer={
+            <div className="flex flex-col-reverse sm:flex-row sm:items-end gap-3 sm:justify-between">
+              <Button type="button" variant="secondary" onClick={close} className="w-full sm:w-auto">
+                Close
+              </Button>
+              <div className="flex-1 min-w-0 w-full">
+                <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-slate-400 mb-2">
+                  Driver verification
+                </p>
+                <DriverVerificationPanel
+                  userId={selected.id}
+                  status={selected.verification_status ?? "pending_documents"}
+                  adminMessage={selected.admin_message}
+                />
+              </div>
+            </div>
+          }
         >
-          <DriverDetailModalBody
-            driver={selected}
-            adminId={adminId}
-            onClose={close}
-          />
+          <DriverDetailModalBody driver={selected} adminId={adminId} />
         </Modal>
       )}
     </>
@@ -111,15 +128,16 @@ export function AdminDriversTable({
 function DriverDetailModalBody({
   driver,
   adminId,
-  onClose,
 }: {
   driver: Driver;
   adminId: string;
-  onClose: () => void;
 }) {
   return (
     <div className="space-y-6">
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm rounded-lg border border-stone-200 dark:border-slate-800 p-4 bg-stone-50/50 dark:bg-slate-900/40">
+      <dl
+        id="driver-detail-profile"
+        className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm rounded-lg border border-stone-200 dark:border-slate-800 p-4 bg-stone-50/50 dark:bg-slate-900/40 scroll-mt-3"
+      >
         <dt className="text-stone-500 dark:text-slate-400">Email</dt>
         <dd className="font-medium text-stone-900 dark:text-stone-100 break-all">
           {driver.email || "—"}
@@ -162,7 +180,10 @@ function DriverDetailModalBody({
         )}
       </dl>
 
-      <div className="space-y-3 border-t border-stone-200 dark:border-slate-800 pt-4">
+      <div
+        id="driver-detail-role"
+        className="space-y-3 border-t border-stone-200 dark:border-slate-800 pt-4 scroll-mt-3"
+      >
         <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
           Change role
         </h3>
@@ -173,21 +194,12 @@ function DriverDetailModalBody({
         />
       </div>
 
-      <div className="space-y-3 border-t border-stone-200 dark:border-slate-800 pt-4">
-        <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
-          Driver verification
-        </h3>
-        <DriverVerificationPanel
-          userId={driver.id}
-          status={driver.verification_status ?? "pending_documents"}
-          adminMessage={driver.admin_message}
-        />
-      </div>
-
-      <div className="flex justify-end pt-2">
-        <Button type="button" variant="secondary" onClick={onClose}>
-          Close
-        </Button>
+      <div
+        id="driver-detail-verification"
+        className="rounded-lg border border-dashed border-stone-200 dark:border-slate-700 p-3 text-sm text-stone-600 dark:text-slate-400 scroll-mt-3"
+      >
+        Approve, reject, or message this driver using the verification actions
+        pinned at the bottom of the dialog — they stay visible while you scroll.
       </div>
     </div>
   );

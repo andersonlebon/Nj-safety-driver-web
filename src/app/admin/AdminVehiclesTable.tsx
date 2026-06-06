@@ -21,6 +21,7 @@ import {
   TRANSIT_ID_LABEL_FRONT,
 } from "@/lib/transit-id-documents";
 import type { Database, VerificationStatus } from "@/lib/types/database";
+import { vehicleDetailSectionLinks } from "@/lib/vehicle-detail-sections";
 
 type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
 type Infraction = Database["public"]["Tables"]["infractions"]["Row"];
@@ -220,12 +221,11 @@ export function AdminVehiclesTable({
                   <td className="py-2 pr-4" onClick={(e) => e.stopPropagation()}>
                     <Button
                       type="button"
-                      variant="secondary"
-                      className="text-xs py-1.5 px-2.5"
+                      className="text-xs py-1.5 px-3 min-w-[6.5rem] shadow-sm"
                       onClick={() => open(v)}
                     >
                       <Eye className="h-3.5 w-3.5 mr-1" />
-                      View
+                      View details
                     </Button>
                   </td>
                 </tr>
@@ -240,8 +240,40 @@ export function AdminVehiclesTable({
           open
           onClose={close}
           title={`Vehicle ${selected.plate_number}`}
-          description="Review registration details and update verification status."
+          description="Jump to any section below — verification actions stay pinned at the bottom."
           className="max-w-xl"
+          sectionNav={vehicleDetailSectionLinks({
+            showId:
+              selected.is_border_transit ||
+              Boolean(selected.transit_passport_id) ||
+              transitIdDocuments.length > 0,
+            showOwner: Boolean(
+              selectedOwner ||
+                selected.transit_driver_name ||
+                selected.transit_driver_phone
+            ),
+            hasInfractions: infractions.length > 0,
+            hasTracking: trackingEvents.length > 0,
+          })}
+          footer={
+            <div className="flex flex-col-reverse sm:flex-row sm:items-center gap-3 sm:justify-between">
+              <Button type="button" variant="secondary" onClick={close} className="w-full sm:w-auto">
+                Close
+              </Button>
+              <div className="flex-1 min-w-0 w-full">
+                <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-slate-400 mb-2">
+                  Verification
+                </p>
+                <VehicleVerificationActions
+                  vehicleId={selected.id}
+                  status={
+                    (selected.verification_status ??
+                      "pending_review") as VerificationStatus
+                  }
+                />
+              </div>
+            </div>
+          }
         >
           <div className="space-y-4">
             <VehicleDetailContent
@@ -276,18 +308,6 @@ export function AdminVehiclesTable({
                   match the driver.
                 </Alert>
               )}
-            <div className="pt-2 border-t border-stone-200 dark:border-slate-800">
-              <p className="text-sm font-medium text-stone-900 dark:text-stone-100 mb-2">
-                Verification
-              </p>
-              <VehicleVerificationActions
-                vehicleId={selected.id}
-                status={
-                  (selected.verification_status ??
-                    "pending_review") as VerificationStatus
-                }
-              />
-            </div>
           </div>
         </Modal>
       )}

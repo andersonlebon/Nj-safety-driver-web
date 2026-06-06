@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useId } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  ModalSectionNav,
+  type ModalSectionLink,
+} from "@/components/ui/ModalSectionNav";
 
 type Props = {
   open: boolean;
@@ -11,6 +15,10 @@ type Props = {
   description?: string;
   children: React.ReactNode;
   className?: string;
+  /** Sticky footer — stays visible while the body scrolls */
+  footer?: React.ReactNode;
+  /** Quick-jump pills under the title (sticky with header) */
+  sectionNav?: ModalSectionLink[];
 };
 
 export function Modal({
@@ -20,7 +28,12 @@ export function Modal({
   description,
   children,
   className,
+  footer,
+  sectionNav,
 }: Props) {
+  const scrollBodyId = useId().replace(/:/g, "");
+  const structured = Boolean(footer || sectionNav);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -37,7 +50,7 @@ export function Modal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <button
         type="button"
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -49,38 +62,76 @@ export function Modal({
         aria-modal="true"
         aria-labelledby="modal-title"
         className={cn(
-          "relative z-10 w-full max-w-lg max-h-[90vh] overflow-y-auto",
-          "rounded-2xl border border-stone-200/80 dark:border-slate-700/80",
+          "relative z-10 w-full sm:rounded-2xl",
+          "border border-stone-200/80 dark:border-slate-700/80",
           "bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-luxury",
           "ring-1 ring-brand-600/10 dark:ring-brand-500/15",
+          structured
+            ? "flex flex-col max-h-[min(92dvh,100%)] sm:max-h-[min(90vh,920px)] overflow-hidden"
+            : "max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl",
           className
         )}
       >
         <div className="gabon-dialog-accent" aria-hidden />
-        <div className="flex items-start justify-between gap-3 border-b border-stone-200 dark:border-slate-800 px-5 py-4">
-          <div>
-            <h2
-              id="modal-title"
-              className="text-base font-semibold text-stone-900 dark:text-stone-100"
+        <div
+          className={cn(
+            "shrink-0 border-b border-stone-200 dark:border-slate-800 px-4 sm:px-5 py-4",
+            structured && "bg-white/95 dark:bg-slate-900/95 backdrop-blur-md"
+          )}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <h2
+                id="modal-title"
+                className="text-base font-semibold text-stone-900 dark:text-stone-100"
+              >
+                {title}
+              </h2>
+              {description && (
+                <p className="text-sm text-stone-500 dark:text-slate-400 mt-0.5">
+                  {description}
+                </p>
+              )}
+              {sectionNav && sectionNav.length > 0 && (
+                <ModalSectionNav
+                  links={sectionNav}
+                  scrollContainerId={scrollBodyId}
+                />
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="shrink-0 rounded-lg p-1.5 text-stone-500 hover:bg-stone-100 dark:hover:bg-slate-800"
+              aria-label="Close"
             >
-              {title}
-            </h2>
-            {description && (
-              <p className="text-sm text-stone-500 dark:text-slate-400 mt-0.5">
-                {description}
-              </p>
-            )}
+              <X className="h-4 w-4" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-stone-500 hover:bg-stone-100 dark:hover:bg-slate-800"
-            aria-label="Close"
-          >
-            <X className="h-4 w-4" />
-          </button>
         </div>
-        <div className="px-5 py-4">{children}</div>
+
+        <div
+          id={scrollBodyId}
+          className={cn(
+            "px-4 sm:px-5 py-4",
+            structured && "flex-1 overflow-y-auto overscroll-contain"
+          )}
+        >
+          {children}
+        </div>
+
+        {footer && (
+          <div
+            className={cn(
+              "shrink-0 border-t border-stone-200 dark:border-slate-800",
+              "bg-white/95 dark:bg-slate-900/95 backdrop-blur-md",
+              "px-4 sm:px-5 py-3 sm:py-4",
+              "pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+            )}
+          >
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );

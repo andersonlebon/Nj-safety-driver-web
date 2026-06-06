@@ -56,9 +56,17 @@ export function VehicleDetailContent({
         ? "badge-unpaid"
         : "badge-pending";
 
+  const showIdSection =
+    vehicle.is_border_transit ||
+    vehicle.transit_passport_id ||
+    transitIdDocuments.length > 0;
+
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-start gap-3">
+      <div
+        id="vehicle-detail-summary"
+        className="flex flex-wrap items-start gap-3 scroll-mt-3"
+      >
         <div className="aspect-video w-full sm:w-48 rounded-lg overflow-hidden bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700">
           {photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -97,7 +105,10 @@ export function VehicleDetailContent({
         </div>
       </div>
 
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm rounded-lg border border-stone-200 dark:border-slate-800 p-4 bg-stone-50/50 dark:bg-slate-900/40">
+      <dl
+        id="vehicle-detail-registration"
+        className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm rounded-lg border border-stone-200 dark:border-slate-800 p-4 bg-stone-50/50 dark:bg-slate-900/40 scroll-mt-3"
+      >
         <dt className="text-stone-500 dark:text-slate-400">Registered</dt>
         <dd>{formatDate(vehicle.created_at)}</dd>
         <dt className="text-stone-500 dark:text-slate-400">Insurance</dt>
@@ -142,19 +153,19 @@ export function VehicleDetailContent({
         )}
       </dl>
 
-      {(vehicle.is_border_transit ||
-        vehicle.transit_passport_id ||
-        transitIdDocuments.length > 0) && (
+      {showIdSection && (
+        <div id="vehicle-detail-id" className="scroll-mt-3">
         <TransitIdDocumentGallery
           passportNumber={vehicle.transit_passport_id}
           documents={transitIdDocuments}
           urls={transitIdUrls}
           showAuthenticityCheck={showIdAuthenticityCheck}
         />
+        </div>
       )}
 
       {showOwner && owner && (
-        <div className="text-sm">
+        <div id="vehicle-detail-owner" className="text-sm scroll-mt-3">
           <p className="font-medium text-stone-900 dark:text-stone-100 mb-1">Owner</p>
           <p className="text-stone-600 dark:text-slate-400">
             {owner.full_name || owner.email || "—"}
@@ -163,7 +174,10 @@ export function VehicleDetailContent({
         </div>
       )}
 
-      <div className="rounded-lg border border-stone-200 dark:border-slate-800 p-4">
+      <div
+        id="vehicle-detail-fines"
+        className="rounded-lg border border-stone-200 dark:border-slate-800 p-4 scroll-mt-3"
+      >
         <div className="flex items-center gap-2 mb-2">
           <Wallet className="h-4 w-4 text-stone-500" />
           <p className="text-sm font-semibold text-stone-900 dark:text-stone-100">
@@ -180,7 +194,7 @@ export function VehicleDetailContent({
       </div>
 
       {infractions.length > 0 && (
-        <div>
+        <div id="vehicle-detail-infractions" className="scroll-mt-3">
           <p className="text-sm font-semibold text-stone-900 dark:text-stone-100 mb-2 flex items-center gap-1.5">
             <AlertTriangle className="h-4 w-4" />
             Recent infractions
@@ -202,7 +216,7 @@ export function VehicleDetailContent({
       )}
 
       {trackingEvents.length > 0 && (
-        <div>
+        <div id="vehicle-detail-tracking" className="scroll-mt-3">
           <p className="text-sm font-semibold text-stone-900 dark:text-stone-100 mb-2 flex items-center gap-1.5">
             <MapPin className="h-4 w-4" />
             Tracking
