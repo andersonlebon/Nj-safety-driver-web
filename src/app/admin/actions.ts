@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { friendlyError } from "@/lib/errors";
 import { requireRole } from "@/lib/auth";
+import { canAssignAdminRole } from "@/lib/staff";
 import type { UserRole } from "@/lib/types/database";
 
 const ROLES: readonly UserRole[] = ["driver", "agent", "admin"] as const;
@@ -25,7 +26,7 @@ export async function updateUserRole(
   userId: string,
   role: UserRole
 ): Promise<AdminActionResult> {
-  const me = await requireRole(["admin"]);
+  const me = await requireRole(["admin", "agent"]);
 
   if (!ROLES.includes(role)) {
     return { ok: false, error: `Unknown role: ${role}` };
@@ -33,6 +34,13 @@ export async function updateUserRole(
 
   if (!userId) {
     return { ok: false, error: "Missing user id." };
+  }
+
+  if (role === "admin" && !canAssignAdminRole(me.role)) {
+    return {
+      ok: false,
+      error: "Only administrators can assign or remove the admin role.",
+    };
   }
 
   if (userId === me.id && role !== "admin") {
@@ -64,7 +72,7 @@ export async function updateDriverVerification(
   status: "active" | "rejected" | "pending_review",
   adminMessage?: string | null
 ): Promise<AdminActionResult> {
-  await requireRole(["admin"]);
+  await requireRole(["admin", "agent"]);
   if (!userId) return { ok: false, error: "Missing user id." };
 
   const supabase = createClient();
@@ -129,37 +137,10 @@ export async function updateVehicleVerification(
   vehicleId: string,
   status: "active" | "rejected" | "pending_review"
 ): Promise<AdminActionResult> {
-  await requireRole(["admin"]);
+  await requireRole(["admin", "agent"]);
   if (!vehicleId) return { ok: false, error: "Missing vehicle id." };
 
   const supabase = createClient();
-
-  if (status === "active") {
-    const { data: vehicle } = await supabase
-      .from("vehicles")
-      .select("is_border_transit")
-      .eq("id", vehicleId)
-      .maybeSingle();
-
-    if (vehicle?.is_border_transit) {
-      const { data: idDocs } = await supabase
-        .from("documents")
-        .select("label, file_path, file_name")
-        .eq("vehicle_id", vehicleId)
-        .eq("doc_type", "passport");
-
-      const { assessTransitIdAuthenticity } = await import(
-        "@/lib/transit-id-documents"
-      );
-      if (!assessTransitIdAuthenticity(idDocs ?? []).complete) {
-        return {
-          ok: false,
-          error:
-            "Cannot approve until passport/ID front and back photos are on file.",
-        };
-      }
-    }
-  }
 
   const { error } = await supabase
     .from("vehicles")

@@ -48,7 +48,7 @@ export function FormDialog({
         onClose={close}
         title={title}
         description={description}
-        className={cn("max-w-xl", modalClassName)}
+        className={cn("max-w-4xl", modalClassName)}
       >
         {typeof children === "function" ? children({ close }) : children}
       </Modal>

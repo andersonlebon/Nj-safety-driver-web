@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Alert } from "@/components/ui/Alert";
+import { Select } from "@/components/ui/Select";
+import { COUNTRIES, DEFAULT_COUNTRY } from "@/lib/countries";
 import type { Database } from "@/lib/types/database";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
@@ -26,13 +28,16 @@ export function ProfileForm({
     national_id: profile.national_id ?? "",
     driver_license: profile.driver_license ?? "",
     address: profile.address ?? "",
+    nationality_country: profile.nationality_country ?? DEFAULT_COUNTRY,
   });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleChange = (field: keyof typeof form) => (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
   ) => {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
   };
@@ -52,6 +57,7 @@ export function ProfileForm({
         national_id: form.national_id || null,
         driver_license: form.driver_license || null,
         address: form.address || null,
+        nationality_country: form.nationality_country || DEFAULT_COUNTRY,
       })
       .eq("id", profile.id);
 
@@ -97,6 +103,18 @@ export function ProfileForm({
           value={form.driver_license}
           onChange={handleChange("driver_license")}
         />
+        <Select
+          label="Nationality"
+          name="nationality_country"
+          value={form.nationality_country}
+          onChange={handleChange("nationality_country")}
+        >
+          {COUNTRIES.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.flag} {c.name}
+            </option>
+          ))}
+        </Select>
       </div>
       <Textarea
         label="Address"

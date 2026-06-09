@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
+import { CountryBadge } from "@/components/vehicles/CountryBadge";
+import { StaffDocumentsLoader } from "@/components/documents/StaffDocumentsLoader";
 import { formatDate } from "@/lib/utils";
 import { RoleBadge, RoleChanger } from "./RoleChanger";
 import {
@@ -16,10 +18,12 @@ type Driver = Database["public"]["Tables"]["profiles"]["Row"];
 
 export function AdminDriversTable({
   drivers,
-  adminId,
+  staffId,
+  staffRole,
 }: {
   drivers: Driver[];
-  adminId: string;
+  staffId: string;
+  staffRole: UserRole;
 }) {
   const [selected, setSelected] = useState<Driver | null>(null);
 
@@ -35,6 +39,7 @@ export function AdminDriversTable({
               <th className="py-2 pr-4 font-medium">Name</th>
               <th className="py-2 pr-4 font-medium">Email</th>
               <th className="py-2 pr-4 font-medium">Phone</th>
+              <th className="py-2 pr-4 font-medium">Nationality</th>
               <th className="py-2 pr-4 font-medium">License #</th>
               <th className="py-2 pr-4 font-medium">Joined</th>
               <th className="py-2 pr-4 font-medium">Verification</th>
@@ -57,6 +62,9 @@ export function AdminDriversTable({
                 </td>
                 <td className="py-2 pr-4 text-stone-700 dark:text-slate-300">
                   {d.phone || "—"}
+                </td>
+                <td className="py-2 pr-4">
+                  <CountryBadge code={d.nationality_country ?? "GA"} />
                 </td>
                 <td className="py-2 pr-4 text-stone-700 dark:text-slate-300">
                   {d.driver_license || "—"}
@@ -93,12 +101,13 @@ export function AdminDriversTable({
           open={Boolean(selected)}
           onClose={close}
           title={selected.full_name || selected.email || "Driver details"}
-          description="Jump to profile, role, or verification — actions stay pinned at the bottom."
-          className="max-w-lg"
+          description="Review profile, uploaded documents, and verification — actions stay pinned at the bottom."
+          className="max-w-4xl"
           sectionNav={[
             { id: "driver-detail-profile", label: "Profile" },
+            { id: "driver-detail-documents", label: "Documents" },
             { id: "driver-detail-role", label: "Role" },
-            { id: "driver-detail-verification", label: "Verification" },
+            { id: "driver-detail-verification", label: "Verify" },
           ]}
           footer={
             <div className="flex flex-col-reverse sm:flex-row sm:items-end gap-3 sm:justify-between">
@@ -118,7 +127,11 @@ export function AdminDriversTable({
             </div>
           }
         >
-          <DriverDetailModalBody driver={selected} adminId={adminId} />
+          <DriverDetailModalBody
+            driver={selected}
+            staffId={staffId}
+            staffRole={staffRole}
+          />
         </Modal>
       )}
     </>
@@ -127,10 +140,12 @@ export function AdminDriversTable({
 
 function DriverDetailModalBody({
   driver,
-  adminId,
+  staffId,
+  staffRole,
 }: {
   driver: Driver;
-  adminId: string;
+  staffId: string;
+  staffRole: UserRole;
 }) {
   return (
     <div className="space-y-6">
@@ -146,6 +161,10 @@ function DriverDetailModalBody({
         <dd className="font-medium text-stone-900 dark:text-stone-100">
           {driver.phone || "—"}
         </dd>
+        <dt className="text-stone-500 dark:text-slate-400">Nationality</dt>
+        <dd>
+          <CountryBadge code={driver.nationality_country ?? "GA"} />
+        </dd>
         <dt className="text-stone-500 dark:text-slate-400">National ID</dt>
         <dd className="font-medium text-stone-900 dark:text-stone-100">
           {driver.national_id || "—"}
@@ -153,6 +172,10 @@ function DriverDetailModalBody({
         <dt className="text-stone-500 dark:text-slate-400">License #</dt>
         <dd className="font-medium text-stone-900 dark:text-stone-100">
           {driver.driver_license || "—"}
+        </dd>
+        <dt className="text-stone-500 dark:text-slate-400">Address</dt>
+        <dd className="font-medium text-stone-900 dark:text-stone-100 col-span-2">
+          {driver.address || "—"}
         </dd>
         <dt className="text-stone-500 dark:text-slate-400">Joined</dt>
         <dd className="font-medium text-stone-900 dark:text-stone-100">
@@ -171,7 +194,7 @@ function DriverDetailModalBody({
         {driver.admin_message && (
           <>
             <dt className="text-stone-500 dark:text-slate-400 col-span-2">
-              Last admin message
+              Last staff message
             </dt>
             <dd className="col-span-2 text-stone-700 dark:text-slate-300 italic">
               {driver.admin_message}
@@ -179,6 +202,12 @@ function DriverDetailModalBody({
           </>
         )}
       </dl>
+
+      <StaffDocumentsLoader
+        ownerId={driver.id}
+        title="Identity, license & vehicle documents"
+        sectionId="driver-detail-documents"
+      />
 
       <div
         id="driver-detail-role"
@@ -190,7 +219,8 @@ function DriverDetailModalBody({
         <RoleChanger
           userId={driver.id}
           currentRole={driver.role as UserRole}
-          isSelf={driver.id === adminId}
+          isSelf={driver.id === staffId}
+          actorRole={staffRole}
         />
       </div>
 
@@ -198,8 +228,8 @@ function DriverDetailModalBody({
         id="driver-detail-verification"
         className="rounded-lg border border-dashed border-stone-200 dark:border-slate-700 p-3 text-sm text-stone-600 dark:text-slate-400 scroll-mt-3"
       >
-        Approve, reject, or message this driver using the verification actions
-        pinned at the bottom of the dialog — they stay visible while you scroll.
+        Compare documents above with the profile, then approve or reject using
+        the actions pinned at the bottom.
       </div>
     </div>
   );

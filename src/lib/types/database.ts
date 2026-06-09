@@ -250,6 +250,7 @@ export type Database = {
         Row: {
           id: string;
           plate_number: string;
+          registration_country: string | null;
           vehicle_id: string | null;
           driver_id: string | null;
           agent_id: string | null;
@@ -265,6 +266,7 @@ export type Database = {
         Insert: {
           id?: string;
           plate_number: string;
+          registration_country?: string | null;
           vehicle_id?: string | null;
           driver_id?: string | null;
           agent_id?: string | null;

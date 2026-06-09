@@ -4,9 +4,10 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/types/database";
+import { canAssignAdminRole } from "@/lib/staff";
 import { updateUserRole } from "./actions";
 
-const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
+const ALL_ROLE_OPTIONS: { value: UserRole; label: string }[] = [
   { value: "driver", label: "Driver" },
   { value: "agent", label: "Agent" },
   { value: "admin", label: "Admin" },
@@ -27,11 +28,17 @@ export function RoleChanger({
   userId,
   currentRole,
   isSelf,
+  actorRole = "admin",
 }: {
   userId: string;
   currentRole: UserRole;
   isSelf: boolean;
+  /** Logged-in staff member — agents cannot assign admin. */
+  actorRole?: UserRole;
 }) {
+  const roleOptions = canAssignAdminRole(actorRole)
+    ? ALL_ROLE_OPTIONS
+    : ALL_ROLE_OPTIONS.filter((o) => o.value !== "admin");
   const router = useRouter();
   const [value, setValue] = useState<UserRole>(currentRole);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +71,7 @@ export function RoleChanger({
             "input h-9 py-1 text-xs w-32 cursor-not-allowed opacity-60"
           )}
         >
-          {ROLE_OPTIONS.map((opt) => (
+          {roleOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label} (you)
             </option>
@@ -86,7 +93,7 @@ export function RoleChanger({
         )}
         aria-label="Change role"
       >
-        {ROLE_OPTIONS.map((opt) => (
+        {roleOptions.map((opt) => (
           <option key={opt.value} value={opt.value}>
             {opt.label}
           </option>

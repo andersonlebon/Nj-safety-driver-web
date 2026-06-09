@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { updateInfractionPaymentStatus } from "@/app/agent/actions";
 import { friendlyError } from "@/lib/errors";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -15,8 +16,11 @@ type Infraction = Database["public"]["Tables"]["infractions"]["Row"];
 
 export function InfractionsTable({
   infractions,
+  allowStatusUpdates = true,
 }: {
   infractions: Infraction[];
+  /** Drivers are read-only; agents and admins can update payment status. */
+  allowStatusUpdates?: boolean;
 }) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -25,12 +29,8 @@ export function InfractionsTable({
   const updateStatus = async (id: string, status: PaymentStatus) => {
     setBusyId(id);
     setError(null);
-    const supabase = createClient();
-    const { error: updateError } = await supabase
-      .from("infractions")
-      .update({ status })
-      .eq("id", id);
-    if (updateError) setError(friendlyError(updateError));
+    const result = await updateInfractionPaymentStatus(id, status);
+    if (!result.ok) setError(result.error);
     setBusyId(null);
     router.refresh();
   };
@@ -87,18 +87,20 @@ export function InfractionsTable({
                 <td className="py-2 pr-4">
                   <div className="flex items-center gap-2">
                     <StatusBadge status={i.status} />
-                    <select
-                      className="input py-1 text-xs"
-                      value={i.status}
-                      disabled={busyId === i.id}
-                      onChange={(e) =>
-                        updateStatus(i.id, e.target.value as PaymentStatus)
-                      }
-                    >
-                      <option value="unpaid">Unpaid</option>
-                      <option value="pending">Pending</option>
-                      <option value="paid">Paid</option>
-                    </select>
+                    {allowStatusUpdates ? (
+                      <select
+                        className="input py-1 text-xs"
+                        value={i.status}
+                        disabled={busyId === i.id}
+                        onChange={(e) =>
+                          updateStatus(i.id, e.target.value as PaymentStatus)
+                        }
+                      >
+                        <option value="unpaid">Unpaid</option>
+                        <option value="pending">Pending</option>
+                        <option value="paid">Paid</option>
+                      </select>
+                    ) : null}
                   </div>
                 </td>
                 <td className="py-2 pr-4">

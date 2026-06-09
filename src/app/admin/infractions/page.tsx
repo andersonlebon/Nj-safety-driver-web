@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Card, CardBody } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { InfractionsTable } from "@/app/agent/infractions/InfractionsTable";
+import { CreateInfractionDialog } from "@/app/agent/search/CreateInfractionDialog";
 
 export default async function AdminInfractionsPage() {
   const supabase = createClient();
@@ -16,7 +17,8 @@ export default async function AdminInfractionsPage() {
     <div>
       <PageHeader
         title="All infractions"
-        description="System-wide list of infractions; update status as needed."
+        description="Only agents and administrators file infractions. Search a plate to add a new record."
+        actions={<CreateInfractionDialog includePlateStep />}
       />
       <Card>
         <CardBody>

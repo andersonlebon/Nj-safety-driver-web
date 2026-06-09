@@ -7,6 +7,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { CountryBadge } from "@/components/vehicles/CountryBadge";
+import { StaffDocumentsLoader } from "@/components/documents/StaffDocumentsLoader";
 import { VehicleDetailContent } from "@/components/vehicles/VehicleDetailContent";
 import { VehicleVerificationActions } from "./VehicleVerificationActions";
 import { formatDate } from "@/lib/utils";
@@ -241,7 +242,7 @@ export function AdminVehiclesTable({
           onClose={close}
           title={`Vehicle ${selected.plate_number}`}
           description="Jump to any section below — verification actions stay pinned at the bottom."
-          className="max-w-xl"
+          className="max-w-4xl"
           sectionNav={vehicleDetailSectionLinks({
             showId:
               selected.is_border_transit ||
@@ -254,7 +255,11 @@ export function AdminVehiclesTable({
             ),
             hasInfractions: infractions.length > 0,
             hasTracking: trackingEvents.length > 0,
-          })}
+          }).concat(
+            selected.owner_id || transitIdDocuments.length > 0
+              ? [{ id: "vehicle-detail-documents", label: "Documents" }]
+              : []
+          )}
           footer={
             <div className="flex flex-col-reverse sm:flex-row sm:items-center gap-3 sm:justify-between">
               <Button type="button" variant="secondary" onClick={close} className="w-full sm:w-auto">
@@ -301,11 +306,19 @@ export function AdminVehiclesTable({
               transitIdUrls={transitIdUrls}
               showIdAuthenticityCheck
             />
+            <StaffDocumentsLoader
+              ownerId={selected.owner_id}
+              vehicleId={selected.id}
+              title="Driver & vehicle documents"
+              sectionId="vehicle-detail-documents"
+            />
             {selected.is_border_transit &&
-              !assessTransitIdAuthenticity(transitIdDocuments).complete && (
-                <Alert variant="warning">
-                  Approve only after both front and back ID photos are on file and
-                  match the driver.
+              !selected.owner_id &&
+              transitIdDocuments.length === 0 && (
+                <Alert variant="info">
+                  No linked driver account — ask the visitor to register at{" "}
+                  <strong>/register</strong> with nationality and vehicle country,
+                  then re-search this plate.
                 </Alert>
               )}
           </div>

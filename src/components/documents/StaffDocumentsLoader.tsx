@@ -1,0 +1,87 @@
+"use client";
+
+import { useEffect, useState, useTransition } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { DocumentGallery } from "@/components/documents/DocumentGallery";
+import type { DocRow } from "@/lib/documents-display";
+
+type Props = {
+  ownerId?: string | null;
+  vehicleId?: string | null;
+  title?: string;
+  sectionId?: string;
+};
+
+export function StaffDocumentsLoader({
+  ownerId,
+  vehicleId,
+  title = "Uploaded documents",
+  sectionId = "staff-detail-documents",
+}: Props) {
+  const [documents, setDocuments] = useState<DocRow[]>([]);
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+  const [, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (!ownerId && !vehicleId) return;
+
+    startTransition(async () => {
+      const supabase = createClient();
+      const select =
+        "id, doc_type, label, file_path, file_name, verification_status, expires_at, vehicle_id";
+      const queries = [];
+
+      if (ownerId) {
+        queries.push(
+          supabase
+            .from("documents")
+            .select(select)
+            .eq("owner_id", ownerId)
+            .order("uploaded_at", { ascending: false })
+        );
+      }
+
+      if (vehicleId) {
+        queries.push(
+          supabase
+            .from("documents")
+            .select(select)
+            .eq("vehicle_id", vehicleId)
+            .order("uploaded_at", { ascending: false })
+        );
+      }
+
+      const results = await Promise.all(queries);
+      const merged = new Map<string, DocRow>();
+      for (const { data } of results) {
+        for (const row of (data ?? []) as DocRow[]) {
+          merged.set(row.id, row);
+        }
+      }
+      const docs = [...merged.values()];
+      setDocuments(docs);
+
+      const paths = docs.map((d) => d.file_path).filter(Boolean);
+      const signedEntries = await Promise.all(
+        paths.map(async (path) => {
+          const { data } = await supabase.storage
+            .from("documents")
+            .createSignedUrl(path, 3600);
+          return [path, data?.signedUrl ?? ""] as const;
+        })
+      );
+      setSignedUrls(Object.fromEntries(signedEntries));
+    });
+  }, [ownerId, vehicleId]);
+
+  return (
+    <div id={sectionId} className="scroll-mt-3">
+      <DocumentGallery
+        title={title}
+        documents={documents}
+        signedUrls={signedUrls}
+        emptyMessage="No identity, license, or vehicle documents uploaded yet."
+      />
+    </div>
+  );
+}

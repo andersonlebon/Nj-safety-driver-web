@@ -9,7 +9,7 @@ import { AdminDriversTable } from "../AdminDriversTable";
 export const dynamic = "force-dynamic";
 
 export default async function AdminDriversPage() {
-  const me = await requireRole(["admin"]);
+  const me = await requireRole(["admin", "agent"]);
   const supabase = createClient();
   const { data: drivers } = await supabase
     .from("profiles")
@@ -32,7 +32,11 @@ export default async function AdminDriversPage() {
               description="Driver accounts will appear here once people register."
             />
           ) : (
-            <AdminDriversTable drivers={drivers} adminId={me.id} />
+            <AdminDriversTable
+              drivers={drivers}
+              staffId={me.id}
+              staffRole={me.role}
+            />
           )}
         </CardBody>
       </Card>

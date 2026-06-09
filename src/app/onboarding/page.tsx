@@ -50,6 +50,7 @@ export default async function OnboardingPage() {
           national_id: profile.national_id ?? "",
           driver_license: profile.driver_license ?? "",
           address: profile.address ?? "",
+          nationality_country: profile.nationality_country ?? "GA",
         }}
       />
     </div>

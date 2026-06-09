@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { friendlyError } from "@/lib/errors";
-import { normalizePlate } from "@/lib/utils";
+import { DEFAULT_COUNTRY, isDomesticCountry } from "@/lib/countries";
+import { normalizePlateForCountry } from "@/lib/vehicles";
 import type { DocumentType } from "@/lib/types/database";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -16,10 +17,12 @@ export type CompletePayload = {
     national_id: string;
     driver_license: string;
     address: string;
+    nationality_country: string;
   };
   vehicle: {
     id: string;
     plate_number: string;
+    registration_country: string;
     brand: string | null;
     model: string | null;
     color: string | null;
@@ -101,7 +104,12 @@ export async function completeOnboarding(
   }
 
   const vehicle = payload.vehicle;
-  const plate_number = normalizePlate(vehicle.plate_number);
+  const registration_country =
+    vehicle.registration_country?.trim() || DEFAULT_COUNTRY;
+  const plate_number = normalizePlateForCountry(
+    vehicle.plate_number,
+    registration_country
+  );
   if (!plate_number || !vehicle.brand || !vehicle.model) {
     return { ok: false, error: "Plate number, brand, and model are required." };
   }
@@ -175,6 +183,8 @@ export async function completeOnboarding(
       national_id: personal.national_id,
       driver_license: personal.driver_license,
       address: personal.address,
+      nationality_country:
+        personal.nationality_country?.trim() || DEFAULT_COUNTRY,
     })
     .eq("id", user.id);
 
@@ -187,6 +197,8 @@ export async function completeOnboarding(
     id: vehicle.id,
     owner_id: user.id,
     plate_number,
+    registration_country,
+    is_foreign: !isDomesticCountry(registration_country),
     brand: vehicle.brand,
     model: vehicle.model,
     color: vehicle.color,

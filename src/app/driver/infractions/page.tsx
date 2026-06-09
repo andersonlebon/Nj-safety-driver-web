@@ -21,7 +21,7 @@ export default async function DriverInfractionsPage() {
     <div>
       <PageHeader
         title="Infractions"
-        description="All infractions associated with your registered vehicles."
+        description="View-only: infractions are filed by field agents and administrators. Contact support if you believe a record is incorrect."
       />
       <Card>
         <CardBody>

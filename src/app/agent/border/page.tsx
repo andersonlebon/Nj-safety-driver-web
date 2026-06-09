@@ -68,8 +68,8 @@ export default async function AgentBorderPage() {
     <div className="space-y-6">
       <PageHeader
         title="Border crossings"
-        description="Register foreign vehicles entering Gabon. Scan the plate, record the driver, and flag for verification."
-        actions={<BorderRegisterDialog agentId={profile.id} />}
+        description="Log vehicle entry/exit at any border. Foreign drivers should register at /register with nationality and vehicle origin country."
+        actions={<BorderRegisterDialog />}
       />
 
       {loadError && (

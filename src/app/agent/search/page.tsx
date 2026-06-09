@@ -17,6 +17,7 @@ import {
 import { LogVehicleCheckIn } from "@/components/tracking/LogVehicleCheckIn";
 import { SearchPlateDialog } from "./SearchPlateDialog";
 import { CreateInfractionDialog } from "./CreateInfractionDialog";
+import { StaffDocumentsLoader } from "@/components/documents/StaffDocumentsLoader";
 import { requireRole } from "@/lib/auth";
 
 export default async function AgentSearchPage({
@@ -112,9 +113,9 @@ export default async function AgentSearchPage({
             {plate && (
               <CreateInfractionDialog
                 plate={plate}
+                country={country}
                 vehicleId={vehicle?.id ?? null}
                 driverId={vehicle?.owner_id ?? null}
-                agentId={profile.id}
               />
             )}
           </div>
@@ -210,6 +211,21 @@ export default async function AgentSearchPage({
               )}
             </CardBody>
           </Card>
+
+          {(owner || vehicle) && (
+            <Card className="lg:col-span-2">
+              <CardBody>
+                <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100 mb-4">
+                  Documents
+                </h3>
+                <StaffDocumentsLoader
+                  ownerId={owner?.id ?? vehicle?.owner_id}
+                  vehicleId={vehicle?.id}
+                  title="Driver & vehicle files"
+                />
+              </CardBody>
+            </Card>
+          )}
 
           <Card className="lg:col-span-2">
             <CardBody>

@@ -17,7 +17,9 @@ import {
 } from "@/components/uploads/EvidenceSlot";
 import { createClient } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
-import { cn, normalizePlate } from "@/lib/utils";
+import { COUNTRIES, DEFAULT_COUNTRY } from "@/lib/countries";
+import { normalizePlateForCountry } from "@/lib/vehicles";
+import { cn } from "@/lib/utils";
 import type { DocumentType } from "@/lib/types/database";
 import {
   savePersonalInfo,
@@ -31,10 +33,12 @@ type PersonalInfo = {
   national_id: string;
   driver_license: string;
   address: string;
+  nationality_country: string;
 };
 
 type VehicleInfo = {
   plate_number: string;
+  registration_country: string;
   brand: string;
   model: string;
   color: string;
@@ -230,6 +234,7 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
   const [personal, setPersonal] = useState<PersonalInfo>(initialProfile);
   const [vehicle, setVehicle] = useState<VehicleInfo>({
     plate_number: "",
+    registration_country: DEFAULT_COUNTRY,
     brand: "",
     model: "",
     color: "",
@@ -285,6 +290,9 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
       national_id: String(formData.get("national_id") ?? "").trim(),
       driver_license: String(formData.get("driver_license") ?? "").trim(),
       address: String(formData.get("address") ?? "").trim(),
+      nationality_country:
+        String(formData.get("nationality_country") ?? DEFAULT_COUNTRY).trim() ||
+        DEFAULT_COUNTRY,
     };
     const trimmedFormData = new FormData();
     for (const [k, v] of Object.entries(trimmed)) {
@@ -332,7 +340,10 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
   };
 
   const validateStep3 = (): string | null => {
-    const plate = normalizePlate(vehicle.plate_number);
+    const plate = normalizePlateForCountry(
+      vehicle.plate_number,
+      vehicle.registration_country
+    );
     if (!plate || !vehicle.brand.trim() || !vehicle.model.trim()) {
       return "Plate number, brand, and model are required.";
     }
@@ -430,10 +441,16 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
             national_id: personal.national_id.trim(),
             driver_license: personal.driver_license.trim(),
             address: personal.address.trim(),
+            nationality_country:
+              personal.nationality_country?.trim() || DEFAULT_COUNTRY,
           },
           vehicle: {
             id: vehicleId,
-            plate_number: normalizePlate(vehicle.plate_number),
+            plate_number: normalizePlateForCountry(
+              vehicle.plate_number,
+              vehicle.registration_country
+            ),
+            registration_country: vehicle.registration_country || DEFAULT_COUNTRY,
             brand: vehicle.brand.trim() || null,
             model: vehicle.model.trim() || null,
             color: vehicle.color.trim() || null,
@@ -607,6 +624,9 @@ function PersonalInfoStep({
   const [nationalId, setNationalId] = useState(defaults.national_id);
   const [driverLicense, setDriverLicense] = useState(defaults.driver_license);
   const [address, setAddress] = useState(defaults.address);
+  const [nationality, setNationality] = useState(
+    defaults.nationality_country || DEFAULT_COUNTRY
+  );
 
   const nationalIdWarning = useDuplicateCheck({
     field: "national_id",
@@ -656,6 +676,19 @@ function PersonalInfoStep({
           onChange={(e) => setDriverLicense(e.target.value)}
           required
         />
+        <Select
+          label="Nationality"
+          name="nationality_country"
+          value={nationality}
+          onChange={(e) => setNationality(e.target.value)}
+          required
+        >
+          {COUNTRIES.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.flag} {c.name}
+            </option>
+          ))}
+        </Select>
       </div>
       {(nationalIdWarning || driverLicenseWarning) && (
         <div className="space-y-2">
@@ -895,6 +928,18 @@ function VehicleStep({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Select
+          label="Vehicle origin (plate country)"
+          name="registration_country"
+          value={vehicle.registration_country}
+          onChange={update("registration_country")}
+        >
+          {COUNTRIES.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.flag} {c.name}
+            </option>
+          ))}
+        </Select>
         <Input
           label="Plate number"
           name="plate_number"
