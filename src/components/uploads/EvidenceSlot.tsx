@@ -42,6 +42,7 @@ type Props = {
   onExpiresAtChange?: (value: string) => void;
   showExpiry?: boolean;
   disabled?: boolean;
+  compactPreview?: boolean;
 };
 
 function bytesToMb(n: number) {
@@ -71,10 +72,12 @@ export function EvidenceSlot({
   onExpiresAtChange,
   showExpiry = false,
   disabled,
+  compactPreview = true,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const acceptedTypes = accept.split(",").map((s) => s.trim());
 
@@ -110,6 +113,7 @@ export function EvidenceSlot({
     (file: File | null) => {
       setLocalError(null);
       if (!file) {
+        setPreviewOpen(false);
         onChange({ file: null, previewUrl: null });
         return;
       }
@@ -140,6 +144,7 @@ export function EvidenceSlot({
 
   const clearSelection = () => {
     setLocalError(null);
+    setPreviewOpen(false);
     onChange({ file: null, previewUrl: null });
   };
 
@@ -167,7 +172,7 @@ export function EvidenceSlot({
       onDragLeave={() => setDragOver(false)}
       onDrop={onDrop}
     >
-      <div className="p-3 sm:p-4 flex flex-col gap-3">
+      <div className={cn("flex flex-col gap-3", compactPreview ? "p-3" : "p-3 sm:p-4")}>
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <p className="text-sm font-medium text-stone-900 dark:text-stone-100">
@@ -197,14 +202,29 @@ export function EvidenceSlot({
         </div>
 
         <div className="relative rounded-lg overflow-hidden border border-stone-200/70 dark:border-slate-800 bg-white dark:bg-slate-900">
-          <div className="aspect-[4/3] w-full grid place-items-center text-stone-400 dark:text-slate-500">
+          <div
+            className={cn(
+              "w-full grid place-items-center text-stone-400 dark:text-slate-500",
+              compactPreview ? "h-28 sm:h-32" : "aspect-[4/3]"
+            )}
+          >
             {hasFile && value.previewUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={value.previewUrl}
-                alt={title}
-                className="h-full w-full object-cover"
-              />
+              <button
+                type="button"
+                onClick={() => setPreviewOpen(true)}
+                className="group relative h-full w-full"
+                aria-label={`Preview ${title}`}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={value.previewUrl}
+                  alt={title}
+                  className="h-full w-full object-cover"
+                />
+                <span className="absolute inset-x-0 bottom-0 bg-black/55 px-2 py-1 text-[10px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
+                  Click to preview
+                </span>
+              </button>
             ) : hasFile && isPdf(value.file) ? (
               <div className="flex flex-col items-center gap-1 text-stone-500 dark:text-slate-400">
                 <FileText className="h-8 w-8" />
@@ -220,7 +240,10 @@ export function EvidenceSlot({
                 type="button"
                 onClick={() => inputRef.current?.click()}
                 disabled={isBusy}
-                className="flex flex-col items-center gap-1 px-3 py-4 text-center hover:text-stone-600 dark:hover:text-slate-300 transition-colors"
+                className={cn(
+                  "flex flex-col items-center gap-1 px-3 text-center hover:text-stone-600 dark:hover:text-slate-300 transition-colors",
+                  compactPreview ? "py-3" : "py-4"
+                )}
               >
                 <UploadCloud className="h-7 w-7" />
                 <span className="text-xs font-medium">
@@ -313,6 +336,34 @@ export function EvidenceSlot({
         onChange={onPick}
         disabled={isBusy}
       />
+
+      {previewOpen && value.previewUrl && (
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/85 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${title} preview`}
+          onClick={() => setPreviewOpen(false)}
+        >
+          <div className="flex max-h-full max-w-full flex-col gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={value.previewUrl}
+              alt={title}
+              className="max-h-[82vh] max-w-[92vw] rounded-lg object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button
+              type="button"
+              onClick={() => setPreviewOpen(false)}
+              className="mx-auto inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-stone-900 shadow-lg hover:bg-stone-100"
+            >
+              <X className="h-4 w-4" />
+              Close preview
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

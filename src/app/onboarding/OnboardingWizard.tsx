@@ -870,7 +870,7 @@ function DocumentsStep({
         </span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
         {DRIVER_SLOTS.map((slot) => (
           <EvidenceSlot
             key={slot.key}
@@ -1084,7 +1084,7 @@ function VehicleStep({
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
         {VEHICLE_SLOTS.map((slot) => (
           <EvidenceSlot
             key={slot.key}
