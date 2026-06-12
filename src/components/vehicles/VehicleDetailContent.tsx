@@ -12,7 +12,12 @@ import { totalsByPaymentStatus } from "@/components/dashboard/analytics";
 import { TransitIdDocumentGallery } from "@/components/vehicles/TransitIdDocumentGallery";
 import type { TrackingEvent } from "@/lib/tracking";
 import type { TransitIdDocRow, TransitIdDocUrls } from "@/lib/transit-id-documents";
-import type { Database, VerificationStatus } from "@/lib/types/database";
+import type {
+  Database,
+  PaymentStatus,
+  TransactionStatus,
+  VerificationStatus,
+} from "@/lib/types/database";
 
 type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
 type Infraction = Database["public"]["Tables"]["infractions"]["Row"];
@@ -22,6 +27,7 @@ type Props = {
   photoUrl?: string | null;
   owner?: { full_name: string | null; email: string | null; phone: string | null } | null;
   infractions?: Infraction[];
+  transactionStatusByInfraction?: Record<string, TransactionStatus>;
   trackingEvents?: TrackingEvent[];
   agentSearchUrl?: string;
   showOwner?: boolean;
@@ -35,6 +41,7 @@ export function VehicleDetailContent({
   photoUrl,
   owner,
   infractions = [],
+  transactionStatusByInfraction = {},
   trackingEvents = [],
   agentSearchUrl,
   showOwner = true,
@@ -43,8 +50,21 @@ export function VehicleDetailContent({
   showIdAuthenticityCheck = false,
 }: Props) {
   const status = (vehicle.verification_status ?? "pending_review") as VerificationStatus;
-  const unpaid = infractions.filter((i) => i.status === "unpaid");
-  const paymentTotals = totalsByPaymentStatus(infractions);
+  const financialRows: Array<{ fine_amount: number | string; status: PaymentStatus }> =
+    infractions.map((infraction) => {
+      const transactionStatus = transactionStatusByInfraction[infraction.id];
+      return {
+        fine_amount: infraction.fine_amount,
+        status:
+          !transactionStatus || transactionStatus === "initialized"
+            ? infraction.status === "paid"
+              ? "paid"
+              : "unpaid"
+            : transactionStatus,
+      };
+    });
+  const unpaid = financialRows.filter((i) => i.status === "unpaid");
+  const paymentTotals = totalsByPaymentStatus(financialRows);
   const foreign = isForeignVehicle(
     vehicle.registration_country,
     vehicle.is_foreign

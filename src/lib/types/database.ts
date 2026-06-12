@@ -94,6 +94,54 @@ export type Database = {
         };
         Relationships: [];
       };
+      driver_profiles: {
+        Row: {
+          profile_id: string;
+          created_at: string;
+        };
+        Insert: {
+          profile_id: string;
+          created_at?: string;
+        };
+        Update: {
+          profile_id?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      agent_profiles: {
+        Row: {
+          profile_id: string;
+          badge_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          profile_id: string;
+          badge_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          profile_id?: string;
+          badge_id?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      admin_profiles: {
+        Row: {
+          profile_id: string;
+          created_at: string;
+        };
+        Insert: {
+          profile_id: string;
+          created_at?: string;
+        };
+        Update: {
+          profile_id?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       vehicles: {
         Row: {
           id: string;

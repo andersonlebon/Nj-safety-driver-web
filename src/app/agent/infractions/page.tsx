@@ -12,13 +12,32 @@ export default async function AgentInfractionsPage() {
     .from("infractions")
     .select("*")
     .order("created_at", { ascending: false });
+  const { data: templates } = await supabase
+    .from("infraction_templates")
+    .select("code, label, amount, points, category")
+    .eq("active", true)
+    .order("label", { ascending: true });
+  const infractionIds = (infractions ?? []).map((infraction) => infraction.id);
+  const { data: transactions } =
+    infractionIds.length > 0
+      ? await supabase
+          .from("transactions")
+          .select("infraction_id, status")
+          .in("infraction_id", infractionIds)
+      : { data: [] };
+  const transactionStatusByInfraction = Object.fromEntries(
+    (transactions ?? []).map((transaction) => [
+      transaction.infraction_id,
+      transaction.status,
+    ])
+  );
 
   return (
     <div>
       <PageHeader
         title="All infractions"
         description="Agents file infractions from plate search. Update payment status here as fines are collected."
-        actions={<CreateInfractionDialog includePlateStep />}
+        actions={<CreateInfractionDialog includePlateStep templates={templates ?? undefined} />}
       />
       <Card>
         <CardBody>
@@ -29,7 +48,10 @@ export default async function AgentInfractionsPage() {
               description="Use the plate search to file the first infraction."
             />
           ) : (
-            <InfractionsTable infractions={infractions} />
+            <InfractionsTable
+              infractions={infractions}
+              transactionStatusByInfraction={transactionStatusByInfraction}
+            />
           )}
         </CardBody>
       </Card>

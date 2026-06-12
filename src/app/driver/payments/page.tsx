@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Alert } from "@/components/ui/Alert";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import type { PaymentStatus, TransactionStatus } from "@/lib/types/database";
 
 export default async function DriverPaymentsPage() {
   const profile = await requireRole(["driver", "admin"]);
@@ -20,10 +21,32 @@ export default async function DriverPaymentsPage() {
     .order("created_at", { ascending: false });
 
   const list = infractions || [];
-  const unpaid = list.filter((i) => i.status === "unpaid");
-  const pending = list.filter((i) => i.status === "pending");
-  const paid = list.filter((i) => i.status === "paid");
-  const totalDue = unpaid.reduce((sum, i) => sum + Number(i.fine_amount), 0);
+  const infractionIds = list.map((infraction) => infraction.id);
+  const { data: transactions } =
+    infractionIds.length > 0
+      ? await supabase
+          .from("transactions")
+          .select("infraction_id, amount, status")
+          .in("infraction_id", infractionIds)
+      : { data: [] };
+  const transactionMap = new Map(
+    (transactions ?? []).map((transaction) => [
+      transaction.infraction_id,
+      transaction,
+    ])
+  );
+  const transactionRows = list.map((infraction) => {
+    const transaction = transactionMap.get(infraction.id);
+    return {
+      infraction,
+      amount: Number(transaction?.amount ?? infraction.fine_amount),
+      status: transaction?.status ?? infraction.status,
+    };
+  });
+  const unpaid = transactionRows.filter((row) => row.status === "unpaid");
+  const pending = transactionRows.filter((row) => row.status === "pending");
+  const paid = transactionRows.filter((row) => row.status === "paid");
+  const totalDue = unpaid.reduce((sum, row) => sum + row.amount, 0);
 
   return (
     <div className="space-y-6">
@@ -68,13 +91,13 @@ export default async function DriverPaymentsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {list.map((i) => (
-                    <tr key={i.id} className="border-b border-slate-100 last:border-0">
-                      <td className="py-2 pr-4 text-slate-700">{formatDate(i.created_at)}</td>
-                      <td className="py-2 pr-4 font-medium text-slate-900">{i.plate_number}</td>
-                      <td className="py-2 pr-4 text-slate-700">{i.infraction_type}</td>
-                      <td className="py-2 pr-4 text-slate-700">{formatCurrency(Number(i.fine_amount))}</td>
-                      <td className="py-2 pr-4"><StatusBadge status={i.status} /></td>
+                  {transactionRows.map(({ infraction, amount, status }) => (
+                    <tr key={infraction.id} className="border-b border-slate-100 last:border-0">
+                      <td className="py-2 pr-4 text-slate-700">{formatDate(infraction.created_at)}</td>
+                      <td className="py-2 pr-4 font-medium text-slate-900">{infraction.plate_number}</td>
+                      <td className="py-2 pr-4 text-slate-700">{infraction.infraction_type}</td>
+                      <td className="py-2 pr-4 text-slate-700">{formatCurrency(amount)}</td>
+                      <td className="py-2 pr-4"><PaymentLedgerBadge status={status} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -85,4 +108,11 @@ export default async function DriverPaymentsPage() {
       </Card>
     </div>
   );
+}
+
+function PaymentLedgerBadge({ status }: { status: TransactionStatus | PaymentStatus }) {
+  if (status === "initialized") {
+    return <span className="badge-pending">Initialized</span>;
+  }
+  return <StatusBadge status={status} />;
 }

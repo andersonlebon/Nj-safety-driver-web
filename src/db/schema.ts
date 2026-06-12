@@ -77,6 +77,35 @@ export const profiles = pgTable("profiles", {
     .default(sql`now()`),
 });
 
+export const driverProfiles = pgTable("driver_profiles", {
+  profileId: uuid("profile_id")
+    .primaryKey()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .default(sql`now()`),
+});
+
+export const agentProfiles = pgTable("agent_profiles", {
+  profileId: uuid("profile_id")
+    .primaryKey()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  badgeId: text("badge_id"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .default(sql`now()`),
+});
+
+export const adminProfiles = pgTable("admin_profiles", {
+  profileId: uuid("profile_id")
+    .primaryKey()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .default(sql`now()`),
+});
+
+
 export const vehicles = pgTable("vehicles", {
   id: uuid("id").primaryKey().default(sql`uuid_generate_v4()`),
   ownerId: uuid("owner_id").references(() => profiles.id, { onDelete: "cascade" }),

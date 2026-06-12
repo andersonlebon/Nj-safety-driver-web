@@ -108,7 +108,32 @@ export default async function AdminOverviewPage() {
   }));
 
   const totalInfractions = infractions.length;
-  const totals = totalsByPaymentStatus(infractions);
+  const infractionIds = infractions.map((infraction) => infraction.id);
+  const { data: transactionRows } =
+    infractionIds.length > 0
+      ? await supabase
+          .from("transactions")
+          .select("infraction_id, amount, status, created_at")
+          .in("infraction_id", infractionIds)
+      : { data: [] };
+  const transactionMap = new Map(
+    (transactionRows ?? []).map((transaction) => [
+      transaction.infraction_id,
+      transaction,
+    ])
+  );
+  const financialRows = infractions.map((infraction) => {
+    const transaction = transactionMap.get(infraction.id);
+    return {
+      fine_amount: Number(transaction?.amount ?? infraction.fine_amount),
+      status:
+        transaction?.status === "initialized"
+          ? ("unpaid" as const)
+          : transaction?.status ?? infraction.status,
+      created_at: transaction?.created_at ?? infraction.created_at,
+    };
+  });
+  const totals = totalsByPaymentStatus(financialRows);
   const collected = totals.paid;
   const pendingTotal = totals.pending;
   const unpaidTotal = totals.unpaid;
@@ -120,16 +145,20 @@ export default async function AdminOverviewPage() {
   );
   const curCount = cur.length;
   const prevCount = prev.length;
-  const curCollected = cur
+  const curFinancial = financialRows.filter((row) => row.created_at >= cutoff30);
+  const prevFinancial = financialRows.filter(
+    (row) => row.created_at < cutoff30 && row.created_at >= cutoff60
+  );
+  const curCollected = curFinancial
     .filter((i) => i.status === "paid")
     .reduce((s, i) => s + Number(i.fine_amount), 0);
-  const prevCollected = prev
+  const prevCollected = prevFinancial
     .filter((i) => i.status === "paid")
     .reduce((s, i) => s + Number(i.fine_amount), 0);
-  const curUnpaid = cur
+  const curUnpaid = curFinancial
     .filter((i) => i.status === "unpaid")
     .reduce((s, i) => s + Number(i.fine_amount), 0);
-  const prevUnpaid = prev
+  const prevUnpaid = prevFinancial
     .filter((i) => i.status === "unpaid")
     .reduce((s, i) => s + Number(i.fine_amount), 0);
 

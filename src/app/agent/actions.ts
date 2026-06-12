@@ -197,13 +197,20 @@ export async function fileInfraction(
     if (!input.infraction_type.trim()) {
       return { ok: false, error: "Infraction type is required." };
     }
-    const template = findInfractionTemplate(input.infraction_template_code);
+    const supabase = createClient();
+    const { data: dbTemplate } = await supabase
+      .from("infraction_templates")
+      .select("code, label, amount, points, category, active")
+      .eq("code", input.infraction_template_code)
+      .eq("active", true)
+      .maybeSingle();
+    const template = dbTemplate ?? findInfractionTemplate(input.infraction_template_code);
     if (!template) {
       return { ok: false, error: "Select a valid infraction template." };
     }
     if (
       input.infraction_type !== template.label ||
-      Number(input.fine_amount) !== template.amount
+      Number(input.fine_amount) !== Number(template.amount)
     ) {
       return {
         ok: false,
@@ -211,7 +218,8 @@ export async function fileInfraction(
       };
     }
 
-    const supabase = createClient();
+    const infractionStatus: PaymentStatus =
+      input.status === "paid" ? "paid" : "unpaid";
     const { data: inserted, error } = await supabase
       .from("infractions")
       .insert({
@@ -223,8 +231,8 @@ export async function fileInfraction(
         infraction_type: template.label,
         description: input.description.trim() || null,
         location: input.location.trim() || null,
-        fine_amount: template.amount,
-        status: input.status,
+        fine_amount: Number(template.amount),
+        status: infractionStatus,
         evidence_path: input.evidence_path,
       })
       .select("id")
@@ -237,7 +245,7 @@ export async function fileInfraction(
         .from("transactions")
         .insert({
           infraction_id: inserted.id,
-          amount: template.amount,
+          amount: Number(template.amount),
           status: input.status,
         });
 
@@ -291,11 +299,13 @@ export async function updateInfractionPaymentStatus(
     if ("ok" in auth) return auth;
 
     if (!infractionId) return { ok: false, error: "Missing infraction id." };
+    const nextInfractionStatus: PaymentStatus =
+      status === "paid" ? "paid" : "unpaid";
 
     const supabase = createClient();
     const { data: updated, error } = await supabase
       .from("infractions")
-      .update({ status })
+      .update({ status: nextInfractionStatus })
       .eq("id", infractionId)
       .select("id, fine_amount")
       .single();

@@ -5,6 +5,7 @@ import {
   ShieldCheck,
   AlertTriangle,
   Radar,
+  ListChecks,
 } from "lucide-react";
 import { Sidebar, type NavItem } from "@/components/dashboard/Sidebar";
 import { Topbar } from "@/components/dashboard/Topbar";
@@ -16,6 +17,7 @@ const navItems: NavItem[] = [
   { href: "/admin/vehicles", label: "Vehicles", icon: <Car className="h-4 w-4" /> },
   { href: "/admin/tracking", label: "Tracking", icon: <Radar className="h-4 w-4" /> },
   { href: "/admin/infractions", label: "Infractions", icon: <AlertTriangle className="h-4 w-4" /> },
+  { href: "/admin/infraction-templates", label: "Templates", icon: <ListChecks className="h-4 w-4" /> },
 ];
 
 const adminOnlyNavItems: NavItem[] = [

@@ -13,6 +13,82 @@ for each row execute function public.set_updated_at();
 alter table public.transactions enable row level security;
 alter table public.infraction_templates enable row level security;
 alter table public.driver_messages enable row level security;
+alter table public.driver_profiles enable row level security;
+alter table public.agent_profiles enable row level security;
+alter table public.admin_profiles enable row level security;
+
+create or replace function public.sync_role_profile_tables()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  delete from public.driver_profiles where profile_id = new.id;
+  delete from public.agent_profiles where profile_id = new.id;
+  delete from public.admin_profiles where profile_id = new.id;
+
+  if new.role = 'driver' then
+    insert into public.driver_profiles (profile_id)
+    values (new.id)
+    on conflict (profile_id) do nothing;
+  elsif new.role = 'agent' then
+    insert into public.agent_profiles (profile_id, badge_id)
+    values (new.id, new.agent_badge_id)
+    on conflict (profile_id) do update set badge_id = excluded.badge_id;
+  elsif new.role = 'admin' then
+    insert into public.admin_profiles (profile_id)
+    values (new.id)
+    on conflict (profile_id) do nothing;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_profiles_sync_role_tables on public.profiles;
+create trigger trg_profiles_sync_role_tables
+after insert or update of role, agent_badge_id on public.profiles
+for each row execute function public.sync_role_profile_tables();
+
+drop policy if exists "driver_profiles_select_self_or_staff" on public.driver_profiles;
+create policy "driver_profiles_select_self_or_staff"
+on public.driver_profiles for select
+to authenticated
+using (profile_id = auth.uid() or public.current_role() in ('agent', 'admin'));
+
+drop policy if exists "agent_profiles_select_self_or_admin" on public.agent_profiles;
+create policy "agent_profiles_select_self_or_admin"
+on public.agent_profiles for select
+to authenticated
+using (profile_id = auth.uid() or public.current_role() = 'admin');
+
+drop policy if exists "admin_profiles_select_self_or_admin" on public.admin_profiles;
+create policy "admin_profiles_select_self_or_admin"
+on public.admin_profiles for select
+to authenticated
+using (profile_id = auth.uid() or public.current_role() = 'admin');
+
+drop policy if exists "role_profile_tables_admin_write_driver" on public.driver_profiles;
+create policy "role_profile_tables_admin_write_driver"
+on public.driver_profiles for all
+to authenticated
+using (public.current_role() = 'admin')
+with check (public.current_role() = 'admin');
+
+drop policy if exists "role_profile_tables_admin_write_agent" on public.agent_profiles;
+create policy "role_profile_tables_admin_write_agent"
+on public.agent_profiles for all
+to authenticated
+using (public.current_role() = 'admin')
+with check (public.current_role() = 'admin');
+
+drop policy if exists "role_profile_tables_admin_write_admin" on public.admin_profiles;
+create policy "role_profile_tables_admin_write_admin"
+on public.admin_profiles for all
+to authenticated
+using (public.current_role() = 'admin')
+with check (public.current_role() = 'admin');
 
 drop policy if exists "transactions_select_staff_or_driver" on public.transactions;
 create policy "transactions_select_staff_or_driver"

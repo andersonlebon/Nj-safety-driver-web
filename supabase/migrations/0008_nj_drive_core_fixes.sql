@@ -14,6 +14,22 @@ CREATE INDEX IF NOT EXISTS "documents_owner_doc_hash_idx"
   ON "public"."documents" ("owner_id", "doc_type", "file_hash")
   WHERE "file_hash" IS NOT NULL;
 
+CREATE TABLE IF NOT EXISTS "public"."driver_profiles" (
+  "profile_id" uuid PRIMARY KEY REFERENCES "public"."profiles"("id") ON DELETE cascade,
+  "created_at" timestamp with time zone NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS "public"."agent_profiles" (
+  "profile_id" uuid PRIMARY KEY REFERENCES "public"."profiles"("id") ON DELETE cascade,
+  "badge_id" text,
+  "created_at" timestamp with time zone NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS "public"."admin_profiles" (
+  "profile_id" uuid PRIMARY KEY REFERENCES "public"."profiles"("id") ON DELETE cascade,
+  "created_at" timestamp with time zone NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS "public"."transactions" (
   "id" uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   "infraction_id" uuid NOT NULL REFERENCES "public"."infractions"("id") ON DELETE cascade,
@@ -66,4 +82,20 @@ INSERT INTO "public"."transactions" ("infraction_id", "amount", "status", "creat
 SELECT "id", "fine_amount", "status"::text::"public"."transaction_status", "created_at", now()
 FROM "public"."infractions"
 ON CONFLICT ("infraction_id") DO NOTHING;
+
+UPDATE "public"."infractions"
+SET "status" = 'unpaid'
+WHERE "status" = 'pending';
+
+INSERT INTO "public"."driver_profiles" ("profile_id")
+SELECT "id" FROM "public"."profiles" WHERE "role" = 'driver'
+ON CONFLICT ("profile_id") DO NOTHING;
+
+INSERT INTO "public"."agent_profiles" ("profile_id", "badge_id")
+SELECT "id", "agent_badge_id" FROM "public"."profiles" WHERE "role" = 'agent'
+ON CONFLICT ("profile_id") DO UPDATE SET "badge_id" = EXCLUDED."badge_id";
+
+INSERT INTO "public"."admin_profiles" ("profile_id")
+SELECT "id" FROM "public"."profiles" WHERE "role" = 'admin'
+ON CONFLICT ("profile_id") DO NOTHING;
 

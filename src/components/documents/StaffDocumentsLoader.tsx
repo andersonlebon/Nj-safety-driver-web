@@ -10,6 +10,7 @@ type Props = {
   vehicleId?: string | null;
   title?: string;
   sectionId?: string;
+  scope?: "all" | "driver" | "vehicle";
 };
 
 export function StaffDocumentsLoader({
@@ -17,6 +18,7 @@ export function StaffDocumentsLoader({
   vehicleId,
   title = "Uploaded documents",
   sectionId = "staff-detail-documents",
+  scope = "all",
 }: Props) {
   const [documents, setDocuments] = useState<DocRow[]>([]);
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
@@ -32,16 +34,18 @@ export function StaffDocumentsLoader({
       const queries = [];
 
       if (ownerId) {
-        queries.push(
-          supabase
-            .from("documents")
-            .select(select)
-            .eq("owner_id", ownerId)
-            .order("uploaded_at", { ascending: false })
-        );
+        let ownerQuery = supabase
+          .from("documents")
+          .select(select)
+          .eq("owner_id", ownerId)
+          .order("uploaded_at", { ascending: false });
+        if (scope === "driver") {
+          ownerQuery = ownerQuery.is("vehicle_id", null);
+        }
+        queries.push(ownerQuery);
       }
 
-      if (vehicleId) {
+      if (vehicleId && scope !== "driver") {
         queries.push(
           supabase
             .from("documents")
@@ -72,7 +76,7 @@ export function StaffDocumentsLoader({
       );
       setSignedUrls(Object.fromEntries(signedEntries));
     });
-  }, [ownerId, vehicleId]);
+  }, [ownerId, scope, vehicleId]);
 
   return (
     <div id={sectionId} className="scroll-mt-3">

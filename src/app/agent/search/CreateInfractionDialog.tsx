@@ -21,12 +21,18 @@ import {
 import { formatCurrency } from "@/lib/utils";
 import { COUNTRIES, DEFAULT_COUNTRY } from "@/lib/countries";
 import { normalizePlateForCountry } from "@/lib/vehicles";
-import { INFRACTION_TEMPLATES, findInfractionTemplate } from "@/lib/infraction-templates";
+import {
+  INFRACTION_TEMPLATES,
+  type InfractionTemplate,
+} from "@/lib/infraction-templates";
 import { fileInfraction } from "@/app/agent/actions";
 import type { PaymentStatus } from "@/lib/types/database";
 
 const DETAIL_STEPS = ["Violation", "Evidence", "Review"];
-const DEFAULT_TEMPLATE = INFRACTION_TEMPLATES[0];
+type TemplateOption = Pick<
+  InfractionTemplate,
+  "code" | "label" | "amount" | "points" | "category"
+>;
 
 export function CreateInfractionDialog({
   plate: fixedPlate,
@@ -34,6 +40,7 @@ export function CreateInfractionDialog({
   vehicleId: fixedVehicleId,
   driverId: fixedDriverId,
   includePlateStep = false,
+  templates = INFRACTION_TEMPLATES,
 }: {
   plate?: string;
   country?: string;
@@ -41,8 +48,10 @@ export function CreateInfractionDialog({
   driverId?: string | null;
   /** When true, first step asks for plate + country (for infractions list page). */
   includePlateStep?: boolean;
+  templates?: readonly TemplateOption[];
 }) {
   const router = useRouter();
+  const defaultTemplate = templates[0] ?? INFRACTION_TEMPLATES[0];
   const steps = includePlateStep
     ? ["Plate", ...DETAIL_STEPS]
     : DETAIL_STEPS;
@@ -64,11 +73,11 @@ export function CreateInfractionDialog({
   const detailStep = includePlateStep ? step - 1 : step;
 
   const [form, setForm] = useState({
-    infraction_template_code: DEFAULT_TEMPLATE.code,
-    infraction_type: DEFAULT_TEMPLATE.label,
+    infraction_template_code: defaultTemplate.code,
+    infraction_type: defaultTemplate.label,
     description: "",
     location: "",
-    fine_amount: String(DEFAULT_TEMPLATE.amount),
+    fine_amount: String(defaultTemplate.amount),
     status: "unpaid" as PaymentStatus,
   });
   const [evidence, setEvidence] = useState<EvidenceSlotValue>({
@@ -88,7 +97,9 @@ export function CreateInfractionDialog({
   };
 
   const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const template = findInfractionTemplate(e.target.value) ?? DEFAULT_TEMPLATE;
+    const template =
+      templates.find((option) => option.code === e.target.value) ??
+      defaultTemplate;
     setForm((prev) => ({
       ...prev,
       infraction_template_code: template.code,
@@ -177,11 +188,11 @@ export function CreateInfractionDialog({
     setStep(0);
     setPlateInput("");
     setForm({
-      infraction_template_code: DEFAULT_TEMPLATE.code,
-      infraction_type: DEFAULT_TEMPLATE.label,
+      infraction_template_code: defaultTemplate.code,
+      infraction_type: defaultTemplate.label,
       description: "",
       location: "",
-      fine_amount: String(DEFAULT_TEMPLATE.amount),
+      fine_amount: String(defaultTemplate.amount),
       status: "unpaid",
     });
     setEvidence({ file: null, previewUrl: null });
@@ -237,7 +248,7 @@ export function CreateInfractionDialog({
                 value={form.infraction_template_code}
                 onChange={handleTemplateChange}
               >
-                {INFRACTION_TEMPLATES.map((template) => (
+                {templates.map((template) => (
                   <option key={template.code} value={template.code}>
                     {template.label} — {formatCurrency(template.amount)}
                   </option>

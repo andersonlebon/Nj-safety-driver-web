@@ -1,16 +1,17 @@
 import { Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { requireRole } from "@/lib/auth";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Card, CardBody } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { requireRole } from "@/lib/auth";
-import { AdminDriversTable } from "../AdminDriversTable";
+import { AdminDriversTable } from "@/app/admin/AdminDriversTable";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminDriversPage() {
-  const me = await requireRole(["admin", "agent"]);
+export default async function AgentDriversPage() {
+  const me = await requireRole(["agent", "admin"]);
   const supabase = createClient();
+
   const { data: drivers } = await supabase
     .from("profiles")
     .select("*")
@@ -38,7 +39,7 @@ export default async function AdminDriversPage() {
     <div>
       <PageHeader
         title="Drivers"
-        description="Review driver accounts. Click a row or View details to approve, reject, or change roles."
+        description="View driver profiles, documents, and registered vehicle plates."
       />
       <Card>
         <CardBody>
@@ -54,7 +55,7 @@ export default async function AdminDriversPage() {
               staffId={me.id}
               staffRole={me.role}
               vehiclesByDriver={vehiclesByDriver}
-              canManageDrivers
+              canManageDrivers={false}
             />
           )}
         </CardBody>
@@ -62,3 +63,4 @@ export default async function AdminDriversPage() {
     </div>
   );
 }
+

@@ -186,3 +186,55 @@ export async function updateVehicleVerification(
   revalidatePath("/driver/vehicles");
   return { ok: true };
 }
+
+export async function saveInfractionTemplate(formData: FormData): Promise<AdminActionResult> {
+  const auth = await requireRoleForAction(["admin"]);
+  if ("ok" in auth) return auth;
+
+  const id = String(formData.get("id") ?? "").trim();
+  const label = String(formData.get("label") ?? "").trim();
+  const amount = Number(formData.get("amount") ?? 0);
+  const points = Number(formData.get("points") ?? 0);
+  const category = String(formData.get("category") ?? "safety").trim() || "safety";
+  const active = formData.get("active") !== "false";
+
+  if (!label) return { ok: false, error: "Infraction label is required." };
+  if (!Number.isFinite(amount) || amount < 0) {
+    return { ok: false, error: "Amount must be a valid positive number." };
+  }
+  if (!Number.isInteger(points) || points < 0) {
+    return { ok: false, error: "Points must be a valid positive integer." };
+  }
+
+  const code =
+    String(formData.get("code") ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "") ||
+    label
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+
+  const supabase = createClient();
+  const payload = {
+    code,
+    label,
+    amount,
+    points,
+    category,
+    active,
+  };
+  const { error } = id
+    ? await supabase.from("infraction_templates").update(payload).eq("id", id)
+    : await supabase.from("infraction_templates").insert(payload);
+
+  if (error) return { ok: false, error: friendlyError(error) };
+
+  revalidatePath("/admin/infraction-templates");
+  revalidatePath("/admin/infractions");
+  revalidatePath("/agent/infractions");
+  revalidatePath("/agent/search");
+  return { ok: true };
+}
