@@ -25,6 +25,7 @@ import {
   countByDay,
   countByMonthByStatus,
   pctDelta,
+  totalsByPaymentStatus,
   topN,
 } from "@/components/dashboard/analytics";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -107,12 +108,10 @@ export default async function AdminOverviewPage() {
   }));
 
   const totalInfractions = infractions.length;
-  const collected = infractions
-    .filter((i) => i.status === "paid")
-    .reduce((s, i) => s + Number(i.fine_amount), 0);
-  const outstanding = infractions
-    .filter((i) => i.status === "unpaid" || i.status === "pending")
-    .reduce((s, i) => s + Number(i.fine_amount), 0);
+  const totals = totalsByPaymentStatus(infractions);
+  const collected = totals.paid;
+  const pendingTotal = totals.pending;
+  const unpaidTotal = totals.unpaid;
 
   // Deltas: current 30-day window vs previous 30-day window
   const cur = infractions.filter((i) => i.created_at >= cutoff30);
@@ -127,11 +126,11 @@ export default async function AdminOverviewPage() {
   const prevCollected = prev
     .filter((i) => i.status === "paid")
     .reduce((s, i) => s + Number(i.fine_amount), 0);
-  const curOutstanding = cur
-    .filter((i) => i.status !== "paid")
+  const curUnpaid = cur
+    .filter((i) => i.status === "unpaid")
     .reduce((s, i) => s + Number(i.fine_amount), 0);
-  const prevOutstanding = prev
-    .filter((i) => i.status !== "paid")
+  const prevUnpaid = prev
+    .filter((i) => i.status === "unpaid")
     .reduce((s, i) => s + Number(i.fine_amount), 0);
 
   const dailyInfractions = countByDay(infractions, 30);
@@ -210,15 +209,28 @@ export default async function AdminOverviewPage() {
           deltaLabel="vs prev 30d"
         />
         <KpiCard
-          label="Outstanding"
-          value={formatCurrency(outstanding)}
+          label="Unpaid fines"
+          value={formatCurrency(unpaidTotal)}
           icon={<Wallet className="h-4 w-4" />}
           accent="red"
-          delta={pctDelta(curOutstanding, prevOutstanding)}
+          delta={pctDelta(curUnpaid, prevUnpaid)}
           deltaLabel="vs prev 30d"
           invertDelta
         />
       </div>
+
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle>Financial totals by payment state</CardTitle>
+        </CardHeader>
+        <CardBody>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+            <PaymentTotal label="Total paid" value={collected} tone="paid" />
+            <PaymentTotal label="Total pending" value={pendingTotal} tone="pending" />
+            <PaymentTotal label="Total unpaid" value={unpaidTotal} tone="unpaid" />
+          </div>
+        </CardBody>
+      </Card>
 
       {/* Time series row */}
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -459,6 +471,33 @@ export default async function AdminOverviewPage() {
           </CardBody>
         </Card>
       </div>
+    </div>
+  );
+}
+
+function PaymentTotal({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: "paid" | "pending" | "unpaid";
+}) {
+  const toneClass = {
+    paid: "text-brand-700 dark:text-brand-300",
+    pending: "text-amber-700 dark:text-amber-300",
+    unpaid: "text-red-700 dark:text-red-300",
+  }[tone];
+
+  return (
+    <div className="rounded-lg border border-stone-200 dark:border-slate-800 bg-stone-50/50 dark:bg-slate-900/40 p-3">
+      <p className="text-xs font-medium uppercase tracking-wide text-stone-500 dark:text-slate-400">
+        {label}
+      </p>
+      <p className={`mt-1 text-xl font-bold ${toneClass}`}>
+        {formatCurrency(value)}
+      </p>
     </div>
   );
 }

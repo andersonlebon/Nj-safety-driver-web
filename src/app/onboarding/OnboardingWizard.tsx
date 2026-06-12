@@ -18,8 +18,10 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
 import { COUNTRIES, DEFAULT_COUNTRY } from "@/lib/countries";
+import { documentRequiresExpiry, validateFutureExpiry } from "@/lib/document-rules";
 import { normalizePlateForCountry } from "@/lib/vehicles";
 import { cn } from "@/lib/utils";
+import { sha256File } from "@/lib/file-hash";
 import type { DocumentType } from "@/lib/types/database";
 import {
   savePersonalInfo,
@@ -359,9 +361,10 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
   const uploadOne = async (
     slot: SlotConfig,
     value: EvidenceSlotValue
-  ): Promise<{ path: string; fileName: string }> => {
+  ): Promise<{ path: string; fileName: string; fileHash: string }> => {
     if (!value.file) throw new Error(`No file picked for "${slot.title}"`);
     const supabase = createClient();
+    const fileHash = await sha256File(value.file);
     const ext = extensionFor(value.file);
     const folder =
       slot.scope === "vehicle" ? `vehicles/${vehicleId}` : slot.folder;
@@ -388,7 +391,7 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
     }
 
     setSlotStatus((prev) => ({ ...prev, [slot.key]: "uploaded" }));
-    return { path, fileName: value.file.name };
+    return { path, fileName: value.file.name, fileHash };
   };
 
   const submitFinal = () => {
@@ -405,13 +408,19 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
         for (const slot of DRIVER_SLOTS) {
           const value = driverSlots[slot.key];
           if (!value?.file) continue;
-          const { path, fileName } = await uploadOne(slot, value);
+          const expiryError = validateFutureExpiry(
+            slotExpiries[slot.key],
+            slot.docType
+          );
+          if (expiryError) throw new Error(`${slot.title}: ${expiryError}`);
+          const { path, fileName, fileHash } = await uploadOne(slot, value);
           uploadedDocs.push({
             doc_type: slot.docType,
             label: slot.labelTag,
             vehicle_id: null,
             file_path: path,
             file_name: fileName,
+            file_hash: fileHash,
             expires_at: slotExpiries[slot.key]
               ? new Date(slotExpiries[slot.key]).toISOString()
               : null,
@@ -421,13 +430,19 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
         for (const slot of VEHICLE_SLOTS) {
           const value = vehicleSlots[slot.key];
           if (!value?.file) continue;
-          const { path, fileName } = await uploadOne(slot, value);
+          const expiryError = validateFutureExpiry(
+            slotExpiries[slot.key],
+            slot.docType
+          );
+          if (expiryError) throw new Error(`${slot.title}: ${expiryError}`);
+          const { path, fileName, fileHash } = await uploadOne(slot, value);
           uploadedDocs.push({
             doc_type: slot.docType,
             label: slot.labelTag,
             vehicle_id: vehicleId,
             file_path: path,
             file_name: fileName,
+            file_hash: fileHash,
             expires_at: slotExpiries[slot.key]
               ? new Date(slotExpiries[slot.key]).toISOString()
               : null,
@@ -843,7 +858,7 @@ function DocumentsStep({
             errorMessage={slotErrors[slot.key]}
             expiresAt={slotExpiries[slot.key]}
             onExpiresAtChange={(value) => onExpiryChange(slot.key, value)}
-            showExpiry={Boolean(slots[slot.key]?.file)}
+            showExpiry={Boolean(slots[slot.key]?.file) && documentRequiresExpiry(slot.docType)}
             disabled={disabled}
           />
         ))}
@@ -1057,7 +1072,7 @@ function VehicleStep({
             errorMessage={slotErrors[slot.key]}
             expiresAt={slotExpiries[slot.key]}
             onExpiresAtChange={(value) => onExpiryChange(slot.key, value)}
-            showExpiry={Boolean(slots[slot.key]?.file)}
+            showExpiry={Boolean(slots[slot.key]?.file) && documentRequiresExpiry(slot.docType)}
             disabled={pending}
           />
         ))}

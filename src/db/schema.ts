@@ -16,6 +16,12 @@ export const paymentStatus = pgEnum("payment_status", [
   "paid",
   "pending",
 ]);
+export const transactionStatus = pgEnum("transaction_status", [
+  "initialized",
+  "pending",
+  "unpaid",
+  "paid",
+]);
 export const documentType = pgEnum("document_type", [
   "identity",
   "driver_license",
@@ -113,6 +119,7 @@ export const documents = pgTable("documents", {
   label: text("label"),
   filePath: text("file_path").notNull(),
   fileName: text("file_name"),
+  fileHash: text("file_hash"),
   expiresAt: timestamp("expires_at", { withTimezone: true }),
   verificationStatus: verificationStatus("verification_status")
     .notNull()
@@ -150,12 +157,58 @@ export const infractions = pgTable("infractions", {
     .default(sql`now()`),
 });
 
+export const transactions = pgTable("transactions", {
+  id: uuid("id").primaryKey().default(sql`uuid_generate_v4()`),
+  infractionId: uuid("infraction_id")
+    .notNull()
+    .references(() => infractions.id, { onDelete: "cascade" }),
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull().default("0"),
+  status: transactionStatus("status").notNull().default("initialized"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .default(sql`now()`),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .default(sql`now()`),
+});
+
+export const infractionTemplates = pgTable("infraction_templates", {
+  id: uuid("id").primaryKey().default(sql`uuid_generate_v4()`),
+  code: text("code").notNull().unique(),
+  label: text("label").notNull(),
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull().default("0"),
+  points: integer("points").notNull().default(0),
+  category: text("category").notNull().default("safety"),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .default(sql`now()`),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .default(sql`now()`),
+});
+
+export const driverMessages = pgTable("driver_messages", {
+  id: uuid("id").primaryKey().default(sql`uuid_generate_v4()`),
+  driverId: uuid("driver_id")
+    .notNull()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  senderId: uuid("sender_id").references(() => profiles.id, {
+    onDelete: "set null",
+  }),
+  body: text("body").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .default(sql`now()`),
+});
+
 export const vehicleTrackingEvents = pgTable("vehicle_tracking_events", {
   id: uuid("id").primaryKey().default(sql`uuid_generate_v4()`),
   vehicleId: uuid("vehicle_id").references(() => vehicles.id, {
     onDelete: "set null",
   }),
   plateNumber: text("plate_number").notNull(),
+  registrationCountry: text("registration_country").default("GA"),
   eventType: trackingEventType("event_type").notNull(),
   location: text("location"),
   latitude: numeric("latitude", { precision: 10, scale: 7 }),
@@ -180,3 +233,7 @@ export type Document = typeof documents.$inferSelect;
 export type NewDocument = typeof documents.$inferInsert;
 export type Infraction = typeof infractions.$inferSelect;
 export type NewInfraction = typeof infractions.$inferInsert;
+export type Transaction = typeof transactions.$inferSelect;
+export type NewTransaction = typeof transactions.$inferInsert;
+export type InfractionTemplateRow = typeof infractionTemplates.$inferSelect;
+export type DriverMessage = typeof driverMessages.$inferSelect;

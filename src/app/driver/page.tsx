@@ -21,7 +21,9 @@ import {
 import { statusColor } from "@/components/charts/theme";
 import {
   computeComplianceScore,
+  COMPLIANCE_RULES,
   sumByMonth,
+  totalsByPaymentStatus,
 } from "@/components/dashboard/analytics";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -79,7 +81,8 @@ export default async function DriverOverviewPage() {
   const unpaid = infractions.filter((i) => i.status === "unpaid");
   const pending = infractions.filter((i) => i.status === "pending");
   const paid = infractions.filter((i) => i.status === "paid");
-  const totalDue = unpaid.reduce((s, i) => s + Number(i.fine_amount), 0);
+  const paymentTotals = totalsByPaymentStatus(infractions);
+  const totalDue = paymentTotals.unpaid;
 
   const monthly = sumByMonth(infractions, 6);
   const recent = infractions.slice(0, 5);
@@ -191,19 +194,19 @@ export default async function DriverOverviewPage() {
             <div className="mt-2 grid grid-cols-3 text-center text-xs">
               <div>
                 <p className="font-semibold text-stone-900 dark:text-stone-100">
-                  {paid.length}
+                  {formatCurrency(paymentTotals.paid)}
                 </p>
                 <p className="text-stone-500 dark:text-slate-400">Paid</p>
               </div>
               <div>
                 <p className="font-semibold text-stone-900 dark:text-stone-100">
-                  {pending.length}
+                  {formatCurrency(paymentTotals.pending)}
                 </p>
                 <p className="text-stone-500 dark:text-slate-400">Pending</p>
               </div>
               <div>
                 <p className="font-semibold text-stone-900 dark:text-stone-100">
-                  {unpaid.length}
+                  {formatCurrency(paymentTotals.unpaid)}
                 </p>
                 <p className="text-stone-500 dark:text-slate-400">Unpaid</p>
               </div>
@@ -228,6 +231,13 @@ export default async function DriverOverviewPage() {
               description={scoreDescription}
               valueFormat="raw"
             />
+            <p className="mt-3 text-xs text-stone-500 dark:text-slate-400">
+              Formula: 100 minus {COMPLIANCE_RULES.unpaidInfractionPenalty} pts
+              per unpaid infraction, {COMPLIANCE_RULES.pendingInfractionPenalty} pts
+              per pending infraction, and vehicle document penalties. Scores at
+              or below {COMPLIANCE_RULES.minimumAllowedToDrive}% require review
+              before driving.
+            </p>
           </CardBody>
         </Card>
 

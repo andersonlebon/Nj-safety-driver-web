@@ -7,6 +7,7 @@ import { requireRoleForAction } from "@/lib/auth";
 import { isDomesticCountry } from "@/lib/countries";
 import { normalizePlateForCountry } from "@/lib/vehicles";
 import type { FileInfractionInput } from "@/lib/infractions";
+import { findInfractionTemplate } from "@/lib/infraction-templates";
 import {
   TRANSIT_ID_DOC_TYPE,
   TRANSIT_ID_LABEL_BACK,
@@ -64,16 +65,8 @@ type TransitIdUpload = {
 };
 
 export async function registerBorderVehicle(input: {
-  plate_number: string;
-  registration_country: string;
-  brand: string;
-  model: string;
-  color: string;
-  year: string;
+  vehicle_id: string;
   border_checkpoint: string;
-  transit_driver_name: string;
-  transit_driver_phone: string;
-  transit_passport_id: string;
   foreign_notes: string;
   id_documents?: {
     front: TransitIdUpload;
@@ -86,48 +79,49 @@ export async function registerBorderVehicle(input: {
     if ("ok" in auth) return auth;
     const agent = auth;
 
-    const country = input.registration_country || "GA";
-    const plate = normalizePlateForCountry(input.plate_number, country);
-    if (!plate) return { ok: false, error: "Plate number is required." };
+    if (!input.vehicle_id) {
+      return { ok: false, error: "Select an existing driver vehicle." };
+    }
     if (!input.border_checkpoint.trim()) {
       return { ok: false, error: "Border checkpoint is required." };
     }
-    if (!input.transit_driver_name.trim()) {
-      return { ok: false, error: "Driver name is required for border registration." };
-    }
     const supabase = createClient();
-    const { data: inserted, error } = await supabase
+    const { data: vehicle } = await supabase
       .from("vehicles")
-      .insert({
-        owner_id: null,
-        plate_number: plate,
-        registration_country: country,
+      .select("id, owner_id, plate_number, registration_country")
+      .eq("id", input.vehicle_id)
+      .not("owner_id", "is", null)
+      .maybeSingle();
+
+    if (!vehicle) {
+      return {
+        ok: false,
+        error: "Border crossings must be linked to an existing driver vehicle.",
+      };
+    }
+
+    const country = vehicle.registration_country || "GA";
+    const plate = normalizePlateForCountry(vehicle.plate_number, country);
+    if (!plate) return { ok: false, error: "Vehicle plate is invalid." };
+
+    const { error } = await supabase
+      .from("vehicles")
+      .update({
         is_foreign: !isDomesticCountry(country),
         is_border_transit: true,
         border_checkpoint: input.border_checkpoint.trim(),
         border_entry_at: new Date().toISOString(),
-        transit_driver_name: input.transit_driver_name.trim(),
-        transit_driver_phone: input.transit_driver_phone.trim() || null,
-        transit_passport_id: input.transit_passport_id.trim() || null,
         foreign_notes: input.foreign_notes.trim() || null,
-        brand: input.brand.trim() || null,
-        model: input.model.trim() || null,
-        color: input.color.trim() || null,
-        year: input.year ? Number(input.year) : null,
         verification_status: "pending_review",
       })
-      .select("id")
-      .single();
+      .eq("id", vehicle.id);
 
     if (error) return { ok: false, error: friendlyError(error) };
-    if (!inserted?.id) {
-      return { ok: false, error: "Registration saved but no vehicle id was returned." };
-    }
 
     const { error: trackingError } = await supabase
       .from("vehicle_tracking_events")
       .insert({
-        vehicle_id: inserted.id,
+        vehicle_id: vehicle.id,
         plate_number: plate,
         registration_country: country,
         event_type: "registration",
@@ -139,10 +133,9 @@ export async function registerBorderVehicle(input: {
       });
 
     if (trackingError) {
-      await supabase.from("vehicles").delete().eq("id", inserted.id);
       return {
         ok: false,
-        error: `Vehicle registered but tracking log failed: ${friendlyError(trackingError)}`,
+        error: `Border crossing saved but tracking log failed: ${friendlyError(trackingError)}`,
       };
     }
 
@@ -152,10 +145,11 @@ export async function registerBorderVehicle(input: {
         { label: TRANSIT_ID_LABEL_BACK, file_path: input.id_documents.back.file_path, file_name: input.id_documents.back.file_name },
       ]);
       if (idCheck.complete) {
+        const documentOwnerId = vehicle.owner_id ?? agent.id;
         const docRows = [
           {
-            owner_id: agent.id,
-            vehicle_id: inserted.id,
+            owner_id: documentOwnerId,
+            vehicle_id: vehicle.id,
             doc_type: TRANSIT_ID_DOC_TYPE,
             label: TRANSIT_ID_LABEL_FRONT,
             file_path: input.id_documents.front.file_path,
@@ -164,8 +158,8 @@ export async function registerBorderVehicle(input: {
             verification_status: "pending_review" as const,
           },
           {
-            owner_id: agent.id,
-            vehicle_id: inserted.id,
+            owner_id: documentOwnerId,
+            vehicle_id: vehicle.id,
             doc_type: TRANSIT_ID_DOC_TYPE,
             label: TRANSIT_ID_LABEL_BACK,
             file_path: input.id_documents.back.file_path,
@@ -182,7 +176,7 @@ export async function registerBorderVehicle(input: {
     revalidatePath("/agent/search");
     revalidatePath("/admin/vehicles");
     revalidatePath("/admin/tracking");
-    return { ok: true, vehicleId: inserted.id };
+    return { ok: true, vehicleId: vehicle.id };
   } catch (err) {
     return { ok: false, error: friendlyError(err) };
   }
@@ -203,8 +197,18 @@ export async function fileInfraction(
     if (!input.infraction_type.trim()) {
       return { ok: false, error: "Infraction type is required." };
     }
-    if (!input.fine_amount || Number(input.fine_amount) < 0) {
-      return { ok: false, error: "A valid fine amount is required." };
+    const template = findInfractionTemplate(input.infraction_template_code);
+    if (!template) {
+      return { ok: false, error: "Select a valid infraction template." };
+    }
+    if (
+      input.infraction_type !== template.label ||
+      Number(input.fine_amount) !== template.amount
+    ) {
+      return {
+        ok: false,
+        error: "Infraction amount must match the selected prebuilt template.",
+      };
     }
 
     const supabase = createClient();
@@ -216,10 +220,10 @@ export async function fileInfraction(
         vehicle_id: input.vehicle_id,
         driver_id: input.driver_id,
         agent_id: staff.id,
-        infraction_type: input.infraction_type.trim(),
+        infraction_type: template.label,
         description: input.description.trim() || null,
         location: input.location.trim() || null,
-        fine_amount: Number(input.fine_amount),
+        fine_amount: template.amount,
         status: input.status,
         evidence_path: input.evidence_path,
       })
@@ -229,6 +233,21 @@ export async function fileInfraction(
     if (error) return { ok: false, error: friendlyError(error) };
 
     if (inserted?.id) {
+      const { error: transactionError } = await supabase
+        .from("transactions")
+        .insert({
+          infraction_id: inserted.id,
+          amount: template.amount,
+          status: input.status,
+        });
+
+      if (transactionError) {
+        return {
+          ok: false,
+          error: `Infraction filed but transaction failed: ${friendlyError(transactionError)}`,
+        };
+      }
+
       const { error: trackingError } = await supabase
         .from("vehicle_tracking_events")
         .insert({
@@ -274,12 +293,29 @@ export async function updateInfractionPaymentStatus(
     if (!infractionId) return { ok: false, error: "Missing infraction id." };
 
     const supabase = createClient();
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from("infractions")
       .update({ status })
-      .eq("id", infractionId);
+      .eq("id", infractionId)
+      .select("id, fine_amount")
+      .single();
 
     if (error) return { ok: false, error: friendlyError(error) };
+
+    const { error: transactionError } = await supabase
+      .from("transactions")
+      .upsert(
+        {
+          infraction_id: updated.id,
+          amount: Number(updated.fine_amount),
+          status,
+        },
+        { onConflict: "infraction_id" }
+      );
+
+    if (transactionError) {
+      return { ok: false, error: friendlyError(transactionError) };
+    }
 
     revalidatePath("/agent/infractions");
     revalidatePath("/admin/infractions");

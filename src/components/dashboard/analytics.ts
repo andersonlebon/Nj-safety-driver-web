@@ -20,6 +20,14 @@ type WithCreatedAt = { created_at: string };
 type WithAmount = { fine_amount: number | string };
 type WithStatus = { status: PaymentStatus };
 
+export const COMPLIANCE_RULES = {
+  unpaidInfractionPenalty: 10,
+  pendingInfractionPenalty: 5,
+  missingInsurancePenalty: 20,
+  missingInspectionPenalty: 20,
+  minimumAllowedToDrive: 40,
+} as const;
+
 /** Returns the first day of the month for `date`, at 00:00:00 local time. */
 function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -193,6 +201,18 @@ export function pctDelta(current: number, previous: number): number | null {
   return Math.round(((current - previous) / previous) * 1000) / 10;
 }
 
+export function totalsByPaymentStatus<T extends WithAmount & WithStatus>(
+  rows: T[]
+): Record<PaymentStatus, number> {
+  return rows.reduce<Record<PaymentStatus, number>>(
+    (totals, row) => {
+      totals[row.status] += Number(row.fine_amount);
+      return totals;
+    },
+    { paid: 0, pending: 0, unpaid: 0 }
+  );
+}
+
 /**
  * Compute a 0–100 compliance score for a driver:
  *   start at 100
@@ -208,10 +228,14 @@ export function computeComplianceScore(args: {
 }): number {
   let score = 100;
   for (const i of args.infractions) {
-    if (i.status === "unpaid") score -= 10;
-    else if (i.status === "pending") score -= 5;
+    if (i.status === "unpaid") score -= COMPLIANCE_RULES.unpaidInfractionPenalty;
+    else if (i.status === "pending") score -= COMPLIANCE_RULES.pendingInfractionPenalty;
   }
-  if (args.vehicles.some((v) => v.insurance_status === false)) score -= 20;
-  if (args.vehicles.some((v) => v.inspection_status === false)) score -= 20;
+  if (args.vehicles.some((v) => v.insurance_status === false)) {
+    score -= COMPLIANCE_RULES.missingInsurancePenalty;
+  }
+  if (args.vehicles.some((v) => v.inspection_status === false)) {
+    score -= COMPLIANCE_RULES.missingInspectionPenalty;
+  }
   return Math.max(0, Math.min(100, score));
 }

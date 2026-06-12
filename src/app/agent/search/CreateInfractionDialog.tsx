@@ -21,11 +21,12 @@ import {
 import { formatCurrency } from "@/lib/utils";
 import { COUNTRIES, DEFAULT_COUNTRY } from "@/lib/countries";
 import { normalizePlateForCountry } from "@/lib/vehicles";
-import { INFRACTION_TYPES } from "@/lib/infractions";
+import { INFRACTION_TEMPLATES, findInfractionTemplate } from "@/lib/infraction-templates";
 import { fileInfraction } from "@/app/agent/actions";
 import type { PaymentStatus } from "@/lib/types/database";
 
 const DETAIL_STEPS = ["Violation", "Evidence", "Review"];
+const DEFAULT_TEMPLATE = INFRACTION_TEMPLATES[0];
 
 export function CreateInfractionDialog({
   plate: fixedPlate,
@@ -63,10 +64,11 @@ export function CreateInfractionDialog({
   const detailStep = includePlateStep ? step - 1 : step;
 
   const [form, setForm] = useState({
-    infraction_type: INFRACTION_TYPES[0],
+    infraction_template_code: DEFAULT_TEMPLATE.code,
+    infraction_type: DEFAULT_TEMPLATE.label,
     description: "",
     location: "",
-    fine_amount: "",
+    fine_amount: String(DEFAULT_TEMPLATE.amount),
     status: "unpaid" as PaymentStatus,
   });
   const [evidence, setEvidence] = useState<EvidenceSlotValue>({
@@ -83,6 +85,16 @@ export function CreateInfractionDialog({
     >
   ) => {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
+  };
+
+  const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const template = findInfractionTemplate(e.target.value) ?? DEFAULT_TEMPLATE;
+    setForm((prev) => ({
+      ...prev,
+      infraction_template_code: template.code,
+      infraction_type: template.label,
+      fine_amount: String(template.amount),
+    }));
   };
 
   const resolvePlate = async () => {
@@ -109,7 +121,7 @@ export function CreateInfractionDialog({
       return null;
     }
     if (detailStep === 0 && !form.fine_amount) {
-      return "Fine amount is required.";
+      return "Select an infraction template.";
     }
     return null;
   };
@@ -145,6 +157,7 @@ export function CreateInfractionDialog({
       registration_country: country,
       vehicle_id: resolvedVehicleId,
       driver_id: resolvedDriverId,
+      infraction_template_code: form.infraction_template_code,
       infraction_type: form.infraction_type,
       description: form.description,
       location: form.location,
@@ -164,10 +177,11 @@ export function CreateInfractionDialog({
     setStep(0);
     setPlateInput("");
     setForm({
-      infraction_type: INFRACTION_TYPES[0],
+      infraction_template_code: DEFAULT_TEMPLATE.code,
+      infraction_type: DEFAULT_TEMPLATE.label,
       description: "",
       location: "",
-      fine_amount: "",
+      fine_amount: String(DEFAULT_TEMPLATE.amount),
       status: "unpaid",
     });
     setEvidence({ file: null, previewUrl: null });
@@ -219,16 +233,19 @@ export function CreateInfractionDialog({
             <div className="space-y-4 mt-4">
               <Select
                 label="Infraction type"
-                name="infraction_type"
-                value={form.infraction_type}
-                onChange={handleChange("infraction_type")}
+                name="infraction_template_code"
+                value={form.infraction_template_code}
+                onChange={handleTemplateChange}
               >
-                {INFRACTION_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
+                {INFRACTION_TEMPLATES.map((template) => (
+                  <option key={template.code} value={template.code}>
+                    {template.label} — {formatCurrency(template.amount)}
                   </option>
                 ))}
               </Select>
+              <p className="text-xs text-stone-500 dark:text-slate-400">
+                Amounts and points are managed by the prebuilt infraction library.
+              </p>
               <Textarea
                 label="Description"
                 name="description"
@@ -250,7 +267,7 @@ export function CreateInfractionDialog({
                   step="0.01"
                   name="fine_amount"
                   value={form.fine_amount}
-                  onChange={handleChange("fine_amount")}
+                  readOnly
                   required
                 />
               </div>
@@ -315,6 +332,7 @@ export function CreateInfractionDialog({
               setError(null);
               setStep((s) => Math.max(0, s - 1));
             }}
+              onCancel={close}
             onNext={async () => {
               const err = validateStep();
               if (err) {

@@ -1,4 +1,4 @@
-import { LayoutDashboard, Search, AlertTriangle, Globe, Users, Car } from "lucide-react";
+import { LayoutDashboard, Search, AlertTriangle, Globe } from "lucide-react";
 import { Sidebar, type NavItem } from "@/components/dashboard/Sidebar";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { requireRole } from "@/lib/auth";
@@ -6,8 +6,6 @@ import { requireRole } from "@/lib/auth";
 const navItems: NavItem[] = [
   { href: "/agent", label: "Overview", icon: <LayoutDashboard className="h-4 w-4" /> },
   { href: "/agent/search", label: "Plate search", icon: <Search className="h-4 w-4" /> },
-  { href: "/admin/drivers", label: "Drivers", icon: <Users className="h-4 w-4" /> },
-  { href: "/admin/vehicles", label: "Vehicles", icon: <Car className="h-4 w-4" /> },
   { href: "/agent/border", label: "Border control", icon: <Globe className="h-4 w-4" /> },
   { href: "/agent/infractions", label: "Infractions", icon: <AlertTriangle className="h-4 w-4" /> },
 ];

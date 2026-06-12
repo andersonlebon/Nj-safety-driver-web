@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { friendlyError } from "@/lib/errors";
-import { requireRole } from "@/lib/auth";
+import { requireRole, requireRoleForAction } from "@/lib/auth";
 import { canAssignAdminRole } from "@/lib/staff";
 import type { UserRole } from "@/lib/types/database";
 
@@ -26,7 +26,9 @@ export async function updateUserRole(
   userId: string,
   role: UserRole
 ): Promise<AdminActionResult> {
-  const me = await requireRole(["admin", "agent"]);
+  const auth = await requireRoleForAction(["admin"]);
+  if ("ok" in auth) return auth;
+  const me = auth;
 
   if (!ROLES.includes(role)) {
     return { ok: false, error: `Unknown role: ${role}` };
@@ -72,20 +74,36 @@ export async function updateDriverVerification(
   status: "active" | "rejected" | "pending_review",
   adminMessage?: string | null
 ): Promise<AdminActionResult> {
-  await requireRole(["admin", "agent"]);
+  const auth = await requireRoleForAction(["admin"]);
+  if ("ok" in auth) return auth;
   if (!userId) return { ok: false, error: "Missing user id." };
 
   const supabase = createClient();
+  const message = adminMessage?.trim() || null;
   const { error } = await supabase
     .from("profiles")
     .update({
       verification_status: status,
-      admin_message: adminMessage?.trim() || null,
+      admin_message: message,
     })
     .eq("id", userId)
     .eq("role", "driver");
 
   if (error) return { ok: false, error: friendlyError(error) };
+
+  if (message) {
+    const { error: messageError } = await supabase
+      .from("driver_messages")
+      .insert({
+        driver_id: userId,
+        sender_id: auth.id,
+        body: message,
+      });
+
+    if (messageError) {
+      return { ok: false, error: friendlyError(messageError) };
+    }
+  }
 
   revalidatePath("/admin/drivers");
   revalidatePath("/admin/vehicles");
@@ -137,7 +155,7 @@ export async function updateVehicleVerification(
   vehicleId: string,
   status: "active" | "rejected" | "pending_review"
 ): Promise<AdminActionResult> {
-  await requireRole(["admin", "agent"]);
+  await requireRole(["admin"]);
   if (!vehicleId) return { ok: false, error: "Missing vehicle id." };
 
   const supabase = createClient();

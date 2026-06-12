@@ -136,13 +136,30 @@ export function DocumentGallery({
           role="dialog"
           aria-modal
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={lightbox}
-            alt="Document"
-            className="max-h-full max-w-full object-contain rounded-lg"
-            onClick={(e) => e.stopPropagation()}
-          />
+          <div className="flex max-h-full max-w-full flex-col gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={lightbox}
+              alt="Document"
+              className="min-h-0 max-h-[80vh] max-w-full object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <div
+              className="flex justify-center gap-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setLightbox(null)}
+              >
+                Cancel
+              </Button>
+              <Button type="button" onClick={() => setLightbox(null)}>
+                Close
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

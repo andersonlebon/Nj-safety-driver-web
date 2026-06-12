@@ -29,7 +29,7 @@ export function Sidebar({
           </span>
           <div>
             <p className="text-sm font-bold text-stone-900 dark:text-stone-100 leading-tight tracking-tight">
-              NJ Safety
+              NJ-Drive
             </p>
             <p className="text-xs text-stone-500 dark:text-slate-400 leading-tight">
               {workspaceLabel}
