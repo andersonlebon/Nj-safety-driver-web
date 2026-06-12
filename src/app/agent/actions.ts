@@ -61,7 +61,6 @@ export async function logVehicleCheckIn(input: {
 type TransitIdUpload = {
   file_path: string;
   file_name: string;
-  expires_at?: string | null;
 };
 
 export async function registerBorderVehicle(input: {
@@ -154,7 +153,7 @@ export async function registerBorderVehicle(input: {
             label: TRANSIT_ID_LABEL_FRONT,
             file_path: input.id_documents.front.file_path,
             file_name: input.id_documents.front.file_name,
-            expires_at: input.id_documents.front.expires_at ?? null,
+            expires_at: null,
             verification_status: "pending_review" as const,
           },
           {
@@ -164,7 +163,7 @@ export async function registerBorderVehicle(input: {
             label: TRANSIT_ID_LABEL_BACK,
             file_path: input.id_documents.back.file_path,
             file_name: input.id_documents.back.file_name,
-            expires_at: input.id_documents.back.expires_at ?? null,
+            expires_at: null,
             verification_status: "pending_review" as const,
           },
         ];

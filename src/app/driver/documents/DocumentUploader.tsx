@@ -8,7 +8,12 @@ import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
-import { documentRequiresExpiry, todayIsoDate, validateFutureExpiry } from "@/lib/document-rules";
+import {
+  documentRequiresExpiry,
+  normalizeExpiryForDocument,
+  todayIsoDate,
+  validateFutureExpiry,
+} from "@/lib/document-rules";
 import { sha256File } from "@/lib/file-hash";
 import type { Database, DocumentType } from "@/lib/types/database";
 
@@ -126,7 +131,10 @@ export function DocumentUploader({
       file_path: path,
       file_name: file.name,
       file_hash: fileHash,
-      expires_at: requiresExpiry && expiresAt ? new Date(expiresAt).toISOString() : null,
+      expires_at: normalizeExpiryForDocument(
+        expiresAt ? new Date(expiresAt).toISOString() : null,
+        docType
+      ),
       verification_status: "pending_review",
     });
 

@@ -18,7 +18,11 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
 import { COUNTRIES, DEFAULT_COUNTRY } from "@/lib/countries";
-import { documentRequiresExpiry, validateFutureExpiry } from "@/lib/document-rules";
+import {
+  documentRequiresExpiry,
+  normalizeExpiryForDocument,
+  validateFutureExpiry,
+} from "@/lib/document-rules";
 import { normalizePlateForCountry } from "@/lib/vehicles";
 import { cn } from "@/lib/utils";
 import { sha256File } from "@/lib/file-hash";
@@ -330,15 +334,31 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
   };
 
   const setDriverSlot = (key: string, next: EvidenceSlotValue) => {
+    const slot = DRIVER_SLOTS.find((candidate) => candidate.key === key);
     setDriverSlots((prev) => ({ ...prev, [key]: next }));
     setSlotStatus((prev) => ({ ...prev, [key]: next.file ? "ready" : "idle" }));
     setSlotErrors((prev) => ({ ...prev, [key]: undefined }));
+    if (slot && !documentRequiresExpiry(slot.docType)) {
+      setSlotExpiries((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
   };
 
   const setVehicleSlot = (key: string, next: EvidenceSlotValue) => {
+    const slot = VEHICLE_SLOTS.find((candidate) => candidate.key === key);
     setVehicleSlots((prev) => ({ ...prev, [key]: next }));
     setSlotStatus((prev) => ({ ...prev, [key]: next.file ? "ready" : "idle" }));
     setSlotErrors((prev) => ({ ...prev, [key]: undefined }));
+    if (slot && !documentRequiresExpiry(slot.docType)) {
+      setSlotExpiries((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
   };
 
   const validateStep3 = (): string | null => {
@@ -421,9 +441,12 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
             file_path: path,
             file_name: fileName,
             file_hash: fileHash,
-            expires_at: slotExpiries[slot.key]
-              ? new Date(slotExpiries[slot.key]).toISOString()
-              : null,
+            expires_at: normalizeExpiryForDocument(
+              slotExpiries[slot.key]
+                ? new Date(slotExpiries[slot.key]).toISOString()
+                : null,
+              slot.docType
+            ),
           });
         }
 
@@ -443,9 +466,12 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
             file_path: path,
             file_name: fileName,
             file_hash: fileHash,
-            expires_at: slotExpiries[slot.key]
-              ? new Date(slotExpiries[slot.key]).toISOString()
-              : null,
+            expires_at: normalizeExpiryForDocument(
+              slotExpiries[slot.key]
+                ? new Date(slotExpiries[slot.key]).toISOString()
+                : null,
+              slot.docType
+            ),
           });
         }
 

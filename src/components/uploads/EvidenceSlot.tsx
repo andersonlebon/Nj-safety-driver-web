@@ -69,7 +69,7 @@ export function EvidenceSlot({
   errorMessage,
   expiresAt,
   onExpiresAtChange,
-  showExpiry = true,
+  showExpiry = false,
   disabled,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
