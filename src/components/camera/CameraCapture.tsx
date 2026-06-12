@@ -25,6 +25,7 @@ export function CameraCapture({
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [active, setActive] = useState(false);
+  const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const stop = useCallback(() => {
@@ -37,7 +38,12 @@ export function CameraCapture({
 
   const start = async () => {
     setError(null);
+    setStarting(true);
     try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setError("Camera is not supported in this browser. Enter details manually.");
+        return;
+      }
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: facingMode } }, audio: false,
       });
@@ -47,8 +53,16 @@ export function CameraCapture({
         await videoRef.current.play();
       }
       setActive(true);
-    } catch {
-      setError("Camera access denied or unavailable. Enter details manually.");
+    } catch (err) {
+      const name = err instanceof DOMException ? err.name : "CameraError";
+      setError(
+        name === "NotAllowedError"
+          ? "Camera permission was denied. Allow camera access in your browser settings, then retry."
+          : "Camera is unavailable or already in use. Close other camera apps and retry, or enter details manually."
+      );
+      console.warn("Camera startup failed", err);
+    } finally {
+      setStarting(false);
     }
   };
 
@@ -108,9 +122,15 @@ export function CameraCapture({
       ) : null}
 
       {!active && !previewUrl && (
-        <Button type="button" variant="secondary" className="w-full text-sm" onClick={start}>
+        <Button
+          type="button"
+          variant="secondary"
+          className="w-full text-sm"
+          onClick={start}
+          loading={starting}
+        >
           <Camera className="h-4 w-4 mr-1.5" />
-          {label}
+          {starting ? "Starting camera..." : label}
         </Button>
       )}
 

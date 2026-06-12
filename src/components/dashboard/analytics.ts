@@ -20,6 +20,11 @@ type WithCreatedAt = { created_at: string };
 type WithAmount = { fine_amount: number | string };
 type WithStatus = { status: PaymentStatus };
 
+export const COMPLIANCE_RULES = {
+  unpaidInfractionPenalty: 2,
+  minimumAllowedToDrive: 50,
+} as const;
+
 /** Returns the first day of the month for `date`, at 00:00:00 local time. */
 function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -193,25 +198,34 @@ export function pctDelta(current: number, previous: number): number | null {
   return Math.round(((current - previous) / previous) * 1000) / 10;
 }
 
+export function totalsByPaymentStatus<T extends WithAmount & WithStatus>(
+  rows: T[]
+): Record<PaymentStatus, number> {
+  return rows.reduce<Record<PaymentStatus, number>>(
+    (totals, row) => {
+      totals[row.status] += Number(row.fine_amount);
+      return totals;
+    },
+    { paid: 0, pending: 0, unpaid: 0 }
+  );
+}
+
 /**
  * Compute a 0–100 compliance score for a driver:
  *   start at 100
- *   −10 per unpaid infraction
- *   −5  per pending infraction
- *   −20 if ANY vehicle has insurance_status === false
- *   −20 if ANY vehicle has inspection_status === false
+ *   −2 per unpaid infraction
+ * Paid infractions restore those points. Transaction states (initialized /
+ * pending / paid / unpaid) are displayed separately and only change the
+ * infraction when the transaction is confirmed paid.
  * Clamped to [0, 100].
  */
 export function computeComplianceScore(args: {
   infractions: Array<{ status: PaymentStatus }>;
-  vehicles: Array<{ insurance_status: boolean; inspection_status: boolean }>;
+  vehicles?: Array<{ insurance_status: boolean; inspection_status: boolean }>;
 }): number {
   let score = 100;
   for (const i of args.infractions) {
-    if (i.status === "unpaid") score -= 10;
-    else if (i.status === "pending") score -= 5;
+    if (i.status === "unpaid") score -= COMPLIANCE_RULES.unpaidInfractionPenalty;
   }
-  if (args.vehicles.some((v) => v.insurance_status === false)) score -= 20;
-  if (args.vehicles.some((v) => v.inspection_status === false)) score -= 20;
   return Math.max(0, Math.min(100, score));
 }

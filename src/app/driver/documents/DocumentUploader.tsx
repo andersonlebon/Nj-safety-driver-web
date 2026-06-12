@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
+import { documentRequiresExpiry, todayIsoDate, validateFutureExpiry } from "@/lib/document-rules";
+import { sha256File } from "@/lib/file-hash";
 import type { Database, DocumentType } from "@/lib/types/database";
 
 type VehicleOption = Pick<
@@ -62,6 +64,7 @@ export function DocumentUploader({
 
   const currentScope =
     docTypes.find((d) => d.value === docType)?.scope ?? "driver";
+  const requiresExpiry = documentRequiresExpiry(docType);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,8 +81,29 @@ export function DocumentUploader({
       setLoading(false);
       return;
     }
+    const expiryError = validateFutureExpiry(expiresAt, docType);
+    if (expiryError) {
+      setError(expiryError);
+      setLoading(false);
+      return;
+    }
 
     const supabase = createClient();
+    const fileHash = await sha256File(file);
+    const { data: duplicate } = await supabase
+      .from("documents")
+      .select("id")
+      .eq("owner_id", ownerId)
+      .eq("file_hash", fileHash)
+      .limit(1)
+      .maybeSingle();
+
+    if (duplicate) {
+      setError("This exact file is already uploaded. Use Replace on the existing document if needed.");
+      setLoading(false);
+      return;
+    }
+
     const ext = file.name.split(".").pop() || "bin";
     const folder = folderFor(docType, effectiveVehicleId);
     const path = `${ownerId}/${folder}/${docType}-${Date.now()}.${ext}`;
@@ -101,7 +125,8 @@ export function DocumentUploader({
       label: label.trim() || null,
       file_path: path,
       file_name: file.name,
-      expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+      file_hash: fileHash,
+      expires_at: requiresExpiry && expiresAt ? new Date(expiresAt).toISOString() : null,
       verification_status: "pending_review",
     });
 
@@ -128,7 +153,11 @@ export function DocumentUploader({
           label="Document type"
           name="doc_type"
           value={docType}
-          onChange={(e) => setDocType(e.target.value as DocumentType)}
+          onChange={(e) => {
+            const next = e.target.value as DocumentType;
+            setDocType(next);
+            if (!documentRequiresExpiry(next)) setExpiresAt("");
+          }}
         >
           {docTypes.map((d) => (
             <option key={d.value} value={d.value}>
@@ -158,14 +187,16 @@ export function DocumentUploader({
           onChange={(e) => setLabel(e.target.value)}
           placeholder="e.g. front, back, 2025"
         />
-        <Input
-          label="Expiration date"
-          type="date"
-          name="expires_at"
-          value={expiresAt}
-          onChange={(e) => setExpiresAt(e.target.value)}
-          min={new Date().toISOString().slice(0, 10)}
-        />
+        {requiresExpiry && (
+          <Input
+            label="Expiration date"
+            type="date"
+            name="expires_at"
+            value={expiresAt}
+            onChange={(e) => setExpiresAt(e.target.value)}
+            min={todayIsoDate()}
+          />
+        )}
         <Input
           ref={fileInputRef}
           label="File"

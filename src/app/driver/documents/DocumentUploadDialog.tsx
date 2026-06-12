@@ -10,6 +10,8 @@ import { StepWizard, StepWizardFooter } from "@/components/ui/StepWizard";
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
+import { documentRequiresExpiry, todayIsoDate, validateFutureExpiry } from "@/lib/document-rules";
+import { sha256File } from "@/lib/file-hash";
 import {
   EvidenceSlot,
   PHOTO_OR_PDF_ACCEPT,
@@ -71,6 +73,7 @@ export function DocumentUploadDialog({
   const [error, setError] = useState<string | null>(null);
 
   const scope = docTypes.find((d) => d.value === docType)?.scope ?? "driver";
+  const requiresExpiry = documentRequiresExpiry(docType);
 
   const reset = () => {
     setStep(0);
@@ -88,6 +91,8 @@ export function DocumentUploadDialog({
       if (scope === "vehicle" && vehicles.length > 0 && !vehicleId) {
         return "Please select a vehicle for this document.";
       }
+      const expiryError = validateFutureExpiry(expiresAt, docType);
+      if (expiryError) return expiryError;
       return null;
     }
     if (!evidence.file) return "Please add a photo or PDF to upload.";
@@ -106,6 +111,21 @@ export function DocumentUploadDialog({
 
     const effectiveVehicleId = scope === "vehicle" ? vehicleId || null : null;
     const supabase = createClient();
+    const fileHash = await sha256File(file);
+    const { data: duplicate } = await supabase
+      .from("documents")
+      .select("id")
+      .eq("owner_id", ownerId)
+      .eq("file_hash", fileHash)
+      .limit(1)
+      .maybeSingle();
+
+    if (duplicate) {
+      setError("This exact file is already uploaded. Use Replace on the existing document if needed.");
+      setLoading(false);
+      return;
+    }
+
     const ext = file.name.split(".").pop() || "bin";
     const folder = folderFor(docType, effectiveVehicleId);
     const path = `${ownerId}/${folder}/${docType}-${Date.now()}.${ext}`;
@@ -127,7 +147,8 @@ export function DocumentUploadDialog({
       label: label.trim() || null,
       file_path: path,
       file_name: file.name,
-      expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+      file_hash: fileHash,
+      expires_at: requiresExpiry && expiresAt ? new Date(expiresAt).toISOString() : null,
       verification_status: "pending_review",
     });
 
@@ -170,7 +191,11 @@ export function DocumentUploadDialog({
               label="What are you uploading?"
               name="doc_type"
               value={docType}
-              onChange={(e) => setDocType(e.target.value as DocumentType)}
+                onChange={(e) => {
+                  const next = e.target.value as DocumentType;
+                  setDocType(next);
+                  if (!documentRequiresExpiry(next)) setExpiresAt("");
+                }}
             >
               {docTypes.map((d) => (
                 <option key={d.value} value={d.value}>
@@ -204,14 +229,20 @@ export function DocumentUploadDialog({
                 onChange={(e) => setLabel(e.target.value)}
                 placeholder="e.g. front, back, 2025"
               />
-              <Input
-                label="Expiration date"
-                type="date"
-                name="expires_at"
-                value={expiresAt}
-                onChange={(e) => setExpiresAt(e.target.value)}
-                min={new Date().toISOString().slice(0, 10)}
-              />
+              {requiresExpiry ? (
+                <Input
+                  label="Expiration date"
+                  type="date"
+                  name="expires_at"
+                  value={expiresAt}
+                  onChange={(e) => setExpiresAt(e.target.value)}
+                  min={todayIsoDate()}
+                />
+              ) : (
+                <Alert variant="info">
+                  This document type does not require an expiration date.
+                </Alert>
+              )}
             </div>
           )}
 
@@ -225,7 +256,7 @@ export function DocumentUploadDialog({
               onChange={setEvidence}
               expiresAt={expiresAt}
               onExpiresAtChange={setExpiresAt}
-              showExpiry={!expiresAt}
+              showExpiry={requiresExpiry && !expiresAt}
             />
           )}
 
@@ -237,6 +268,7 @@ export function DocumentUploadDialog({
               setError(null);
               setStep((s) => Math.max(0, s - 1));
             }}
+            onCancel={close}
             onNext={() => {
               const err = validateStep();
               if (err) {

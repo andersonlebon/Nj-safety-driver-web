@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Alert } from "@/components/ui/Alert";
 import { formatDate } from "@/lib/utils";
 import { CountryBadge } from "@/components/vehicles/CountryBadge";
-import { BorderRegisterDialog } from "./BorderRegisterDialog";
+import { BorderRegisterDialog, type BorderVehicleOption } from "./BorderRegisterDialog";
 import { assessTransitIdAuthenticity, TRANSIT_ID_DOC_TYPE } from "@/lib/transit-id-documents";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +17,7 @@ type BorderTransitRow = {
   id: string;
   plate_number: string;
   registration_country: string;
+  owner_id: string | null;
   transit_driver_name: string | null;
   border_checkpoint: string | null;
   border_entry_at: string | null;
@@ -26,6 +27,8 @@ export default async function AgentBorderPage() {
   const profile = await requireRole(["agent", "admin"]);
 
   let transit: BorderTransitRow[] = [];
+  let vehicleOptions: BorderVehicleOption[] = [];
+  let ownerMap: Record<string, { full_name: string | null; email: string | null }> = {};
   let loadError: string | null = null;
 
   try {
@@ -33,7 +36,7 @@ export default async function AgentBorderPage() {
     const { data, error } = await supabase
       .from("vehicles")
       .select(
-        "id, plate_number, registration_country, transit_driver_name, border_checkpoint, border_entry_at"
+        "id, owner_id, plate_number, registration_country, transit_driver_name, border_checkpoint, border_entry_at"
       )
       .eq("is_border_transit", true)
       .order("border_entry_at", { ascending: false })
@@ -44,6 +47,41 @@ export default async function AgentBorderPage() {
     } else {
       transit = (data ?? []) as BorderTransitRow[];
     }
+
+    const { data: registeredVehicles } = await supabase
+      .from("vehicles")
+      .select("id, owner_id, plate_number, registration_country")
+      .not("owner_id", "is", null)
+      .order("plate_number", { ascending: true })
+      .limit(250);
+
+    const ownerIds = [
+      ...new Set(
+        (registeredVehicles ?? [])
+          .map((vehicle) => vehicle.owner_id)
+          .filter((id): id is string => Boolean(id))
+      ),
+    ];
+
+    const { data: owners } =
+      ownerIds.length > 0
+        ? await supabase
+            .from("profiles")
+            .select("id, full_name, email")
+            .in("id", ownerIds)
+        : { data: [] as { id: string; full_name: string | null; email: string | null }[] };
+
+    ownerMap = Object.fromEntries((owners ?? []).map((owner) => [owner.id, owner]));
+    vehicleOptions = (registeredVehicles ?? []).map((vehicle) => {
+      const owner = vehicle.owner_id ? ownerMap[vehicle.owner_id] : null;
+      return {
+        id: vehicle.id,
+        plate_number: vehicle.plate_number,
+        registration_country: vehicle.registration_country,
+        owner_name: owner?.full_name ?? null,
+        owner_email: owner?.email ?? null,
+      };
+    });
   } catch (err) {
     loadError = friendlyError(err);
   }
@@ -68,8 +106,8 @@ export default async function AgentBorderPage() {
     <div className="space-y-6">
       <PageHeader
         title="Border crossings"
-        description="Log vehicle entry/exit at any border. Foreign drivers should register at /register with nationality and vehicle origin country."
-        actions={<BorderRegisterDialog />}
+        description="Log vehicle entry/exit at any border using an existing registered vehicle."
+        actions={<BorderRegisterDialog vehicles={vehicleOptions} />}
       />
 
       {loadError && (
@@ -114,7 +152,11 @@ export default async function AgentBorderPage() {
                         <CountryBadge code={v.registration_country} />
                       </td>
                       <td className="py-2 pr-4">
-                        {v.transit_driver_name || "—"}
+                        {v.owner_id
+                          ? ownerMap[v.owner_id]?.full_name ||
+                            ownerMap[v.owner_id]?.email ||
+                            "Registered driver"
+                          : v.transit_driver_name || "—"}
                       </td>
                       <td className="py-2 pr-4">
                         {v.border_checkpoint || "—"}

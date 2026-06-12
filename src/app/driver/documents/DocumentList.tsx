@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
 import { formatDate } from "@/lib/utils";
 import { documentExpiryState } from "@/lib/verification";
+import { sha256File } from "@/lib/file-hash";
 import type { Database, DocumentType } from "@/lib/types/database";
 
 type Doc = Database["public"]["Tables"]["documents"]["Row"];
@@ -168,6 +169,7 @@ export function DocumentList({ documents }: { documents: Doc[] }) {
     setBusyId(target.id);
     setError(null);
     const supabase = createClient();
+    const fileHash = await sha256File(file);
     const ext = extOf(file);
     const folder = folderOfPath(target.file_path);
     const base = target.label
@@ -191,6 +193,7 @@ export function DocumentList({ documents }: { documents: Doc[] }) {
       label: target.label,
       file_path: newPath,
       file_name: file.name,
+      file_hash: fileHash,
       expires_at: target.expires_at,
       verification_status: "pending_review",
     });

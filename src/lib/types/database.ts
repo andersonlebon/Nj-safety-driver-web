@@ -1,5 +1,6 @@
 export type UserRole = "driver" | "agent" | "admin";
 export type PaymentStatus = "unpaid" | "paid" | "pending";
+export type TransactionStatus = "initialized" | "unpaid" | "paid" | "pending";
 export type VerificationStatus =
   | "pending_documents"
   | "pending_review"
@@ -93,6 +94,54 @@ export type Database = {
         };
         Relationships: [];
       };
+      driver_profiles: {
+        Row: {
+          profile_id: string;
+          created_at: string;
+        };
+        Insert: {
+          profile_id: string;
+          created_at?: string;
+        };
+        Update: {
+          profile_id?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      agent_profiles: {
+        Row: {
+          profile_id: string;
+          badge_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          profile_id: string;
+          badge_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          profile_id?: string;
+          badge_id?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      admin_profiles: {
+        Row: {
+          profile_id: string;
+          created_at: string;
+        };
+        Insert: {
+          profile_id: string;
+          created_at?: string;
+        };
+        Update: {
+          profile_id?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       vehicles: {
         Row: {
           id: string;
@@ -174,6 +223,7 @@ export type Database = {
           label: string | null;
           file_path: string;
           file_name: string | null;
+          file_hash: string | null;
           expires_at: string | null;
           verification_status: VerificationStatus;
           uploaded_at: string;
@@ -186,6 +236,7 @@ export type Database = {
           label?: string | null;
           file_path: string;
           file_name?: string | null;
+          file_hash?: string | null;
           expires_at?: string | null;
           verification_status?: VerificationStatus;
           uploaded_at?: string;
@@ -198,6 +249,7 @@ export type Database = {
           label?: string | null;
           file_path?: string;
           file_name?: string | null;
+          file_hash?: string | null;
           expires_at?: string | null;
           verification_status?: VerificationStatus;
           uploaded_at?: string;
@@ -209,6 +261,7 @@ export type Database = {
           id: string;
           vehicle_id: string | null;
           plate_number: string;
+          registration_country: string | null;
           event_type: TrackingEventType;
           location: string | null;
           latitude: number | null;
@@ -222,6 +275,7 @@ export type Database = {
           id?: string;
           vehicle_id?: string | null;
           plate_number: string;
+          registration_country?: string | null;
           event_type: TrackingEventType;
           location?: string | null;
           latitude?: number | null;
@@ -235,6 +289,7 @@ export type Database = {
           id?: string;
           vehicle_id?: string | null;
           plate_number?: string;
+          registration_country?: string | null;
           event_type?: TrackingEventType;
           location?: string | null;
           latitude?: number | null;
@@ -282,6 +337,7 @@ export type Database = {
         Update: {
           id?: string;
           plate_number?: string;
+          registration_country?: string | null;
           vehicle_id?: string | null;
           driver_id?: string | null;
           agent_id?: string | null;
@@ -296,6 +352,93 @@ export type Database = {
         };
         Relationships: [];
       };
+      transactions: {
+        Row: {
+          id: string;
+          infraction_id: string;
+          amount: number;
+          status: TransactionStatus;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          infraction_id: string;
+          amount?: number;
+          status?: TransactionStatus;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          infraction_id?: string;
+          amount?: number;
+          status?: TransactionStatus;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      infraction_templates: {
+        Row: {
+          id: string;
+          code: string;
+          label: string;
+          amount: number;
+          points: number;
+          category: string;
+          active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          code: string;
+          label: string;
+          amount?: number;
+          points?: number;
+          category?: string;
+          active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          code?: string;
+          label?: string;
+          amount?: number;
+          points?: number;
+          category?: string;
+          active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      driver_messages: {
+        Row: {
+          id: string;
+          driver_id: string;
+          sender_id: string | null;
+          body: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          driver_id: string;
+          sender_id?: string | null;
+          body: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          driver_id?: string;
+          sender_id?: string | null;
+          body?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -306,6 +449,7 @@ export type Database = {
     Enums: {
       user_role: UserRole;
       payment_status: PaymentStatus;
+      transaction_status: TransactionStatus;
       document_type: DocumentType;
       verification_status: VerificationStatus;
       tracking_event_type: TrackingEventType;

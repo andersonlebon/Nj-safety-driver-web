@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { friendlyError } from "@/lib/errors";
 import { DEFAULT_COUNTRY, isDomesticCountry } from "@/lib/countries";
 import { normalizePlateForCountry } from "@/lib/vehicles";
+import { validateFutureExpiry } from "@/lib/document-rules";
 import type { DocumentType } from "@/lib/types/database";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -36,6 +37,7 @@ export type CompletePayload = {
     vehicle_id: string | null;
     file_path: string;
     file_name: string | null;
+    file_hash: string | null;
     expires_at: string | null;
   }>;
   skip_documents?: boolean;
@@ -175,6 +177,29 @@ export async function completeOnboarding(
   }
   const uploadedPaths = payload.documents.map((d) => d.file_path);
 
+  const duplicateHash = payload.documents.find((doc, index, docs) => {
+    if (!doc.file_hash) return false;
+    return docs.findIndex((other) => other.file_hash === doc.file_hash) !== index;
+  });
+  if (duplicateHash) {
+    await deleteStoragePaths(supabase, uploadedPaths);
+    return {
+      ok: false,
+      error: "Duplicate document image detected. Please replace one side before submitting.",
+    };
+  }
+
+  for (const document of payload.documents) {
+    const expiryError = validateFutureExpiry(
+      document.expires_at,
+      document.doc_type
+    );
+    if (expiryError) {
+      await deleteStoragePaths(supabase, uploadedPaths);
+      return { ok: false, error: expiryError };
+    }
+  }
+
   const { error: profileUpdateError } = await supabase
     .from("profiles")
     .update({
@@ -227,6 +252,7 @@ export async function completeOnboarding(
     label: d.label,
     file_path: d.file_path,
     file_name: d.file_name,
+    file_hash: d.file_hash,
     expires_at: d.expires_at,
     verification_status: "pending_review" as const,
   }));

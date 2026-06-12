@@ -33,6 +33,11 @@ export default async function AgentSearchPage({
 
   const supabase = createClient();
   const profile = await requireRole(["agent", "admin"]);
+  const { data: templates } = await supabase
+    .from("infraction_templates")
+    .select("code, label, amount, points, category")
+    .eq("active", true)
+    .order("label", { ascending: true });
 
   let vehicle = null;
   let owner = null;
@@ -116,6 +121,7 @@ export default async function AgentSearchPage({
                 country={country}
                 vehicleId={vehicle?.id ?? null}
                 driverId={vehicle?.owner_id ?? null}
+                templates={templates ?? undefined}
               />
             )}
           </div>

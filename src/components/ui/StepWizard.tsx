@@ -86,6 +86,7 @@ export function StepWizardFooter({
   step,
   totalSteps,
   onBack,
+  onCancel,
   onNext,
   onSubmit,
   loading,
@@ -95,6 +96,7 @@ export function StepWizardFooter({
   step: number;
   totalSteps: number;
   onBack?: () => void;
+  onCancel?: () => void;
   onNext?: () => void;
   onSubmit?: () => void;
   loading?: boolean;
@@ -107,11 +109,11 @@ export function StepWizardFooter({
     <div className="flex justify-between gap-3 pt-2 border-t border-stone-200 dark:border-slate-800 mt-4">
       <button
         type="button"
-        onClick={onBack}
-        disabled={step === 0 || loading}
+        onClick={step === 0 ? onCancel : onBack}
+        disabled={(step === 0 && !onCancel) || loading}
         className="text-sm font-medium text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-stone-200 disabled:opacity-40"
       >
-        Back
+        {step === 0 ? "Cancel" : "Back"}
       </button>
       {isLast ? (
         <button

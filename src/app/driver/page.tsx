@@ -21,6 +21,7 @@ import {
 import { statusColor } from "@/components/charts/theme";
 import {
   computeComplianceScore,
+  COMPLIANCE_RULES,
   sumByMonth,
 } from "@/components/dashboard/analytics";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -75,11 +76,51 @@ export default async function DriverOverviewPage() {
     ...i,
     fine_amount: Number(i.fine_amount),
   }));
+  const infractionIds = infractions.map((infraction) => infraction.id);
+  const { data: transactionRows } =
+    infractionIds.length > 0
+      ? await supabase
+          .from("transactions")
+          .select("infraction_id, amount, status")
+          .in("infraction_id", infractionIds)
+      : { data: [] };
+  const transactionMap = new Map(
+    (transactionRows ?? []).map((transaction) => [
+      transaction.infraction_id,
+      transaction,
+    ])
+  );
+  const transactionTotals = infractions.reduce(
+    (totals, infraction) => {
+      const transaction = transactionMap.get(infraction.id);
+      const status = transaction?.status ?? infraction.status;
+      const amount = Number(transaction?.amount ?? infraction.fine_amount);
+      if (status === "initialized") {
+        totals.unpaid += amount;
+      } else if (status === "paid") {
+        totals.paid += amount;
+      } else if (status === "pending") {
+        totals.pending += amount;
+      } else {
+        totals.unpaid += amount;
+      }
+      return totals;
+    },
+    { paid: 0, pending: 0, unpaid: 0 }
+  );
 
-  const unpaid = infractions.filter((i) => i.status === "unpaid");
-  const pending = infractions.filter((i) => i.status === "pending");
-  const paid = infractions.filter((i) => i.status === "paid");
-  const totalDue = unpaid.reduce((s, i) => s + Number(i.fine_amount), 0);
+  const transactionStatusCounts = infractions.reduce(
+    (counts, infraction) => {
+      const status = transactionMap.get(infraction.id)?.status ?? infraction.status;
+      if (status === "initialized") counts.unpaid += 1;
+      else if (status === "paid") counts.paid += 1;
+      else if (status === "pending") counts.pending += 1;
+      else counts.unpaid += 1;
+      return counts;
+    },
+    { paid: 0, pending: 0, unpaid: 0 }
+  );
+  const totalDue = transactionTotals.unpaid;
 
   const monthly = sumByMonth(infractions, 6);
   const recent = infractions.slice(0, 5);
@@ -90,9 +131,9 @@ export default async function DriverOverviewPage() {
   });
 
   const statusSlices: DonutSlice[] = [
-    { label: "Paid", value: paid.length, color: statusColor.paid },
-    { label: "Pending", value: pending.length, color: statusColor.pending },
-    { label: "Unpaid", value: unpaid.length, color: statusColor.unpaid },
+    { label: "Paid", value: transactionStatusCounts.paid, color: statusColor.paid },
+    { label: "Pending", value: transactionStatusCounts.pending, color: statusColor.pending },
+    { label: "Unpaid", value: transactionStatusCounts.unpaid, color: statusColor.unpaid },
   ];
 
   const scoreDescription =
@@ -100,7 +141,7 @@ export default async function DriverOverviewPage() {
       ? "All clear. Keep it up — drive safely."
       : score >= 50
         ? "Action recommended. Resolve open items soon."
-        : "Critical. Address unpaid fines and vehicle status.";
+        : "Critical. Address unpaid infractions before driving.";
 
   return (
     <div>
@@ -129,12 +170,16 @@ export default async function DriverOverviewPage() {
         />
         <KpiCard
           label="Open infractions"
-          value={unpaid.length + pending.length}
+          value={transactionStatusCounts.unpaid + transactionStatusCounts.pending}
           icon={<AlertTriangle className="h-4 w-4" />}
-          accent={unpaid.length + pending.length > 0 ? "red" : "stone"}
+          accent={
+            transactionStatusCounts.unpaid + transactionStatusCounts.pending > 0
+              ? "red"
+              : "stone"
+          }
           hint={
-            pending.length > 0
-              ? `${pending.length} pending review`
+            transactionStatusCounts.pending > 0
+              ? `${transactionStatusCounts.pending} pending payment`
               : "No outstanding fines"
           }
         />
@@ -191,19 +236,19 @@ export default async function DriverOverviewPage() {
             <div className="mt-2 grid grid-cols-3 text-center text-xs">
               <div>
                 <p className="font-semibold text-stone-900 dark:text-stone-100">
-                  {paid.length}
+                  {formatCurrency(transactionTotals.paid)}
                 </p>
                 <p className="text-stone-500 dark:text-slate-400">Paid</p>
               </div>
               <div>
                 <p className="font-semibold text-stone-900 dark:text-stone-100">
-                  {pending.length}
+                  {formatCurrency(transactionTotals.pending)}
                 </p>
                 <p className="text-stone-500 dark:text-slate-400">Pending</p>
               </div>
               <div>
                 <p className="font-semibold text-stone-900 dark:text-stone-100">
-                  {unpaid.length}
+                  {formatCurrency(transactionTotals.unpaid)}
                 </p>
                 <p className="text-stone-500 dark:text-slate-400">Unpaid</p>
               </div>
@@ -228,6 +273,13 @@ export default async function DriverOverviewPage() {
               description={scoreDescription}
               valueFormat="raw"
             />
+            <p className="mt-3 text-xs text-stone-500 dark:text-slate-400">
+              Formula: 100 minus {COMPLIANCE_RULES.unpaidInfractionPenalty} pts
+              per unpaid infraction. Payment transactions are tracked separately;
+              points are restored only when the infraction is marked paid. Scores
+              at or below {COMPLIANCE_RULES.minimumAllowedToDrive}% require
+              review before driving.
+            </p>
           </CardBody>
         </Card>
 

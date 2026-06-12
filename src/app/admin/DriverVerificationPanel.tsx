@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Check, MessageSquare, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { Modal } from "@/components/ui/Modal";
+import { Alert } from "@/components/ui/Alert";
 import { updateDriverVerification } from "@/app/admin/actions";
 import type { VerificationStatus } from "@/lib/types/database";
 import { VERIFICATION_LABELS } from "@/lib/verification";
@@ -20,18 +22,30 @@ export function DriverVerificationPanel({
   status,
   adminMessage,
 }: Props) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [messageOpen, setMessageOpen] = useState(false);
   const [message, setMessage] = useState(adminMessage ?? "");
+  const [feedback, setFeedback] = useState<{
+    variant: "success" | "error";
+    message: string;
+  } | null>(null);
 
   const run = (
     next: "active" | "rejected" | "pending_review",
-    msg?: string | null
+    msg?: string | null,
+    successMessage = "Driver verification updated."
   ) => {
+    setFeedback(null);
     startTransition(async () => {
       const result = await updateDriverVerification(userId, next, msg);
-      if (!result.ok) alert(result.error);
-      else window.location.reload();
+      if (!result.ok) {
+        setFeedback({ variant: "error", message: result.error });
+        return;
+      }
+      setFeedback({ variant: "success", message: successMessage });
+      setMessageOpen(false);
+      router.refresh();
     });
   };
 
@@ -67,6 +81,7 @@ export function DriverVerificationPanel({
           Send message
         </Button>
       </div>
+      {feedback && <Alert variant={feedback.variant}>{feedback.message}</Alert>}
 
       <Modal
         open={messageOpen}
@@ -75,6 +90,7 @@ export function DriverVerificationPanel({
         description="The driver will see this as a required action on their dashboard."
       >
         <div className="space-y-4">
+          {feedback && <Alert variant={feedback.variant}>{feedback.message}</Alert>}
           <Textarea
             label="Instructions"
             value={message}
@@ -94,20 +110,20 @@ export function DriverVerificationPanel({
               type="button"
               variant="secondary"
               loading={pending}
+              disabled={!message.trim()}
               onClick={() => {
-                run("pending_review", message);
-                setMessageOpen(false);
+                run("pending_review", message, "Message sent to driver.");
               }}
             >
-              Save message only
+              Send message
             </Button>
             <Button
               type="button"
               variant="danger"
               loading={pending}
+              disabled={!message.trim()}
               onClick={() => {
-                run("rejected", message);
-                setMessageOpen(false);
+                run("rejected", message, "Driver rejected and message sent.");
               }}
             >
               Reject account

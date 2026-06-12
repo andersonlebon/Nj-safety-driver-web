@@ -8,10 +8,16 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { VERIFICATION_LABELS } from "@/lib/verification";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { isForeignVehicle } from "@/lib/vehicles";
+import { totalsByPaymentStatus } from "@/components/dashboard/analytics";
 import { TransitIdDocumentGallery } from "@/components/vehicles/TransitIdDocumentGallery";
 import type { TrackingEvent } from "@/lib/tracking";
 import type { TransitIdDocRow, TransitIdDocUrls } from "@/lib/transit-id-documents";
-import type { Database, VerificationStatus } from "@/lib/types/database";
+import type {
+  Database,
+  PaymentStatus,
+  TransactionStatus,
+  VerificationStatus,
+} from "@/lib/types/database";
 
 type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
 type Infraction = Database["public"]["Tables"]["infractions"]["Row"];
@@ -21,6 +27,7 @@ type Props = {
   photoUrl?: string | null;
   owner?: { full_name: string | null; email: string | null; phone: string | null } | null;
   infractions?: Infraction[];
+  transactionStatusByInfraction?: Record<string, TransactionStatus>;
   trackingEvents?: TrackingEvent[];
   agentSearchUrl?: string;
   showOwner?: boolean;
@@ -34,6 +41,7 @@ export function VehicleDetailContent({
   photoUrl,
   owner,
   infractions = [],
+  transactionStatusByInfraction = {},
   trackingEvents = [],
   agentSearchUrl,
   showOwner = true,
@@ -42,8 +50,21 @@ export function VehicleDetailContent({
   showIdAuthenticityCheck = false,
 }: Props) {
   const status = (vehicle.verification_status ?? "pending_review") as VerificationStatus;
-  const unpaid = infractions.filter((i) => i.status === "unpaid");
-  const unpaidTotal = unpaid.reduce((s, i) => s + Number(i.fine_amount ?? 0), 0);
+  const financialRows: Array<{ fine_amount: number | string; status: PaymentStatus }> =
+    infractions.map((infraction) => {
+      const transactionStatus = transactionStatusByInfraction[infraction.id];
+      return {
+        fine_amount: infraction.fine_amount,
+        status:
+          !transactionStatus || transactionStatus === "initialized"
+            ? infraction.status === "paid"
+              ? "paid"
+              : "unpaid"
+            : transactionStatus,
+      };
+    });
+  const unpaid = financialRows.filter((i) => i.status === "unpaid");
+  const paymentTotals = totalsByPaymentStatus(financialRows);
   const foreign = isForeignVehicle(
     vehicle.registration_country,
     vehicle.is_foreign
@@ -178,16 +199,18 @@ export function VehicleDetailContent({
         id="vehicle-detail-fines"
         className="rounded-lg border border-stone-200 dark:border-slate-800 p-4 scroll-mt-3"
       >
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-2 mb-3">
           <Wallet className="h-4 w-4 text-stone-500" />
           <p className="text-sm font-semibold text-stone-900 dark:text-stone-100">
-            Outstanding fines
+            Fine totals
           </p>
         </div>
-        <p className="text-2xl font-bold text-stone-900 dark:text-stone-100">
-          {formatCurrency(unpaidTotal)}
-        </p>
-        <p className="text-xs text-stone-500 dark:text-slate-400 mt-1">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <FineTotal label="Paid" value={paymentTotals.paid} />
+          <FineTotal label="Pending" value={paymentTotals.pending} />
+          <FineTotal label="Unpaid" value={paymentTotals.unpaid} emphasis />
+        </div>
+        <p className="text-xs text-stone-500 dark:text-slate-400 mt-2">
           {unpaid.length} unpaid infraction{unpaid.length !== 1 ? "s" : ""} of{" "}
           {infractions.length} total
         </p>
@@ -224,6 +247,31 @@ export function VehicleDetailContent({
           <VehicleTrackingTimeline events={trackingEvents.slice(0, 8)} />
         </div>
       )}
+    </div>
+  );
+}
+
+function FineTotal({
+  label,
+  value,
+  emphasis,
+}: {
+  label: string;
+  value: number;
+  emphasis?: boolean;
+}) {
+  return (
+    <div className="rounded-md bg-stone-50 dark:bg-slate-900/60 p-2">
+      <p className="text-[11px] text-stone-500 dark:text-slate-400">{label}</p>
+      <p
+        className={
+          emphasis
+            ? "font-bold text-red-700 dark:text-red-300"
+            : "font-bold text-stone-900 dark:text-stone-100"
+        }
+      >
+        {formatCurrency(value)}
+      </p>
     </div>
   );
 }

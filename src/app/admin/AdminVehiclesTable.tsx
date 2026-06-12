@@ -21,7 +21,7 @@ import {
   TRANSIT_ID_LABEL_BACK,
   TRANSIT_ID_LABEL_FRONT,
 } from "@/lib/transit-id-documents";
-import type { Database, VerificationStatus } from "@/lib/types/database";
+import type { Database, TransactionStatus, VerificationStatus } from "@/lib/types/database";
 import { vehicleDetailSectionLinks } from "@/lib/vehicle-detail-sections";
 
 type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
@@ -31,6 +31,7 @@ export function AdminVehiclesTable({
   vehicles,
   ownerMap,
   photoUrls,
+  canManageVehicles = true,
 }: {
   vehicles: Vehicle[];
   ownerMap: Record<
@@ -38,9 +39,12 @@ export function AdminVehiclesTable({
     { full_name: string | null; email: string | null }
   >;
   photoUrls: Record<string, string>;
+  canManageVehicles?: boolean;
 }) {
   const [selected, setSelected] = useState<Vehicle | null>(null);
   const [infractions, setInfractions] = useState<Infraction[]>([]);
+  const [transactionStatusByInfraction, setTransactionStatusByInfraction] =
+    useState<Record<string, TransactionStatus>>({});
   const [trackingEvents, setTrackingEvents] = useState<TrackingEvent[]>([]);
   const [transitIdDocuments, setTransitIdDocuments] = useState<TransitIdDocRow[]>([]);
   const [transitIdUrls, setTransitIdUrls] = useState<TransitIdDocUrls>({
@@ -52,6 +56,7 @@ export function AdminVehiclesTable({
   const open = (vehicle: Vehicle) => {
     setSelected(vehicle);
     setInfractions([]);
+    setTransactionStatusByInfraction({});
     setTrackingEvents([]);
     setTransitIdDocuments([]);
     setTransitIdUrls({ front: null, back: null });
@@ -78,6 +83,21 @@ export function AdminVehiclesTable({
           .eq("doc_type", TRANSIT_ID_DOC_TYPE),
       ]);
       setInfractions(inf ?? []);
+      const infractionIds = (inf ?? []).map((row) => row.id);
+      if (infractionIds.length > 0) {
+        const { data: transactions } = await supabase
+          .from("transactions")
+          .select("infraction_id, status")
+          .in("infraction_id", infractionIds);
+        setTransactionStatusByInfraction(
+          Object.fromEntries(
+            (transactions ?? []).map((transaction) => [
+              transaction.infraction_id,
+              transaction.status,
+            ])
+          )
+        );
+      }
       const docs = (idDocs ?? []) as TransitIdDocRow[];
       setTransitIdDocuments(docs);
       const paths = docs.map((d) => d.file_path).filter(Boolean);
@@ -266,16 +286,20 @@ export function AdminVehiclesTable({
                 Close
               </Button>
               <div className="flex-1 min-w-0 w-full">
-                <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-slate-400 mb-2">
-                  Verification
-                </p>
-                <VehicleVerificationActions
-                  vehicleId={selected.id}
-                  status={
-                    (selected.verification_status ??
-                      "pending_review") as VerificationStatus
-                  }
-                />
+                {canManageVehicles && (
+                  <>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-slate-400 mb-2">
+                      Verification
+                    </p>
+                    <VehicleVerificationActions
+                      vehicleId={selected.id}
+                      status={
+                        (selected.verification_status ??
+                          "pending_review") as VerificationStatus
+                      }
+                    />
+                  </>
+                )}
               </div>
             </div>
           }
@@ -300,6 +324,7 @@ export function AdminVehiclesTable({
                     : null
               }
               infractions={infractions}
+              transactionStatusByInfraction={transactionStatusByInfraction}
               trackingEvents={trackingEvents}
               showOwner
               transitIdDocuments={transitIdDocuments}
@@ -307,10 +332,11 @@ export function AdminVehiclesTable({
               showIdAuthenticityCheck
             />
             <StaffDocumentsLoader
-              ownerId={selected.owner_id}
+              ownerId={undefined}
               vehicleId={selected.id}
-              title="Driver & vehicle documents"
+              title="Vehicle documents"
               sectionId="vehicle-detail-documents"
+              scope="vehicle"
             />
             {selected.is_border_transit &&
               !selected.owner_id &&

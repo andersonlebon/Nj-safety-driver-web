@@ -6,8 +6,8 @@ import { requireRole } from "@/lib/auth";
 const navItems: NavItem[] = [
   { href: "/agent", label: "Overview", icon: <LayoutDashboard className="h-4 w-4" /> },
   { href: "/agent/search", label: "Plate search", icon: <Search className="h-4 w-4" /> },
-  { href: "/admin/drivers", label: "Drivers", icon: <Users className="h-4 w-4" /> },
-  { href: "/admin/vehicles", label: "Vehicles", icon: <Car className="h-4 w-4" /> },
+  { href: "/agent/drivers", label: "Drivers", icon: <Users className="h-4 w-4" /> },
+  { href: "/agent/vehicles", label: "Vehicles", icon: <Car className="h-4 w-4" /> },
   { href: "/agent/border", label: "Border control", icon: <Globe className="h-4 w-4" /> },
   { href: "/agent/infractions", label: "Infractions", icon: <AlertTriangle className="h-4 w-4" /> },
 ];

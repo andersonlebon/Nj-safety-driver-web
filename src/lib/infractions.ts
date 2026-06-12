@@ -1,16 +1,10 @@
 import type { PaymentStatus } from "@/lib/types/database";
+import { INFRACTION_TEMPLATES } from "@/lib/infraction-templates";
 
 /** Infraction types agents and admins can file in the field. */
-export const INFRACTION_TYPES = [
-  "Speeding",
-  "Running red light",
-  "Illegal parking",
-  "Reckless driving",
-  "Driving without insurance",
-  "Expired inspection",
-  "No seatbelt",
-  "Other",
-] as const;
+export const INFRACTION_TYPES = INFRACTION_TEMPLATES.map(
+  (template) => template.label
+);
 
 export type InfractionType = (typeof INFRACTION_TYPES)[number];
 
@@ -25,6 +19,7 @@ export type FileInfractionInput = {
   registration_country: string;
   vehicle_id: string | null;
   driver_id: string | null;
+  infraction_template_code: string;
   infraction_type: string;
   description: string;
   location: string;
