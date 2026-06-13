@@ -60,6 +60,11 @@ type GroupStatusState = Record<string, Record<string, EvidenceSlotStatus>>;
 type GroupErrorState = Record<string, Record<string, string | undefined>>;
 type GroupDatesState = Record<string, DocumentGroupDates>;
 
+type GroupUploadedMetaState = Record<
+  string,
+  Record<string, { path: string; fileName: string; fileHash: string } | undefined>
+>;
+
 function emptyGroupAttachments(
   groups: readonly DocumentGroupDefinition[]
 ): GroupAttachmentsState {
@@ -109,21 +114,27 @@ function extensionFor(file: File): string {
   return "jpg";
 }
 
-function groupHasRequiredFiles(
+function groupHasRequiredUploads(
   group: DocumentGroupDefinition,
-  attachments: Record<string, EvidenceSlotValue> | undefined
+  attachments: Record<string, EvidenceSlotValue> | undefined,
+  statuses: Record<string, EvidenceSlotStatus> | undefined
 ): boolean {
   return group.attachments
     .filter((item) => item.required)
-    .every((item) => Boolean(attachments?.[item.key]?.file));
+    .every(
+      (item) =>
+        statuses?.[item.key] === "uploaded" &&
+        Boolean(attachments?.[item.key]?.file)
+    );
 }
 
 function groupIsComplete(
   group: DocumentGroupDefinition,
   attachments: Record<string, EvidenceSlotValue> | undefined,
-  dates: DocumentGroupDates | undefined
+  dates: DocumentGroupDates | undefined,
+  statuses: Record<string, EvidenceSlotStatus> | undefined
 ): boolean {
-  if (!groupHasRequiredFiles(group, attachments)) return false;
+  if (!groupHasRequiredUploads(group, attachments, statuses)) return false;
   const dateError = validateDocumentDates(
     group.docType,
     dates?.issuedAt,
@@ -165,6 +176,8 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
   const [vehicleDates, setVehicleDates] = useState<GroupDatesState>(() =>
     emptyGroupDates(VEHICLE_DOCUMENT_GROUPS)
   );
+  const [driverUploadedMeta, setDriverUploadedMeta] = useState<GroupUploadedMetaState>({});
+  const [vehicleUploadedMeta, setVehicleUploadedMeta] = useState<GroupUploadedMetaState>({});
   const [skipDocuments, setSkipDocuments] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [vehicleId] = useState<string>(() => generateVehicleId());
@@ -177,12 +190,22 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
   const driverDoneCount = useMemo(
     () =>
       requiredDriverGroups.filter((group) =>
-        groupIsComplete(group, driverGroups[group.key], driverDates[group.key])
+        groupIsComplete(
+          group,
+          driverGroups[group.key],
+          driverDates[group.key],
+          groupStatus[group.key]
+        )
       ).length,
-    [driverDates, driverGroups, requiredDriverGroups]
+    [driverDates, driverGroups, groupStatus, requiredDriverGroups]
   );
   const driverRequiredCount = requiredDriverGroups.length;
   const canAdvanceFromStep2 = driverDoneCount === driverRequiredCount;
+  const hasUploadsInProgress = useMemo(() => {
+    return Object.values(groupStatus).some((statuses) =>
+      Object.values(statuses ?? {}).some((status) => status === "uploading")
+    );
+  }, [groupStatus]);
 
   const vehicleRequiredGroups = useMemo(
     () => VEHICLE_DOCUMENT_GROUPS.filter((group) => isDocumentGroupRequired(group, vehicle)),
@@ -191,9 +214,14 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
   const vehicleDoneCount = useMemo(
     () =>
       vehicleRequiredGroups.filter((group) =>
-        groupIsComplete(group, vehicleGroups[group.key], vehicleDates[group.key])
+        groupIsComplete(
+          group,
+          vehicleGroups[group.key],
+          vehicleDates[group.key],
+          groupStatus[group.key]
+        )
       ).length,
-    [vehicleDates, vehicleGroups, vehicleRequiredGroups]
+    [groupStatus, vehicleDates, vehicleGroups, vehicleRequiredGroups]
   );
   const vehicleRequiredCount = vehicleRequiredGroups.length;
 
@@ -233,6 +261,10 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
   };
 
   const goToStep3 = () => {
+    if (hasUploadsInProgress) {
+      setError("Please wait for uploads to finish before continuing.");
+      return;
+    }
     if (!canAdvanceFromStep2) {
       setError(
         "Please complete the required documents with their delivered and expiration dates, or use “Skip for now” if you will upload them later."
@@ -250,26 +282,134 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
     setStep(3);
   };
 
-  const setDriverAttachment = (
+  const removeStoragePath = async (path: string | undefined) => {
+    if (!path) return;
+    const supabase = createClient();
+    await supabase.storage.from("documents").remove([path]);
+  };
+
+  const collectUploadedHashes = (
+    exclude?: { groupKey: string; attachmentKey: string; scope: "driver" | "vehicle" }
+  ) => {
+    const hashes: string[] = [];
+    const append = (
+      scope: "driver" | "vehicle",
+      metaByGroup: GroupUploadedMetaState
+    ) => {
+      for (const [groupKey, attachments] of Object.entries(metaByGroup)) {
+        for (const [attachmentKey, meta] of Object.entries(attachments ?? {})) {
+          if (!meta?.fileHash) continue;
+          if (
+            exclude &&
+            exclude.scope === scope &&
+            exclude.groupKey === groupKey &&
+            exclude.attachmentKey === attachmentKey
+          ) {
+            continue;
+          }
+          hashes.push(meta.fileHash);
+        }
+      }
+    };
+    append("driver", driverUploadedMeta);
+    append("vehicle", vehicleUploadedMeta);
+    return hashes;
+  };
+
+  const handleAttachmentChange = (
+    scope: "driver" | "vehicle",
     groupKey: string,
     attachmentKey: string,
     next: EvidenceSlotValue
   ) => {
-    setDriverGroups((prev) => ({
+    const groupDefinitions =
+      scope === "driver" ? DRIVER_DOCUMENT_GROUPS : VEHICLE_DOCUMENT_GROUPS;
+    const group = groupDefinitions.find((item) => item.key === groupKey);
+    if (!group) return;
+
+    const setGroups = scope === "driver" ? setDriverGroups : setVehicleGroups;
+    const setUploadedMeta =
+      scope === "driver" ? setDriverUploadedMeta : setVehicleUploadedMeta;
+    const uploadedMeta =
+      scope === "driver" ? driverUploadedMeta : vehicleUploadedMeta;
+    const previousMeta = uploadedMeta[groupKey]?.[attachmentKey];
+
+    setGroups((prev) => ({
       ...prev,
       [groupKey]: { ...prev[groupKey], [attachmentKey]: next },
-    }));
-    setGroupStatus((prev) => ({
-      ...prev,
-      [groupKey]: {
-        ...prev[groupKey],
-        [attachmentKey]: next.file ? "ready" : "idle",
-      },
     }));
     setGroupErrors((prev) => ({
       ...prev,
       [groupKey]: { ...prev[groupKey], [attachmentKey]: undefined },
     }));
+
+    if (!next.file) {
+      void removeStoragePath(previousMeta?.path);
+      setUploadedMeta((prev) => ({
+        ...prev,
+        [groupKey]: { ...prev[groupKey], [attachmentKey]: undefined },
+      }));
+      setGroupStatus((prev) => ({
+        ...prev,
+        [groupKey]: { ...prev[groupKey], [attachmentKey]: "idle" },
+      }));
+      return;
+    }
+
+    setGroupStatus((prev) => ({
+      ...prev,
+      [groupKey]: { ...prev[groupKey], [attachmentKey]: "uploading" },
+    }));
+
+    void (async () => {
+      try {
+        if (previousMeta?.path) {
+          await removeStoragePath(previousMeta.path);
+        }
+
+        const fileHash = await sha256File(next.file!);
+        const duplicateHashes = collectUploadedHashes({
+          scope,
+          groupKey,
+          attachmentKey,
+        });
+        if (duplicateHashes.includes(fileHash)) {
+          throw new Error(
+            "Duplicate document image detected. Please choose a different photo."
+          );
+        }
+
+        const uploaded = await uploadAttachment(group, attachmentKey, next);
+        setUploadedMeta((prev) => ({
+          ...prev,
+          [groupKey]: { ...prev[groupKey], [attachmentKey]: uploaded },
+        }));
+        setGroupStatus((prev) => ({
+          ...prev,
+          [groupKey]: { ...prev[groupKey], [attachmentKey]: "uploaded" },
+        }));
+      } catch (err) {
+        setGroupStatus((prev) => ({
+          ...prev,
+          [groupKey]: { ...prev[groupKey], [attachmentKey]: "error" },
+        }));
+        setGroupErrors((prev) => ({
+          ...prev,
+          [groupKey]: {
+            ...prev[groupKey],
+            [attachmentKey]: friendlyError(err),
+          },
+        }));
+      }
+    })();
+  };
+
+  const setDriverAttachment = (
+    groupKey: string,
+    attachmentKey: string,
+    next: EvidenceSlotValue
+  ) => {
+    handleAttachmentChange("driver", groupKey, attachmentKey, next);
   };
 
   const setVehicleAttachment = (
@@ -277,21 +417,7 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
     attachmentKey: string,
     next: EvidenceSlotValue
   ) => {
-    setVehicleGroups((prev) => ({
-      ...prev,
-      [groupKey]: { ...prev[groupKey], [attachmentKey]: next },
-    }));
-    setGroupStatus((prev) => ({
-      ...prev,
-      [groupKey]: {
-        ...prev[groupKey],
-        [attachmentKey]: next.file ? "ready" : "idle",
-      },
-    }));
-    setGroupErrors((prev) => ({
-      ...prev,
-      [groupKey]: { ...prev[groupKey], [attachmentKey]: undefined },
-    }));
+    handleAttachmentChange("vehicle", groupKey, attachmentKey, next);
   };
 
   const validateStep3 = (): string | null => {
@@ -365,21 +491,22 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
     return { path, fileName: value.file.name, fileHash };
   };
 
-  const buildUploadedGroups = async (
+  const buildUploadedGroups = (
     groups: readonly DocumentGroupDefinition[],
     attachmentsByGroup: GroupAttachmentsState,
     datesByGroup: GroupDatesState,
+    uploadedMetaByGroup: GroupUploadedMetaState,
     scopeVehicleId: string | null
-  ): Promise<CompletePayload["document_groups"]> => {
+  ): CompletePayload["document_groups"] => {
     const uploadedGroups: CompletePayload["document_groups"] = [];
 
     for (const group of groups) {
-      const attachments = attachmentsByGroup[group.key] ?? {};
       const dates = datesByGroup[group.key];
-      const hasAnyFile = group.attachments.some((item) =>
-        Boolean(attachments[item.key]?.file)
+      const uploadedMeta = uploadedMetaByGroup[group.key] ?? {};
+      const hasAnyUpload = group.attachments.some((item) =>
+        Boolean(uploadedMeta[item.key]?.path)
       );
-      if (!hasAnyFile) continue;
+      if (!hasAnyUpload) continue;
 
       const dateError = validateDocumentDates(
         group.docType,
@@ -394,18 +521,13 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
         [];
 
       for (const attachment of group.attachments) {
-        const value = attachments[attachment.key];
-        if (!value?.file) continue;
-        const { path, fileName, fileHash } = await uploadAttachment(
-          group,
-          attachment.key,
-          value
-        );
+        const meta = uploadedMeta[attachment.key];
+        if (!meta) continue;
         uploadedAttachments.push({
           label: attachment.label,
-          file_path: path,
-          file_name: fileName,
-          file_hash: fileHash,
+          file_path: meta.path,
+          file_name: meta.fileName,
+          file_hash: meta.fileHash,
         });
       }
 
@@ -431,6 +553,10 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
 
   const submitFinal = () => {
     setError(null);
+    if (hasUploadsInProgress) {
+      setError("Please wait for uploads to finish before submitting.");
+      return;
+    }
     const validationError = validateStep3();
     if (validationError) {
       setError(validationError);
@@ -438,16 +564,18 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
     }
     startTransition(async () => {
       try {
-        const driverUploads = await buildUploadedGroups(
+        const driverUploads = buildUploadedGroups(
           DRIVER_DOCUMENT_GROUPS,
           driverGroups,
           driverDates,
+          driverUploadedMeta,
           null
         );
-        const vehicleUploads = await buildUploadedGroups(
+        const vehicleUploads = buildUploadedGroups(
           VEHICLE_DOCUMENT_GROUPS,
           vehicleGroups,
           vehicleDates,
+          vehicleUploadedMeta,
           vehicleId
         );
         const uploadedGroups = [...driverUploads, ...vehicleUploads];
@@ -527,6 +655,7 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
             done={driverDoneCount}
             total={driverRequiredCount}
             disabled={pending}
+            uploadsInProgress={hasUploadsInProgress}
             onAttachmentChange={setDriverAttachment}
             onDatesChange={(groupKey, nextDates) =>
               setDriverDates((prev) => ({ ...prev, [groupKey]: nextDates }))
@@ -550,6 +679,7 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
             total={vehicleRequiredCount}
             pending={pending}
             skippedDocs={skipDocuments}
+            uploadsInProgress={hasUploadsInProgress}
             onAttachmentChange={setVehicleAttachment}
             onDatesChange={(groupKey, nextDates) =>
               setVehicleDates((prev) => ({ ...prev, [groupKey]: nextDates }))
@@ -802,6 +932,7 @@ function DocumentsStep({
   done,
   total,
   disabled,
+  uploadsInProgress,
   onAttachmentChange,
   onDatesChange,
   onBack,
@@ -816,6 +947,7 @@ function DocumentsStep({
   done: number;
   total: number;
   disabled: boolean;
+  uploadsInProgress: boolean;
   onAttachmentChange: (
     groupKey: string,
     attachmentKey: string,
@@ -891,9 +1023,9 @@ function DocumentsStep({
           <Button
             type="button"
             onClick={onNext}
-            disabled={disabled || !canAdvance}
+            disabled={disabled || uploadsInProgress || !canAdvance}
           >
-            Continue with uploads
+            {uploadsInProgress ? "Uploading..." : "Continue with uploads"}
           </Button>
         </div>
       </div>
@@ -912,6 +1044,7 @@ function VehicleStep({
   total,
   pending,
   skippedDocs,
+  uploadsInProgress,
   onAttachmentChange,
   onDatesChange,
   onBack,
@@ -927,6 +1060,7 @@ function VehicleStep({
   total: number;
   pending: boolean;
   skippedDocs: boolean;
+  uploadsInProgress: boolean;
   onAttachmentChange: (
     groupKey: string,
     attachmentKey: string,
@@ -1096,10 +1230,17 @@ function VehicleStep({
         >
           Back
         </Button>
-        <Button type="button" onClick={onSubmit} loading={pending}>
-          {skippedDocs
-            ? "Finish setup (documents pending)"
-            : "Finish & submit for verification"}
+        <Button
+          type="button"
+          onClick={onSubmit}
+          loading={pending}
+          disabled={uploadsInProgress}
+        >
+          {uploadsInProgress
+            ? "Uploading..."
+            : skippedDocs
+              ? "Finish setup (documents pending)"
+              : "Finish & submit for verification"}
         </Button>
       </div>
     </div>
