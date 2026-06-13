@@ -10,7 +10,12 @@ import { StepWizard, StepWizardFooter } from "@/components/ui/StepWizard";
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
-import { documentRequiresExpiry, todayIsoDate, validateFutureExpiry } from "@/lib/document-rules";
+import {
+  documentRequiresExpiry,
+  normalizeExpiryForDocument,
+  todayIsoDate,
+  validateFutureExpiry,
+} from "@/lib/document-rules";
 import { sha256File } from "@/lib/file-hash";
 import {
   EvidenceSlot,
@@ -148,7 +153,10 @@ export function DocumentUploadDialog({
       file_path: path,
       file_name: file.name,
       file_hash: fileHash,
-      expires_at: requiresExpiry && expiresAt ? new Date(expiresAt).toISOString() : null,
+      expires_at: normalizeExpiryForDocument(
+        expiresAt ? new Date(expiresAt).toISOString() : null,
+        docType
+      ),
       verification_status: "pending_review",
     });
 
@@ -240,7 +248,7 @@ export function DocumentUploadDialog({
                 />
               ) : (
                 <Alert variant="info">
-                  This document type does not require an expiration date.
+                  This document type does not need a validity period.
                 </Alert>
               )}
             </div>

@@ -10,6 +10,10 @@ CREATE TYPE "public"."transaction_status" AS ENUM (
 ALTER TABLE "public"."documents"
   ADD COLUMN IF NOT EXISTS "file_hash" text;
 
+UPDATE "public"."documents"
+SET "expires_at" = NULL
+WHERE "doc_type" IN ('identity', 'passport', 'vehicle_photo', 'other');
+
 CREATE INDEX IF NOT EXISTS "documents_owner_doc_hash_idx"
   ON "public"."documents" ("owner_id", "doc_type", "file_hash")
   WHERE "file_hash" IS NOT NULL;

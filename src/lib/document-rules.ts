@@ -7,8 +7,23 @@ export const NON_EXPIRING_DOCUMENT_TYPES: readonly DocumentType[] = [
   "other",
 ];
 
+export const EXPIRING_DOCUMENT_TYPES: readonly DocumentType[] = [
+  "driver_license",
+  "vehicle_registration",
+  "insurance",
+  "technical_inspection",
+];
+
 export function documentRequiresExpiry(docType: DocumentType): boolean {
-  return !NON_EXPIRING_DOCUMENT_TYPES.includes(docType);
+  return EXPIRING_DOCUMENT_TYPES.includes(docType);
+}
+
+export function normalizeExpiryForDocument(
+  expiresAt: string | null | undefined,
+  docType: DocumentType
+): string | null {
+  if (!documentRequiresExpiry(docType)) return null;
+  return expiresAt ?? null;
 }
 
 export function todayIsoDate(): string {

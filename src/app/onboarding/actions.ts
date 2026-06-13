@@ -6,7 +6,10 @@ import { createClient } from "@/lib/supabase/server";
 import { friendlyError } from "@/lib/errors";
 import { DEFAULT_COUNTRY, isDomesticCountry } from "@/lib/countries";
 import { normalizePlateForCountry } from "@/lib/vehicles";
-import { validateFutureExpiry } from "@/lib/document-rules";
+import {
+  normalizeExpiryForDocument,
+  validateFutureExpiry,
+} from "@/lib/document-rules";
 import type { DocumentType } from "@/lib/types/database";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -253,7 +256,7 @@ export async function completeOnboarding(
     file_path: d.file_path,
     file_name: d.file_name,
     file_hash: d.file_hash,
-    expires_at: d.expires_at,
+    expires_at: normalizeExpiryForDocument(d.expires_at, d.doc_type),
     verification_status: "pending_review" as const,
   }));
 
