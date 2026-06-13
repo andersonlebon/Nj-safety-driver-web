@@ -12,11 +12,17 @@ import {
   documentRequiresIssuedDate,
   todayIsoDate,
 } from "@/lib/document-rules";
+import {
+  translateAttachmentTitle,
+  translateDocumentGroupDescription,
+  translateDocumentGroupTitle,
+} from "@/lib/document-i18n";
 import type {
   AttachmentDefinition,
   DocumentGroupDates,
   DocumentGroupDefinition,
 } from "@/lib/document-definitions";
+import { useI18n } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -52,8 +58,11 @@ export function DocumentGroupUpload({
   disabled,
   className,
 }: Props) {
+  const { t } = useI18n();
   const showIssued = documentRequiresIssuedDate(group.docType);
   const showExpiry = documentRequiresExpiry(group.docType);
+  const title = translateDocumentGroupTitle(group, t);
+  const description = translateDocumentGroupDescription(group, t);
   const requiredAttachments = group.attachments.filter((item) =>
     required ? item.required : false
   );
@@ -77,20 +86,20 @@ export function DocumentGroupUpload({
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h5 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
-            {group.title}
+            {title}
             {required ? (
               <span className="ml-1 text-red-500" aria-hidden>
                 *
               </span>
             ) : (
               <span className="ml-1.5 text-[10px] uppercase tracking-wider text-stone-400 dark:text-slate-500">
-                optional
+                {t("common.optional")}
               </span>
             )}
           </h5>
-          {group.description && (
+          {description && (
             <p className="mt-0.5 text-xs text-stone-500 dark:text-slate-400">
-              {group.description}
+              {description}
             </p>
           )}
         </div>
@@ -99,12 +108,12 @@ export function DocumentGroupUpload({
             {isComplete ? (
               <>
                 <Check className="h-3.5 w-3.5 text-brand-600" />
-                Complete
+                {t("common.complete")}
               </>
             ) : (
               <>
                 {uploadedRequired}/{requiredAttachments.length || allRequiredAttachments.length}{" "}
-                files
+                {t("common.files")}
               </>
             )}
           </span>
@@ -115,7 +124,7 @@ export function DocumentGroupUpload({
         <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {showIssued && (
             <Input
-              label="Delivered date"
+              label={t("common.deliveredDate")}
               type="date"
               name={`${group.key}-issued-at`}
               value={dates.issuedAt}
@@ -129,7 +138,7 @@ export function DocumentGroupUpload({
           )}
           {showExpiry && (
             <Input
-              label="Expiration date"
+              label={t("common.expirationDate")}
               type="date"
               name={`${group.key}-expires-at`}
               value={dates.expiresAt}
@@ -155,7 +164,7 @@ export function DocumentGroupUpload({
           >
             <EvidenceSlot
               layout="list"
-              title={attachment.title}
+              title={translateAttachmentTitle(attachment.key, attachment.title, t)}
               required={required && attachment.required}
               accept={attachment.accept}
               value={attachments[attachment.key] ?? { file: null, previewUrl: null }}

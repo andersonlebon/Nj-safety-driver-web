@@ -7,8 +7,10 @@ import { friendlyError } from "@/lib/errors";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
+import { useI18n } from "@/i18n/context";
 
 export function LoginForm() {
+  const { t } = useI18n();
   const router = useRouter();
   const params = useSearchParams();
   const redirectTo = params.get("redirect") || "";
@@ -60,7 +62,7 @@ export function LoginForm() {
     <form className="space-y-4" onSubmit={handleSubmit}>
       {error && <Alert variant="error">{error}</Alert>}
       <Input
-        label="Email"
+        label={t("auth.email")}
         type="email"
         name="email"
         autoComplete="email"
@@ -69,7 +71,7 @@ export function LoginForm() {
         required
       />
       <Input
-        label="Password"
+        label={t("auth.password")}
         type="password"
         name="password"
         autoComplete="current-password"
@@ -78,7 +80,7 @@ export function LoginForm() {
         required
       />
       <Button type="submit" loading={loading} className="w-full">
-        Sign in
+        {t("auth.signIn")}
       </Button>
     </form>
   );

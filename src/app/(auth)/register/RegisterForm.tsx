@@ -7,8 +7,10 @@ import { friendlyError } from "@/lib/errors";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
+import { useI18n } from "@/i18n/context";
 
 export function RegisterForm() {
+  const { t } = useI18n();
   const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -42,9 +44,7 @@ export function RegisterForm() {
     }
 
     if (!data.session) {
-      setInfo(
-        "Account created. Please check your email to confirm your address before signing in."
-      );
+      setInfo(t("auth.confirmEmailHint"));
       setLoading(false);
       return;
     }
@@ -58,7 +58,7 @@ export function RegisterForm() {
       {error && <Alert variant="error">{error}</Alert>}
       {info && <Alert variant="success">{info}</Alert>}
       <Input
-        label="Full name"
+        label={t("onboarding.fields.fullName")}
         name="full_name"
         autoComplete="name"
         value={fullName}
@@ -66,7 +66,7 @@ export function RegisterForm() {
         required
       />
       <Input
-        label="Email"
+        label={t("auth.email")}
         type="email"
         name="email"
         autoComplete="email"
@@ -75,7 +75,7 @@ export function RegisterForm() {
         required
       />
       <Input
-        label="Password"
+        label={t("auth.password")}
         type="password"
         name="password"
         autoComplete="new-password"
@@ -85,7 +85,7 @@ export function RegisterForm() {
         required
       />
       <Button type="submit" loading={loading} className="w-full">
-        Create account
+        {t("auth.createAccountButton")}
       </Button>
     </form>
   );

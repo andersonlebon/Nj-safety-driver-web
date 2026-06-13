@@ -28,6 +28,7 @@ import {
 import { normalizePlateForCountry } from "@/lib/vehicles";
 import { cn } from "@/lib/utils";
 import { sha256File } from "@/lib/file-hash";
+import { useI18n } from "@/i18n/context";
 import type { DocumentType } from "@/lib/types/database";
 import {
   savePersonalInfo,
@@ -89,10 +90,10 @@ function emptyGroupDates(
   );
 }
 
-const STEPS = [
-  { id: 1, label: "Personal information", icon: User },
-  { id: 2, label: "Personal documents", icon: Camera },
-  { id: 3, label: "First vehicle", icon: Car },
+const STEP_DEFS = [
+  { id: 1 as StepId, labelKey: "onboarding.steps.personal", icon: User },
+  { id: 2 as StepId, labelKey: "onboarding.steps.documents", icon: Camera },
+  { id: 3 as StepId, labelKey: "onboarding.steps.vehicle", icon: Car },
 ] as const;
 
 type StepId = 1 | 2 | 3;
@@ -150,6 +151,7 @@ type Props = {
 };
 
 export function OnboardingWizard({ initialStep, initialProfile, userId }: Props) {
+  const { t } = useI18n();
   const [step, setStep] = useState<StepId>(initialStep);
   const [personal, setPersonal] = useState<PersonalInfo>(initialProfile);
   const [vehicle, setVehicle] = useState<VehicleInfo>({
@@ -262,13 +264,11 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
 
   const goToStep3 = () => {
     if (hasUploadsInProgress) {
-      setError("Please wait for uploads to finish before continuing.");
+      setError(t("onboarding.waitUploadContinue"));
       return;
     }
     if (!canAdvanceFromStep2) {
-      setError(
-        "Please complete the required documents with their delivered and expiration dates, or use “Skip for now” if you will upload them later."
-      );
+      setError(t("onboarding.completeRequiredDocs"));
       return;
     }
     setSkipDocuments(false);
@@ -374,9 +374,7 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
           attachmentKey,
         });
         if (duplicateHashes.includes(fileHash)) {
-          throw new Error(
-            "Duplicate document image detected. Please choose a different photo."
-          );
+          throw new Error(t("onboarding.duplicateImage"));
         }
 
         const uploaded = await uploadAttachment(group, attachmentKey, next);
@@ -426,12 +424,12 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
       vehicle.registration_country
     );
     if (!plate || !vehicle.brand.trim() || !vehicle.model.trim()) {
-      return "Plate number, brand, and model are required.";
+      return t("onboarding.plateRequired");
     }
     if (vehicle.year) {
       const y = Number(vehicle.year);
       if (!Number.isFinite(y) || y < 1900 || y > 2100) {
-        return "Year must be a valid 4-digit number.";
+        return t("onboarding.yearInvalid");
       }
     }
     return null;
@@ -493,7 +491,6 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
 
   const buildUploadedGroups = (
     groups: readonly DocumentGroupDefinition[],
-    attachmentsByGroup: GroupAttachmentsState,
     datesByGroup: GroupDatesState,
     uploadedMetaByGroup: GroupUploadedMetaState,
     scopeVehicleId: string | null
@@ -554,7 +551,7 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
   const submitFinal = () => {
     setError(null);
     if (hasUploadsInProgress) {
-      setError("Please wait for uploads to finish before submitting.");
+      setError(t("onboarding.waitUploadSubmit"));
       return;
     }
     const validationError = validateStep3();
@@ -566,14 +563,12 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
       try {
         const driverUploads = buildUploadedGroups(
           DRIVER_DOCUMENT_GROUPS,
-          driverGroups,
           driverDates,
           driverUploadedMeta,
           null
         );
         const vehicleUploads = buildUploadedGroups(
           VEHICLE_DOCUMENT_GROUPS,
-          vehicleGroups,
           vehicleDates,
           vehicleUploadedMeta,
           vehicleId
@@ -622,11 +617,10 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
     <Card>
       <div className="px-5 py-5 border-b border-stone-200 dark:border-slate-800">
         <h3 className="text-base font-semibold tracking-tight text-stone-900 dark:text-stone-100">
-          Welcome to NJ Safety Driver
+          {t("onboarding.welcomeTitle")}
         </h3>
         <p className="text-sm text-stone-600 dark:text-slate-400 mt-1">
-          Activate your driver profile in three quick steps. You can edit
-          everything later from your dashboard.
+          {t("onboarding.welcomeSubtitle")}
         </p>
         <StepIndicator current={step} />
       </div>
@@ -694,9 +688,11 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
 }
 
 function StepIndicator({ current }: { current: StepId }) {
+  const { t } = useI18n();
+
   return (
     <ol className="mt-6 flex items-center gap-3">
-      {STEPS.map((s, idx) => {
+      {STEP_DEFS.map((s, idx) => {
         const Icon = s.icon;
         const isDone = current > s.id;
         const isActive = current === s.id;
@@ -728,7 +724,7 @@ function StepIndicator({ current }: { current: StepId }) {
                     : "text-stone-500 dark:text-slate-500"
                 )}
               >
-                Step {s.id}
+                {t("onboarding.stepLabel", { id: s.id })}
               </p>
               <p
                 className={cn(
@@ -738,10 +734,10 @@ function StepIndicator({ current }: { current: StepId }) {
                     : "text-stone-500 dark:text-slate-500"
                 )}
               >
-                {s.label}
+                {t(s.labelKey)}
               </p>
             </div>
-            {idx < STEPS.length - 1 && (
+            {idx < STEP_DEFS.length - 1 && (
               <div
                 className={cn(
                   "flex-1 h-px",
@@ -767,6 +763,7 @@ function PersonalInfoStep({
   userId: string;
   onSubmit: (data: FormData) => void;
 }) {
+  const { t } = useI18n();
   const [fullName, setFullName] = useState(defaults.full_name);
   const [phone, setPhone] = useState(defaults.phone);
   const [nationalId, setNationalId] = useState(defaults.national_id);
@@ -780,20 +777,20 @@ function PersonalInfoStep({
     field: "national_id",
     value: nationalId,
     userId,
-    message: "This National ID is already registered.",
+    message: t("onboarding.nationalIdDuplicate"),
   });
   const driverLicenseWarning = useDuplicateCheck({
     field: "driver_license",
     value: driverLicense,
     userId,
-    message: "This driver's license is already registered.",
+    message: t("onboarding.licenseDuplicate"),
   });
 
   return (
     <form action={onSubmit} className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Input
-          label="Full name"
+          label={t("onboarding.fields.fullName")}
           name="full_name"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
@@ -801,7 +798,7 @@ function PersonalInfoStep({
           autoComplete="name"
         />
         <Input
-          label="Phone number"
+          label={t("onboarding.fields.phone")}
           name="phone"
           type="tel"
           value={phone}
@@ -811,21 +808,21 @@ function PersonalInfoStep({
           placeholder="+241 ..."
         />
         <Input
-          label="National ID number"
+          label={t("onboarding.fields.nationalId")}
           name="national_id"
           value={nationalId}
           onChange={(e) => setNationalId(e.target.value)}
           required
         />
         <Input
-          label="Driver license number"
+          label={t("onboarding.fields.driverLicense")}
           name="driver_license"
           value={driverLicense}
           onChange={(e) => setDriverLicense(e.target.value)}
           required
         />
         <Select
-          label="Nationality"
+          label={t("onboarding.fields.nationality")}
           name="nationality_country"
           value={nationality}
           onChange={(e) => setNationality(e.target.value)}
@@ -849,7 +846,7 @@ function PersonalInfoStep({
         </div>
       )}
       <Textarea
-        label="Address"
+        label={t("onboarding.fields.address")}
         name="address"
         value={address}
         onChange={(e) => setAddress(e.target.value)}
@@ -858,7 +855,7 @@ function PersonalInfoStep({
       />
       <div className="flex justify-end pt-2">
         <Button type="submit" loading={pending}>
-          Continue
+          {t("common.continue")}
         </Button>
       </div>
     </form>
@@ -959,27 +956,24 @@ function DocumentsStep({
   onSkip: () => void;
   canAdvance: boolean;
 }) {
+  const { t } = useI18n();
+
   return (
     <div className="space-y-5">
-      <Alert variant="warning">
-        You can upload documents now or skip and add them later from your
-        dashboard. Your profile stays <strong>inactive</strong> until an
-        administrator verifies your documents.
-      </Alert>
+      <Alert variant="warning">{t("onboarding.documentsWarning")}</Alert>
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
           <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
-            Personal documents
+            {t("onboarding.documentsTitle")}
           </h4>
           <p className="text-xs text-stone-500 dark:text-slate-400 mt-0.5">
-            Each document can include multiple attachments. Add delivered and
-            expiration dates once per document, not per photo.
+            {t("onboarding.documentsHint")}
           </p>
         </div>
         <span className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-full bg-brand-50 dark:bg-brand-950/40 px-3 py-1 text-xs font-medium text-brand-700 dark:text-brand-300">
           <Check className="h-3.5 w-3.5" />
-          {done}/{total} required complete
+          {t("onboarding.requiredComplete", { done, total })}
         </span>
       </div>
 
@@ -1009,7 +1003,7 @@ function DocumentsStep({
           onClick={onBack}
           disabled={disabled}
         >
-          Back
+          {t("common.back")}
         </Button>
         <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
           <Button
@@ -1018,14 +1012,16 @@ function DocumentsStep({
             onClick={onSkip}
             disabled={disabled}
           >
-            Skip for now
+            {t("common.skipForNow")}
           </Button>
           <Button
             type="button"
             onClick={onNext}
             disabled={disabled || uploadsInProgress || !canAdvance}
           >
-            {uploadsInProgress ? "Uploading..." : "Continue with uploads"}
+            {uploadsInProgress
+              ? t("common.uploading")
+              : t("onboarding.continueWithUploads")}
           </Button>
         </div>
       </div>
@@ -1070,6 +1066,7 @@ function VehicleStep({
   onBack: () => void;
   onSubmit: () => void;
 }) {
+  const { t } = useI18n();
   const update =
     <K extends keyof VehicleInfo>(key: K) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -1079,16 +1076,16 @@ function VehicleStep({
     <div className="space-y-6">
       <div>
         <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
-          Vehicle details
+          {t("onboarding.vehicleDetails")}
         </h4>
         <p className="text-xs text-stone-500 dark:text-slate-400 mt-0.5">
-          You can add more vehicles later from your dashboard.
+          {t("onboarding.vehicleDetailsHint")}
         </p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <Select
-          label="Vehicle origin (plate country)"
+          label={t("onboarding.fields.vehicleOrigin")}
           name="registration_country"
           value={vehicle.registration_country}
           onChange={update("registration_country")}
@@ -1100,7 +1097,7 @@ function VehicleStep({
           ))}
         </Select>
         <Input
-          label="Plate number"
+          label={t("onboarding.fields.plateNumber")}
           name="plate_number"
           required
           placeholder="GA-1234-AB"
@@ -1108,7 +1105,7 @@ function VehicleStep({
           onChange={update("plate_number")}
         />
         <Input
-          label="Brand"
+          label={t("onboarding.fields.brand")}
           name="brand"
           required
           placeholder="Toyota"
@@ -1116,7 +1113,7 @@ function VehicleStep({
           onChange={update("brand")}
         />
         <Input
-          label="Model"
+          label={t("onboarding.fields.model")}
           name="model"
           required
           placeholder="Corolla"
@@ -1124,12 +1121,12 @@ function VehicleStep({
           onChange={update("model")}
         />
         <Select
-          label="Color"
+          label={t("onboarding.fields.color")}
           name="color"
           value={vehicle.color}
           onChange={update("color")}
         >
-          <option value="">Select a color</option>
+          <option value="">{t("onboarding.fields.selectColor")}</option>
           <option value="Black">Black</option>
           <option value="White">White</option>
           <option value="Silver">Silver</option>
@@ -1145,7 +1142,7 @@ function VehicleStep({
           <option value="Other">Other</option>
         </Select>
         <Input
-          label="Year"
+          label={t("onboarding.fields.year")}
           name="year"
           type="number"
           min={1900}
@@ -1155,49 +1152,46 @@ function VehicleStep({
           onChange={update("year")}
         />
         <Select
-          label="Insurance status"
+          label={t("onboarding.fields.insuranceStatus")}
           name="insurance_status"
           value={vehicle.insurance_status}
           onChange={update("insurance_status")}
         >
-          <option value="false">Not insured</option>
-          <option value="true">Insured</option>
+          <option value="false">{t("onboarding.fields.notInsured")}</option>
+          <option value="true">{t("onboarding.fields.insured")}</option>
         </Select>
         <Select
-          label="Technical inspection"
+          label={t("onboarding.fields.inspectionStatus")}
           name="inspection_status"
           value={vehicle.inspection_status}
           onChange={update("inspection_status")}
         >
-          <option value="false">Not inspected</option>
-          <option value="true">Inspection valid</option>
+          <option value="false">{t("onboarding.fields.notInspected")}</option>
+          <option value="true">{t("onboarding.fields.inspectionValid")}</option>
         </Select>
       </div>
 
       <div className="pt-2 border-t border-stone-200 dark:border-slate-800" />
 
       {skippedDocs && (
-        <Alert variant="warning">
-          Document uploads were skipped. You can add them later under{" "}
-          <strong>Documents</strong> in your dashboard, then submit for
-          verification.
-        </Alert>
+        <Alert variant="warning">{t("onboarding.skippedDocsWarning")}</Alert>
       )}
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
           <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
-            Vehicle evidence {skippedDocs ? "(optional now)" : ""}
+            {skippedDocs
+              ? t("onboarding.vehicleEvidenceOptional")
+              : t("onboarding.vehicleEvidence")}
           </h4>
           <p className="text-xs text-stone-500 dark:text-slate-400 mt-0.5">
-            Photos and certificates for this vehicle. You can upload these later
-            if you prefer to finish quickly.
+            {t("onboarding.vehicleEvidenceHint")}
           </p>
         </div>
         {!skippedDocs && (
           <span className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-full bg-brand-50 dark:bg-brand-950/40 px-3 py-1 text-xs font-medium text-brand-700 dark:text-brand-300">
             <Check className="h-3.5 w-3.5" />
-            {done}/{total} required complete
+            {t("onboarding.requiredComplete", { done, total })}
           </span>
         )}
       </div>
@@ -1228,7 +1222,7 @@ function VehicleStep({
           onClick={onBack}
           disabled={pending}
         >
-          Back
+          {t("common.back")}
         </Button>
         <Button
           type="button"
@@ -1237,10 +1231,10 @@ function VehicleStep({
           disabled={uploadsInProgress}
         >
           {uploadsInProgress
-            ? "Uploading..."
+            ? t("common.uploading")
             : skippedDocs
-              ? "Finish setup (documents pending)"
-              : "Finish & submit for verification"}
+              ? t("onboarding.finishPending")
+              : t("onboarding.finishSubmit")}
         </Button>
       </div>
     </div>

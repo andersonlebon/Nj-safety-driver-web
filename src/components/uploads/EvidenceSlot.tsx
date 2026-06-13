@@ -10,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/context";
 
 export const MAX_EVIDENCE_BYTES = 10 * 1024 * 1024;
 
@@ -76,6 +77,7 @@ export function EvidenceSlot({
   compactPreview = true,
   layout = "card",
 }: Props) {
+  const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -104,11 +106,11 @@ export function EvidenceSlot({
         return t === type;
       });
       if (!matches && type) {
-        return "Unsupported file type. Use JPG, PNG, WEBP, HEIC, or PDF.";
+        return t("evidence.unsupportedFileType");
       }
       return null;
     },
-    [acceptedTypes, maxBytes]
+    [acceptedTypes, maxBytes, t]
   );
 
   const handleFile = useCallback(
@@ -167,7 +169,7 @@ export function EvidenceSlot({
           </span>
         ) : (
           <span className="ml-1.5 text-[10px] uppercase tracking-wider text-stone-400 dark:text-slate-500">
-            optional
+            {t("common.optional")}
           </span>
         )}
       </p>
@@ -197,7 +199,7 @@ export function EvidenceSlot({
             type="button"
             onClick={() => setPreviewOpen(true)}
             className="group relative h-full w-full"
-            aria-label={`Preview ${title}`}
+            aria-label={t("evidence.previewAria", { title })}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -206,7 +208,7 @@ export function EvidenceSlot({
               className="h-full w-full object-cover"
             />
             <span className="absolute inset-x-0 bottom-0 bg-black/55 px-1 py-0.5 text-[9px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
-              Preview
+              {t("common.preview")}
             </span>
           </button>
         ) : hasFile && isPdf(value.file) ? (
@@ -217,7 +219,7 @@ export function EvidenceSlot({
         ) : hasFile ? (
           <div className="flex flex-col items-center gap-0.5 text-stone-500 dark:text-slate-400">
             <ImageIcon className={cn(isListLayout ? "h-6 w-6" : "h-8 w-8")} />
-            <span className="text-[10px]">Ready</span>
+            <span className="text-[10px]">{t("evidence.ready")}</span>
           </div>
         ) : (
           <button
@@ -232,15 +234,19 @@ export function EvidenceSlot({
             <UploadCloud className={cn(isListLayout ? "h-5 w-5" : "h-7 w-7")} />
             {!isListLayout && (
               <>
-                <span className="text-xs font-medium">Drop or click to upload</span>
+                <span className="text-xs font-medium">{t("evidence.dropOrClick")}</span>
                 <span className="text-[10px] text-stone-400 dark:text-slate-500">
-                  JPG, PNG, WEBP, HEIC{accept.includes("pdf") ? ", or PDF" : ""} —
-                  max {bytesToMb(maxBytes)} MB
+                  {t("evidence.fileFormats", {
+                    pdfSuffix: accept.includes("pdf")
+                      ? t("evidence.fileFormatsPdfSuffix")
+                      : "",
+                    maxMb: bytesToMb(maxBytes),
+                  })}
                 </span>
               </>
             )}
             {isListLayout && (
-              <span className="text-[10px] font-medium leading-tight">Upload</span>
+              <span className="text-[10px] font-medium leading-tight">{t("common.upload")}</span>
             )}
           </button>
         )}
@@ -263,7 +269,7 @@ export function EvidenceSlot({
     >
       {!isListLayout && (
         <p className="min-w-0 truncate text-[11px] text-stone-500 dark:text-slate-400">
-          {hasFile ? value.file!.name : "No file selected"}
+          {hasFile ? value.file!.name : t("common.noFileSelected")}
         </p>
       )}
       <div className={cn("flex items-center gap-1", isListLayout && "ml-auto")}>
@@ -277,10 +283,10 @@ export function EvidenceSlot({
               "text-stone-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400",
               "disabled:opacity-50"
             )}
-            aria-label="Remove file"
+            aria-label={t("evidence.removeFile")}
           >
             <X className="h-3.5 w-3.5" />
-            Remove
+            {t("common.remove")}
           </button>
         )}
         <button
@@ -290,7 +296,7 @@ export function EvidenceSlot({
           className="inline-flex items-center gap-1 text-[11px] font-medium text-brand-700 hover:text-brand-800 disabled:opacity-50 dark:text-brand-300 dark:hover:text-brand-200"
         >
           <UploadCloud className="h-3.5 w-3.5" />
-          {hasFile ? "Replace" : "Choose file"}
+          {hasFile ? t("common.replace") : t("common.chooseFile")}
         </button>
       </div>
     </div>
@@ -300,12 +306,12 @@ export function EvidenceSlot({
     showExpiry && hasFile && onExpiresAtChange ? (
       <div className={cn(isListLayout && "sm:max-w-xs")}>
         <label className="mb-1 block text-xs font-medium text-stone-700 dark:text-slate-300">
-          Expiration date
+          {t("common.expirationDate")}
           {required ? (
             <span className="ml-1 text-red-500">*</span>
           ) : (
             <span className="ml-1 font-normal text-stone-400 dark:text-slate-500">
-              (recommended)
+              {t("evidence.recommended")}
             </span>
           )}
         </label>
@@ -347,12 +353,12 @@ export function EvidenceSlot({
                 {isDone && (
                   <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-medium text-brand-700 dark:text-brand-300">
                     <Check className="h-3.5 w-3.5" />
-                    Done
+                    {t("evidence.done")}
                   </span>
                 )}
               </div>
               <p className="truncate text-[11px] text-stone-500 dark:text-slate-400">
-                {hasFile ? value.file!.name : "No file selected"}
+                {hasFile ? value.file!.name : t("common.noFileSelected")}
               </p>
               {actionRow}
             </div>
@@ -370,7 +376,7 @@ export function EvidenceSlot({
             {isDone && (
               <span className="inline-flex items-center gap-1 text-[11px] font-medium text-brand-700 dark:text-brand-300">
                 <Check className="h-3.5 w-3.5" />
-                Uploaded
+                {t("evidence.uploaded")}
               </span>
             )}
           </div>
@@ -399,7 +405,7 @@ export function EvidenceSlot({
           className="fixed inset-0 z-[120] flex items-center justify-center bg-black/85 p-4"
           role="dialog"
           aria-modal="true"
-          aria-label={`${title} preview`}
+          aria-label={t("evidence.previewDialogAria", { title })}
           onClick={() => setPreviewOpen(false)}
         >
           <div className="flex max-h-full max-w-full flex-col gap-3">
@@ -416,7 +422,7 @@ export function EvidenceSlot({
               className="mx-auto inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-stone-900 shadow-lg hover:bg-stone-100"
             >
               <X className="h-4 w-4" />
-              Close preview
+              {t("evidence.closePreview")}
             </button>
           </div>
         </div>

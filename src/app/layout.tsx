@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Fraunces, JetBrains_Mono } from "next/font/google";
 import { AppProviders } from "@/components/providers/AppProviders";
+import { getLocale } from "@/i18n/server";
+import { messages } from "@/i18n/messages";
 import "./globals.css";
 
 const sans = Plus_Jakarta_Sans({
@@ -24,26 +26,31 @@ const mono = JetBrains_Mono({
   variable: "--font-mono",
 });
 
-export const metadata: Metadata = {
-  title: "NJ Safety Driver",
-  description:
-    "Road safety management platform for drivers, agents, and administrators.",
-  icons: {
-    icon: "/favicon.ico",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  const copy = messages[locale].app;
+  return {
+    title: copy.legacyName,
+    description: copy.description,
+    icons: {
+      icon: "/favicon.ico",
+    },
+  };
+}
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const locale = await getLocale();
+
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <body
         className={`${sans.variable} ${display.variable} ${mono.variable} min-h-screen antialiased`}
       >
-        <AppProviders>{children}</AppProviders>
+        <AppProviders initialLocale={locale}>{children}</AppProviders>
       </body>
     </html>
   );

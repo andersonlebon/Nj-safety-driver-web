@@ -2,12 +2,14 @@ import { redirect } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { requireRole } from "@/lib/auth";
+import { getTranslations } from "@/i18n/server";
 import { OnboardingWizard } from "./OnboardingWizard";
 
 export const dynamic = "force-dynamic";
 
 export default async function OnboardingPage() {
   const profile = await requireRole(["driver", "agent", "admin"]);
+  const { t } = await getTranslations();
 
   if (profile.onboarded_at) {
     redirect(`/${profile.role}`);
@@ -28,7 +30,7 @@ export default async function OnboardingPage() {
             <ShieldCheck className="h-5 w-5" />
           </span>
           <span className="font-semibold text-stone-900 dark:text-stone-100">
-            NJ Safety Driver
+            {t("app.legacyName")}
           </span>
         </Link>
         <form action="/auth/signout" method="post">
@@ -36,7 +38,7 @@ export default async function OnboardingPage() {
             type="submit"
             className="text-sm text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-stone-100"
           >
-            Sign out
+            {t("common.signOut")}
           </button>
         </form>
       </div>
