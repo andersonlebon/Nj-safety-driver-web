@@ -870,10 +870,11 @@ function DocumentsStep({
         </span>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
+      <div className="max-h-[min(52vh,28rem)] overflow-y-auto overscroll-y-contain pr-1 -mr-1 space-y-2.5 scroll-smooth">
         {DRIVER_SLOTS.map((slot) => (
           <EvidenceSlot
             key={slot.key}
+            layout="list"
             title={slot.title}
             description={slot.description}
             required={slot.required === true}
@@ -1084,10 +1085,11 @@ function VehicleStep({
         )}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
+      <div className="max-h-[min(52vh,28rem)] overflow-y-auto overscroll-y-contain pr-1 -mr-1 space-y-2.5 scroll-smooth">
         {VEHICLE_SLOTS.map((slot) => (
           <EvidenceSlot
             key={slot.key}
+            layout="list"
             title={slot.title}
             description={slot.description}
             required={!skippedDocs && isSlotRequired(slot, vehicle)}
