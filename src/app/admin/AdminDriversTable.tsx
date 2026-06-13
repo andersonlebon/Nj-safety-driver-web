@@ -5,7 +5,7 @@ import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { CountryBadge } from "@/components/vehicles/CountryBadge";
-import { StaffDocumentsLoader } from "@/components/documents/StaffDocumentsLoader";
+import { DriverDocumentsTabs } from "@/components/documents/DriverDocumentsTabs";
 import { formatDate } from "@/lib/utils";
 import { RoleBadge, RoleChanger } from "./RoleChanger";
 import {
@@ -224,12 +224,7 @@ function DriverDetailModalBody({
         )}
       </dl>
 
-      <StaffDocumentsLoader
-        ownerId={driver.id}
-        title="Driver documents"
-        sectionId="driver-detail-documents"
-        scope="driver"
-      />
+      <DriverDocumentsTabs ownerId={driver.id} vehicles={vehicles} />
 
       <DriverVehiclesSection vehicles={vehicles} />
 

@@ -127,7 +127,7 @@ export default async function DriverOverviewPage() {
 
   const score = computeComplianceScore({
     infractions,
-    vehicles,
+    verificationStatus: profile.verification_status,
   });
 
   const statusSlices: DonutSlice[] = [

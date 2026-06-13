@@ -6,6 +6,19 @@ import { Card, CardBody } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { resolveLedgerStatus } from "@/lib/transactions";
+import type { PaymentStatus, TransactionStatus } from "@/lib/types/database";
+
+function InfractionStatusBadge({
+  status,
+}: {
+  status: PaymentStatus | TransactionStatus;
+}) {
+  if (status === "initialized") {
+    return <span className="badge-pending">Initialized</span>;
+  }
+  return <StatusBadge status={status as PaymentStatus} />;
+}
 
 export default async function DriverInfractionsPage() {
   const profile = await requireRole(["driver", "admin"]);
@@ -17,6 +30,22 @@ export default async function DriverInfractionsPage() {
     .eq("driver_id", profile.id)
     .order("created_at", { ascending: false });
 
+  const list = infractions ?? [];
+  const infractionIds = list.map((infraction) => infraction.id);
+  const { data: transactions } =
+    infractionIds.length > 0
+      ? await supabase
+          .from("transactions")
+          .select("infraction_id, status")
+          .in("infraction_id", infractionIds)
+      : { data: [] };
+  const transactionMap = new Map(
+    (transactions ?? []).map((transaction) => [
+      transaction.infraction_id,
+      transaction.status,
+    ])
+  );
+
   return (
     <div>
       <PageHeader
@@ -25,7 +54,7 @@ export default async function DriverInfractionsPage() {
       />
       <Card>
         <CardBody>
-          {!infractions || infractions.length === 0 ? (
+          {list.length === 0 ? (
             <EmptyState
               icon={<AlertTriangle className="h-8 w-8" />}
               title="No infractions"
@@ -45,31 +74,42 @@ export default async function DriverInfractionsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {infractions.map((i) => (
-                    <tr key={i.id} className="border-b border-stone-100 dark:border-slate-800 last:border-0 align-top">
-                      <td className="py-2 pr-4 text-stone-600 dark:text-slate-400 whitespace-nowrap">
-                        {formatDate(i.created_at)}
-                      </td>
-                      <td className="py-2 pr-4 font-medium text-stone-900 dark:text-stone-100">
-                        {i.plate_number}
-                      </td>
-                      <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">
-                        {i.infraction_type}
-                        {i.description && (
-                          <span className="block text-xs text-stone-400 dark:text-slate-500 mt-0.5">
-                            {i.description}
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">{i.location || "—"}</td>
-                      <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">
-                        {formatCurrency(Number(i.fine_amount))}
-                      </td>
-                      <td className="py-2 pr-4">
-                        <StatusBadge status={i.status} />
-                      </td>
-                    </tr>
-                  ))}
+                  {list.map((infraction) => {
+                    const displayStatus = resolveLedgerStatus(
+                      infraction.status,
+                      transactionMap.get(infraction.id)
+                    );
+                    return (
+                      <tr
+                        key={infraction.id}
+                        className="border-b border-stone-100 dark:border-slate-800 last:border-0 align-top"
+                      >
+                        <td className="py-2 pr-4 text-stone-600 dark:text-slate-400 whitespace-nowrap">
+                          {formatDate(infraction.created_at)}
+                        </td>
+                        <td className="py-2 pr-4 font-medium text-stone-900 dark:text-stone-100">
+                          {infraction.plate_number}
+                        </td>
+                        <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">
+                          {infraction.infraction_type}
+                          {infraction.description && (
+                            <span className="block text-xs text-stone-400 dark:text-slate-500 mt-0.5">
+                              {infraction.description}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">
+                          {infraction.location || "—"}
+                        </td>
+                        <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">
+                          {formatCurrency(Number(infraction.fine_amount))}
+                        </td>
+                        <td className="py-2 pr-4">
+                          <InfractionStatusBadge status={displayStatus} />
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

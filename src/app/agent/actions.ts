@@ -14,7 +14,7 @@ import {
   TRANSIT_ID_LABEL_FRONT,
   assessTransitIdAuthenticity,
 } from "@/lib/transit-id-documents";
-import type { PaymentStatus } from "@/lib/types/database";
+import type { PaymentStatus, TransactionStatus } from "@/lib/types/database";
 
 export type AgentActionResult = { ok: true; vehicleId?: string } | { ok: false; error: string };
 
@@ -291,15 +291,23 @@ export async function fileInfraction(
 /** Payment status updates — agents and admins only. */
 export async function updateInfractionPaymentStatus(
   infractionId: string,
-  status: PaymentStatus
+  status: PaymentStatus | TransactionStatus
 ): Promise<AgentActionResult> {
   try {
     const auth = await requireRoleForAction(["agent", "admin"]);
     if ("ok" in auth) return auth;
 
     if (!infractionId) return { ok: false, error: "Missing infraction id." };
+    const transactionStatus: TransactionStatus =
+      status === "paid"
+        ? "paid"
+        : status === "pending"
+          ? "pending"
+          : status === "initialized"
+            ? "initialized"
+            : "unpaid";
     const nextInfractionStatus: PaymentStatus =
-      status === "paid" ? "paid" : "unpaid";
+      transactionStatus === "paid" ? "paid" : "unpaid";
 
     const supabase = createClient();
     const { data: updated, error } = await supabase
@@ -317,7 +325,7 @@ export async function updateInfractionPaymentStatus(
         {
           infraction_id: updated.id,
           amount: Number(updated.fine_amount),
-          status,
+          status: transactionStatus,
         },
         { onConflict: "infraction_id" }
       );

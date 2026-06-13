@@ -14,7 +14,7 @@
  * client chart components without crossing the RSC function-prop boundary.
  */
 
-import type { PaymentStatus } from "@/lib/types/database";
+import type { PaymentStatus, VerificationStatus } from "@/lib/types/database";
 
 type WithCreatedAt = { created_at: string };
 type WithAmount = { fine_amount: number | string };
@@ -213,19 +213,26 @@ export function totalsByPaymentStatus<T extends WithAmount & WithStatus>(
 /**
  * Compute a 0–100 compliance score for a driver:
  *   start at 100
- *   −2 per unpaid infraction
- * Paid infractions restore those points. Transaction states (initialized /
- * pending / paid / unpaid) are displayed separately and only change the
- * infraction when the transaction is confirmed paid.
- * Clamped to [0, 100].
+ *   −2 per unpaid infraction (paid infractions do not deduct)
+ * Approved drivers with no infractions always score 100%.
+ * Payment pending states are shown separately on the payments ledger.
  */
 export function computeComplianceScore(args: {
   infractions: Array<{ status: PaymentStatus }>;
-  vehicles?: Array<{ insurance_status: boolean; inspection_status: boolean }>;
+  verificationStatus?: VerificationStatus | null;
 }): number {
+  if (
+    args.verificationStatus === "active" &&
+    args.infractions.length === 0
+  ) {
+    return 100;
+  }
+
   let score = 100;
-  for (const i of args.infractions) {
-    if (i.status === "unpaid") score -= COMPLIANCE_RULES.unpaidInfractionPenalty;
+  for (const infraction of args.infractions) {
+    if (infraction.status === "unpaid") {
+      score -= COMPLIANCE_RULES.unpaidInfractionPenalty;
+    }
   }
   return Math.max(0, Math.min(100, score));
 }

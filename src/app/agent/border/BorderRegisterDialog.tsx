@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FormDialog } from "@/components/ui/FormDialog";
@@ -95,12 +94,10 @@ export function BorderRegisterDialog({
       {({ close }) => (
         <div>
           <Alert variant="info" className="mb-4">
-            Border crossings must be linked to a registered driver vehicle. If
-            the driver is not in the system yet, use{" "}
-            <Link href="/register" className="underline font-medium">
-              driver registration
-            </Link>
-            {" "}first, then log this crossing.
+            Select an existing driver and vehicle already registered in the system.
+            Foreign drivers follow the same registration flow — create the driver
+            account first, add their vehicle, then log the border crossing here.
+            Do not create a new driver from this screen.
           </Alert>
           <StepWizard steps={STEPS} currentStep={step} onStepChange={setStep} />
           {error && <Alert variant="error" className="mb-4">{error}</Alert>}

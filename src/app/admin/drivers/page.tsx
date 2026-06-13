@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Card, CardBody } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { requireRole } from "@/lib/auth";
+import { driverDirectoryQuery } from "@/lib/driver-profiles";
 import { AdminDriversTable } from "../AdminDriversTable";
 
 export const dynamic = "force-dynamic";
@@ -11,11 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminDriversPage() {
   const me = await requireRole(["admin", "agent"]);
   const supabase = createClient();
-  const { data: drivers } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("role", "driver")
-    .order("created_at", { ascending: false });
+  const { data: drivers } = await driverDirectoryQuery(supabase);
 
   const driverIds = (drivers ?? []).map((driver) => driver.id);
   const { data: vehicles } =

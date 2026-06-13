@@ -7,8 +7,8 @@ import {
   Radar,
   ListChecks,
 } from "lucide-react";
-import { Sidebar, type NavItem } from "@/components/dashboard/Sidebar";
-import { Topbar } from "@/components/dashboard/Topbar";
+import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import type { NavItem } from "@/components/dashboard/Sidebar";
 import { requireRole } from "@/lib/auth";
 import { getTranslations } from "@/i18n/server";
 
@@ -64,17 +64,15 @@ export default async function AdminLayout({
   const items = [...navItems, ...adminOnlyNavItems];
 
   return (
-    <div className="min-h-screen flex">
-      <Sidebar items={items} workspaceLabel={t("workspaces.admin")} />
-      <div className="flex-1 flex flex-col min-w-0">
-        <Topbar
-          title={t("dashboards.admin")}
-          userName={profile.full_name}
-          userEmail={profile.email}
-          roleLabel={t("roles.admin")}
-        />
-        <main className="flex-1 px-6 py-6">{children}</main>
-      </div>
-    </div>
+    <DashboardShell
+      items={items}
+      workspaceLabel={t("workspaces.admin")}
+      title={t("dashboards.admin")}
+      userName={profile.full_name}
+      userEmail={profile.email}
+      roleLabel={t("roles.admin")}
+    >
+      {children}
+    </DashboardShell>
   );
 }

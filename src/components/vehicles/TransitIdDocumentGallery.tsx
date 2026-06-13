@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ShieldCheck, ShieldAlert } from "lucide-react";
+import { ShieldCheck, ShieldAlert, X } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
 import {
   assessTransitIdAuthenticity,
@@ -121,15 +122,26 @@ export function TransitIdDocumentGallery({
           className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4"
           role="dialog"
           aria-modal
+          aria-label="ID document preview"
           onClick={() => setLightbox(null)}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={lightbox}
-            alt="ID document"
-            className="max-h-full max-w-full object-contain rounded-lg"
-            onClick={(e) => e.stopPropagation()}
-          />
+          <div className="flex max-h-full max-w-full flex-col items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={lightbox}
+              alt="ID document"
+              className="max-h-[82vh] max-w-[92vw] object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setLightbox(null)}
+            >
+              <X className="h-4 w-4 mr-1.5" />
+              Close
+            </Button>
+          </div>
         </div>
       )}
     </div>

@@ -1,6 +1,6 @@
 import { LayoutDashboard, Search, AlertTriangle, Globe, Users, Car } from "lucide-react";
-import { Sidebar, type NavItem } from "@/components/dashboard/Sidebar";
-import { Topbar } from "@/components/dashboard/Topbar";
+import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import type { NavItem } from "@/components/dashboard/Sidebar";
 import { requireRole } from "@/lib/auth";
 import { getTranslations } from "@/i18n/server";
 
@@ -46,17 +46,15 @@ export default async function AgentLayout({
   ];
 
   return (
-    <div className="min-h-screen flex">
-      <Sidebar items={navItems} workspaceLabel={t("workspaces.agent")} />
-      <div className="flex-1 flex flex-col min-w-0">
-        <Topbar
-          title={t("dashboards.agent")}
-          userName={profile.full_name}
-          userEmail={profile.email}
-          roleLabel={t("roles.agent")}
-        />
-        <main className="flex-1 px-6 py-6">{children}</main>
-      </div>
-    </div>
+    <DashboardShell
+      items={navItems}
+      workspaceLabel={t("workspaces.agent")}
+      title={t("dashboards.agent")}
+      userName={profile.full_name}
+      userEmail={profile.email}
+      roleLabel={t("roles.agent")}
+    >
+      {children}
+    </DashboardShell>
   );
 }

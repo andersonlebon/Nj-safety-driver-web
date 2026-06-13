@@ -7,8 +7,8 @@ import {
   Wallet,
 } from "lucide-react";
 import { redirect } from "next/navigation";
-import { Sidebar, type NavItem } from "@/components/dashboard/Sidebar";
-import { Topbar } from "@/components/dashboard/Topbar";
+import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import type { NavItem } from "@/components/dashboard/Sidebar";
 import { DriverStatusBanner } from "@/components/dashboard/DriverStatusBanner";
 import { requireRole } from "@/lib/auth";
 import { getTranslations } from "@/i18n/server";
@@ -66,25 +66,23 @@ export default async function DriverLayout({
   ];
 
   return (
-    <div className="min-h-screen flex">
-      <Sidebar items={navItems} workspaceLabel={t("workspaces.driver")} />
-      <div className="flex-1 flex flex-col min-w-0">
-        <Topbar
-          title={t("dashboards.driver")}
-          userName={profile.full_name}
-          userEmail={profile.email}
-          roleLabel={t("roles.driver")}
-        />
-        <main className="flex-1 px-6 py-6">
-          {profile.role === "driver" && (
-            <DriverStatusBanner
-              verificationStatus={profile.verification_status ?? "pending_documents"}
-              adminMessage={profile.admin_message}
-            />
-          )}
-          {children}
-        </main>
-      </div>
-    </div>
+    <DashboardShell
+      items={navItems}
+      workspaceLabel={t("workspaces.driver")}
+      title={t("dashboards.driver")}
+      userName={profile.full_name}
+      userEmail={profile.email}
+      roleLabel={t("roles.driver")}
+      banner={
+        profile.role === "driver" ? (
+          <DriverStatusBanner
+            verificationStatus={profile.verification_status ?? "pending_documents"}
+            adminMessage={profile.admin_message}
+          />
+        ) : null
+      }
+    >
+      {children}
+    </DashboardShell>
   );
 }

@@ -19,6 +19,7 @@ import { Alert } from "@/components/ui/Alert";
 import { formatDate } from "@/lib/utils";
 import { documentExpiryState } from "@/lib/verification";
 import { sha256File } from "@/lib/file-hash";
+import { hasDuplicateDocumentHash } from "@/lib/document-duplicate";
 import type { Database, DocumentType } from "@/lib/types/database";
 
 type Doc = Database["public"]["Tables"]["documents"]["Row"];
@@ -170,6 +171,15 @@ export function DocumentList({ documents }: { documents: Doc[] }) {
     setError(null);
     const supabase = createClient();
     const fileHash = await sha256File(file);
+    const duplicate = await hasDuplicateDocumentHash(supabase, target.owner_id, fileHash, {
+      excludeDocumentId: target.id,
+      vehicleId: target.vehicle_id,
+    });
+    if (duplicate) {
+      setError("This exact file is already uploaded. Choose a different photo.");
+      setBusyId(null);
+      return;
+    }
     const ext = extOf(file);
     const folder = folderOfPath(target.file_path);
     const base = target.label

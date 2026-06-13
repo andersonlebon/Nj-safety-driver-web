@@ -4,6 +4,7 @@ import {
   normalizeIssuedForDocument,
   validateDocumentDates,
 } from "@/lib/document-rules";
+import { hasDuplicateDocumentHash } from "@/lib/document-duplicate";
 import type { Database, DocumentType } from "@/lib/types/database";
 
 type Client = SupabaseClient<Database>;
@@ -30,6 +31,19 @@ export async function saveDocumentAttachment(
     input.expiresAt
   );
   if (dateError) return { ok: false, error: dateError };
+
+  const duplicate = await hasDuplicateDocumentHash(
+    input.supabase,
+    input.ownerId,
+    input.fileHash,
+    { vehicleId: input.vehicleId }
+  );
+  if (duplicate) {
+    return {
+      ok: false,
+      error: "Duplicate document image detected. Please choose a different photo.",
+    };
+  }
 
   let groupQuery = input.supabase
     .from("document_groups")
