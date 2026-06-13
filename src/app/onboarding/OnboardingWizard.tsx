@@ -8,24 +8,27 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { Alert } from "@/components/ui/Alert";
-import {
-  EvidenceSlot,
-  PHOTO_ACCEPT,
-  PHOTO_OR_PDF_ACCEPT,
-  type EvidenceSlotStatus,
-  type EvidenceSlotValue,
-} from "@/components/uploads/EvidenceSlot";
+import type { EvidenceSlotStatus, EvidenceSlotValue } from "@/components/uploads/EvidenceSlot";
+import { DocumentGroupUpload } from "@/components/uploads/DocumentGroupUpload";
 import { createClient } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
 import { COUNTRIES, DEFAULT_COUNTRY } from "@/lib/countries";
 import {
-  documentRequiresExpiry,
+  validateDocumentDates,
   normalizeExpiryForDocument,
-  validateFutureExpiry,
+  normalizeIssuedForDocument,
 } from "@/lib/document-rules";
+import {
+  DRIVER_DOCUMENT_GROUPS,
+  VEHICLE_DOCUMENT_GROUPS,
+  isDocumentGroupRequired,
+  type DocumentGroupDates,
+  type DocumentGroupDefinition,
+} from "@/lib/document-definitions";
 import { normalizePlateForCountry } from "@/lib/vehicles";
 import { cn } from "@/lib/utils";
 import { sha256File } from "@/lib/file-hash";
+import { useI18n } from "@/i18n/context";
 import type { DocumentType } from "@/lib/types/database";
 import {
   savePersonalInfo,
@@ -53,156 +56,47 @@ type VehicleInfo = {
   inspection_status: "true" | "false";
 };
 
-type SlotConfig = {
-  key: string;
-  docType: DocumentType;
-  labelTag: string | null;
-  title: string;
-  description?: string;
-  accept: string;
-  folder: string;
-  fileBase: string;
-  scope: "driver" | "vehicle";
-  required: boolean | "if_insured" | "if_inspected";
-};
+type GroupAttachmentsState = Record<string, Record<string, EvidenceSlotValue>>;
+type GroupStatusState = Record<string, Record<string, EvidenceSlotStatus>>;
+type GroupErrorState = Record<string, Record<string, string | undefined>>;
+type GroupDatesState = Record<string, DocumentGroupDates>;
 
-const DRIVER_SLOTS: SlotConfig[] = [
-  {
-    key: "identity-front",
-    docType: "identity",
-    labelTag: "front",
-    title: "National ID — front",
-    accept: PHOTO_ACCEPT,
-    folder: "identity",
-    fileBase: "front",
-    scope: "driver",
-    required: true,
-  },
-  {
-    key: "identity-back",
-    docType: "identity",
-    labelTag: "back",
-    title: "National ID — back",
-    accept: PHOTO_ACCEPT,
-    folder: "identity",
-    fileBase: "back",
-    scope: "driver",
-    required: true,
-  },
-  {
-    key: "license-front",
-    docType: "driver_license",
-    labelTag: "front",
-    title: "Driver's license — front",
-    accept: PHOTO_ACCEPT,
-    folder: "license",
-    fileBase: "front",
-    scope: "driver",
-    required: true,
-  },
-  {
-    key: "license-back",
-    docType: "driver_license",
-    labelTag: "back",
-    title: "Driver's license — back",
-    accept: PHOTO_ACCEPT,
-    folder: "license",
-    fileBase: "back",
-    scope: "driver",
-    required: true,
-  },
-  {
-    key: "portrait",
-    docType: "other",
-    labelTag: "portrait",
-    title: "Portrait / selfie",
-    description: "Helps an agent confirm your identity in person.",
-    accept: PHOTO_ACCEPT,
-    folder: "portrait",
-    fileBase: "portrait",
-    scope: "driver",
-    required: false,
-  },
-];
+type GroupUploadedMetaState = Record<
+  string,
+  Record<string, { path: string; fileName: string; fileHash: string } | undefined>
+>;
 
-const VEHICLE_SLOTS: SlotConfig[] = [
-  {
-    key: "vehicle-photo-front",
-    docType: "vehicle_photo",
-    labelTag: "front",
-    title: "Vehicle photo — front",
-    accept: PHOTO_ACCEPT,
-    folder: "vehicles", // placeholder, replaced with vehicles/{vehicleId}
-    fileBase: "photo-front",
-    scope: "vehicle",
-    required: true,
-  },
-  {
-    key: "vehicle-photo-rear",
-    docType: "vehicle_photo",
-    labelTag: "rear",
-    title: "Vehicle photo — rear / side",
-    description: "Improves identification.",
-    accept: PHOTO_ACCEPT,
-    folder: "vehicles",
-    fileBase: "photo-rear",
-    scope: "vehicle",
-    required: false,
-  },
-  {
-    key: "vehicle-registration",
-    docType: "vehicle_registration",
-    labelTag: "carte_grise",
-    title: "Vehicle registration card (carte grise)",
-    accept: PHOTO_OR_PDF_ACCEPT,
-    folder: "vehicles",
-    fileBase: "registration",
-    scope: "vehicle",
-    required: true,
-  },
-  {
-    key: "vehicle-insurance",
-    docType: "insurance",
-    labelTag: null,
-    title: "Insurance certificate",
-    description: "Required only if you marked your vehicle as insured.",
-    accept: PHOTO_OR_PDF_ACCEPT,
-    folder: "vehicles",
-    fileBase: "insurance",
-    scope: "vehicle",
-    required: "if_insured",
-  },
-  {
-    key: "vehicle-inspection",
-    docType: "technical_inspection",
-    labelTag: null,
-    title: "Technical inspection certificate",
-    description: "Required only if you marked your inspection as valid.",
-    accept: PHOTO_OR_PDF_ACCEPT,
-    folder: "vehicles",
-    fileBase: "inspection",
-    scope: "vehicle",
-    required: "if_inspected",
-  },
-];
+function emptyGroupAttachments(
+  groups: readonly DocumentGroupDefinition[]
+): GroupAttachmentsState {
+  return Object.fromEntries(
+    groups.map((group) => [
+      group.key,
+      Object.fromEntries(
+        group.attachments.map((attachment) => [
+          attachment.key,
+          { file: null, previewUrl: null },
+        ])
+      ),
+    ])
+  );
+}
 
-const STEPS = [
-  { id: 1, label: "Personal information", icon: User },
-  { id: 2, label: "Personal documents", icon: Camera },
-  { id: 3, label: "First vehicle", icon: Car },
+function emptyGroupDates(
+  groups: readonly DocumentGroupDefinition[]
+): GroupDatesState {
+  return Object.fromEntries(
+    groups.map((group) => [group.key, { issuedAt: "", expiresAt: "" }])
+  );
+}
+
+const STEP_DEFS = [
+  { id: 1 as StepId, labelKey: "onboarding.steps.personal", icon: User },
+  { id: 2 as StepId, labelKey: "onboarding.steps.documents", icon: Camera },
+  { id: 3 as StepId, labelKey: "onboarding.steps.vehicle", icon: Car },
 ] as const;
 
 type StepId = 1 | 2 | 3;
-
-type SlotsState = Record<string, EvidenceSlotValue>;
-type SlotStatusState = Record<string, EvidenceSlotStatus>;
-type SlotErrorState = Record<string, string | undefined>;
-
-function emptySlots(slots: SlotConfig[]): SlotsState {
-  return Object.fromEntries(
-    slots.map((s) => [s.key, { file: null, previewUrl: null }])
-  );
-}
 
 function generateVehicleId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -221,12 +115,33 @@ function extensionFor(file: File): string {
   return "jpg";
 }
 
-function isSlotRequired(slot: SlotConfig, vehicle: VehicleInfo): boolean {
-  if (slot.required === true) return true;
-  if (slot.required === "if_insured") return vehicle.insurance_status === "true";
-  if (slot.required === "if_inspected")
-    return vehicle.inspection_status === "true";
-  return false;
+function groupHasRequiredUploads(
+  group: DocumentGroupDefinition,
+  attachments: Record<string, EvidenceSlotValue> | undefined,
+  statuses: Record<string, EvidenceSlotStatus> | undefined
+): boolean {
+  return group.attachments
+    .filter((item) => item.required)
+    .every(
+      (item) =>
+        statuses?.[item.key] === "uploaded" &&
+        Boolean(attachments?.[item.key]?.file)
+    );
+}
+
+function groupIsComplete(
+  group: DocumentGroupDefinition,
+  attachments: Record<string, EvidenceSlotValue> | undefined,
+  dates: DocumentGroupDates | undefined,
+  statuses: Record<string, EvidenceSlotStatus> | undefined
+): boolean {
+  if (!groupHasRequiredUploads(group, attachments, statuses)) return false;
+  const dateError = validateDocumentDates(
+    group.docType,
+    dates?.issuedAt,
+    dates?.expiresAt
+  );
+  return !dateError;
 }
 
 type Props = {
@@ -236,6 +151,7 @@ type Props = {
 };
 
 export function OnboardingWizard({ initialStep, initialProfile, userId }: Props) {
+  const { t } = useI18n();
   const [step, setStep] = useState<StepId>(initialStep);
   const [personal, setPersonal] = useState<PersonalInfo>(initialProfile);
   const [vehicle, setVehicle] = useState<VehicleInfo>({
@@ -248,37 +164,68 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
     insurance_status: "false",
     inspection_status: "false",
   });
-  const [driverSlots, setDriverSlots] = useState<SlotsState>(() =>
-    emptySlots(DRIVER_SLOTS)
+  const [driverGroups, setDriverGroups] = useState<GroupAttachmentsState>(() =>
+    emptyGroupAttachments(DRIVER_DOCUMENT_GROUPS)
   );
-  const [vehicleSlots, setVehicleSlots] = useState<SlotsState>(() =>
-    emptySlots(VEHICLE_SLOTS)
+  const [vehicleGroups, setVehicleGroups] = useState<GroupAttachmentsState>(() =>
+    emptyGroupAttachments(VEHICLE_DOCUMENT_GROUPS)
   );
-  const [slotStatus, setSlotStatus] = useState<SlotStatusState>({});
-  const [slotErrors, setSlotErrors] = useState<SlotErrorState>({});
-  const [slotExpiries, setSlotExpiries] = useState<Record<string, string>>({});
+  const [groupStatus, setGroupStatus] = useState<GroupStatusState>({});
+  const [groupErrors, setGroupErrors] = useState<GroupErrorState>({});
+  const [driverDates, setDriverDates] = useState<GroupDatesState>(() =>
+    emptyGroupDates(DRIVER_DOCUMENT_GROUPS)
+  );
+  const [vehicleDates, setVehicleDates] = useState<GroupDatesState>(() =>
+    emptyGroupDates(VEHICLE_DOCUMENT_GROUPS)
+  );
+  const [driverUploadedMeta, setDriverUploadedMeta] = useState<GroupUploadedMetaState>({});
+  const [vehicleUploadedMeta, setVehicleUploadedMeta] = useState<GroupUploadedMetaState>({});
   const [skipDocuments, setSkipDocuments] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [vehicleId] = useState<string>(() => generateVehicleId());
   const [pending, startTransition] = useTransition();
 
+  const requiredDriverGroups = useMemo(
+    () => DRIVER_DOCUMENT_GROUPS.filter((group) => group.required === true),
+    []
+  );
   const driverDoneCount = useMemo(
     () =>
-      DRIVER_SLOTS.filter((s) => s.required).filter((s) => driverSlots[s.key]?.file)
-        .length,
-    [driverSlots]
+      requiredDriverGroups.filter((group) =>
+        groupIsComplete(
+          group,
+          driverGroups[group.key],
+          driverDates[group.key],
+          groupStatus[group.key]
+        )
+      ).length,
+    [driverDates, driverGroups, groupStatus, requiredDriverGroups]
   );
-  const driverRequiredCount = DRIVER_SLOTS.filter((s) => s.required).length;
+  const driverRequiredCount = requiredDriverGroups.length;
   const canAdvanceFromStep2 = driverDoneCount === driverRequiredCount;
+  const hasUploadsInProgress = useMemo(() => {
+    return Object.values(groupStatus).some((statuses) =>
+      Object.values(statuses ?? {}).some((status) => status === "uploading")
+    );
+  }, [groupStatus]);
 
-  const vehicleRequiredSlots = useMemo(
-    () => VEHICLE_SLOTS.filter((s) => isSlotRequired(s, vehicle)),
+  const vehicleRequiredGroups = useMemo(
+    () => VEHICLE_DOCUMENT_GROUPS.filter((group) => isDocumentGroupRequired(group, vehicle)),
     [vehicle]
   );
-  const vehicleDoneCount = vehicleRequiredSlots.filter(
-    (s) => vehicleSlots[s.key]?.file
-  ).length;
-  const vehicleRequiredCount = vehicleRequiredSlots.length;
+  const vehicleDoneCount = useMemo(
+    () =>
+      vehicleRequiredGroups.filter((group) =>
+        groupIsComplete(
+          group,
+          vehicleGroups[group.key],
+          vehicleDates[group.key],
+          groupStatus[group.key]
+        )
+      ).length,
+    [groupStatus, vehicleDates, vehicleGroups, vehicleRequiredGroups]
+  );
+  const vehicleRequiredCount = vehicleRequiredGroups.length;
 
   const goTo = (target: StepId) => {
     setError(null);
@@ -316,10 +263,12 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
   };
 
   const goToStep3 = () => {
+    if (hasUploadsInProgress) {
+      setError(t("onboarding.waitUploadContinue"));
+      return;
+    }
     if (!canAdvanceFromStep2) {
-      setError(
-        "Please upload the four required identity & license photos, or use “Skip for now” if you will upload them later."
-      );
+      setError(t("onboarding.completeRequiredDocs"));
       return;
     }
     setSkipDocuments(false);
@@ -333,32 +282,140 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
     setStep(3);
   };
 
-  const setDriverSlot = (key: string, next: EvidenceSlotValue) => {
-    const slot = DRIVER_SLOTS.find((candidate) => candidate.key === key);
-    setDriverSlots((prev) => ({ ...prev, [key]: next }));
-    setSlotStatus((prev) => ({ ...prev, [key]: next.file ? "ready" : "idle" }));
-    setSlotErrors((prev) => ({ ...prev, [key]: undefined }));
-    if (slot && !documentRequiresExpiry(slot.docType)) {
-      setSlotExpiries((prev) => {
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      });
-    }
+  const removeStoragePath = async (path: string | undefined) => {
+    if (!path) return;
+    const supabase = createClient();
+    await supabase.storage.from("documents").remove([path]);
   };
 
-  const setVehicleSlot = (key: string, next: EvidenceSlotValue) => {
-    const slot = VEHICLE_SLOTS.find((candidate) => candidate.key === key);
-    setVehicleSlots((prev) => ({ ...prev, [key]: next }));
-    setSlotStatus((prev) => ({ ...prev, [key]: next.file ? "ready" : "idle" }));
-    setSlotErrors((prev) => ({ ...prev, [key]: undefined }));
-    if (slot && !documentRequiresExpiry(slot.docType)) {
-      setSlotExpiries((prev) => {
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      });
+  const collectUploadedHashes = (
+    exclude?: { groupKey: string; attachmentKey: string; scope: "driver" | "vehicle" }
+  ) => {
+    const hashes: string[] = [];
+    const append = (
+      scope: "driver" | "vehicle",
+      metaByGroup: GroupUploadedMetaState
+    ) => {
+      for (const [groupKey, attachments] of Object.entries(metaByGroup)) {
+        for (const [attachmentKey, meta] of Object.entries(attachments ?? {})) {
+          if (!meta?.fileHash) continue;
+          if (
+            exclude &&
+            exclude.scope === scope &&
+            exclude.groupKey === groupKey &&
+            exclude.attachmentKey === attachmentKey
+          ) {
+            continue;
+          }
+          hashes.push(meta.fileHash);
+        }
+      }
+    };
+    append("driver", driverUploadedMeta);
+    append("vehicle", vehicleUploadedMeta);
+    return hashes;
+  };
+
+  const handleAttachmentChange = (
+    scope: "driver" | "vehicle",
+    groupKey: string,
+    attachmentKey: string,
+    next: EvidenceSlotValue
+  ) => {
+    const groupDefinitions =
+      scope === "driver" ? DRIVER_DOCUMENT_GROUPS : VEHICLE_DOCUMENT_GROUPS;
+    const group = groupDefinitions.find((item) => item.key === groupKey);
+    if (!group) return;
+
+    const setGroups = scope === "driver" ? setDriverGroups : setVehicleGroups;
+    const setUploadedMeta =
+      scope === "driver" ? setDriverUploadedMeta : setVehicleUploadedMeta;
+    const uploadedMeta =
+      scope === "driver" ? driverUploadedMeta : vehicleUploadedMeta;
+    const previousMeta = uploadedMeta[groupKey]?.[attachmentKey];
+
+    setGroups((prev) => ({
+      ...prev,
+      [groupKey]: { ...prev[groupKey], [attachmentKey]: next },
+    }));
+    setGroupErrors((prev) => ({
+      ...prev,
+      [groupKey]: { ...prev[groupKey], [attachmentKey]: undefined },
+    }));
+
+    if (!next.file) {
+      void removeStoragePath(previousMeta?.path);
+      setUploadedMeta((prev) => ({
+        ...prev,
+        [groupKey]: { ...prev[groupKey], [attachmentKey]: undefined },
+      }));
+      setGroupStatus((prev) => ({
+        ...prev,
+        [groupKey]: { ...prev[groupKey], [attachmentKey]: "idle" },
+      }));
+      return;
     }
+
+    setGroupStatus((prev) => ({
+      ...prev,
+      [groupKey]: { ...prev[groupKey], [attachmentKey]: "uploading" },
+    }));
+
+    void (async () => {
+      try {
+        if (previousMeta?.path) {
+          await removeStoragePath(previousMeta.path);
+        }
+
+        const fileHash = await sha256File(next.file!);
+        const duplicateHashes = collectUploadedHashes({
+          scope,
+          groupKey,
+          attachmentKey,
+        });
+        if (duplicateHashes.includes(fileHash)) {
+          throw new Error(t("onboarding.duplicateImage"));
+        }
+
+        const uploaded = await uploadAttachment(group, attachmentKey, next);
+        setUploadedMeta((prev) => ({
+          ...prev,
+          [groupKey]: { ...prev[groupKey], [attachmentKey]: uploaded },
+        }));
+        setGroupStatus((prev) => ({
+          ...prev,
+          [groupKey]: { ...prev[groupKey], [attachmentKey]: "uploaded" },
+        }));
+      } catch (err) {
+        setGroupStatus((prev) => ({
+          ...prev,
+          [groupKey]: { ...prev[groupKey], [attachmentKey]: "error" },
+        }));
+        setGroupErrors((prev) => ({
+          ...prev,
+          [groupKey]: {
+            ...prev[groupKey],
+            [attachmentKey]: friendlyError(err),
+          },
+        }));
+      }
+    })();
+  };
+
+  const setDriverAttachment = (
+    groupKey: string,
+    attachmentKey: string,
+    next: EvidenceSlotValue
+  ) => {
+    handleAttachmentChange("driver", groupKey, attachmentKey, next);
+  };
+
+  const setVehicleAttachment = (
+    groupKey: string,
+    attachmentKey: string,
+    next: EvidenceSlotValue
+  ) => {
+    handleAttachmentChange("vehicle", groupKey, attachmentKey, next);
   };
 
   const validateStep3 = (): string | null => {
@@ -367,30 +424,42 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
       vehicle.registration_country
     );
     if (!plate || !vehicle.brand.trim() || !vehicle.model.trim()) {
-      return "Plate number, brand, and model are required.";
+      return t("onboarding.plateRequired");
     }
     if (vehicle.year) {
       const y = Number(vehicle.year);
       if (!Number.isFinite(y) || y < 1900 || y > 2100) {
-        return "Year must be a valid 4-digit number.";
+        return t("onboarding.yearInvalid");
       }
     }
     return null;
   };
 
-  const uploadOne = async (
-    slot: SlotConfig,
+  const uploadAttachment = async (
+    group: DocumentGroupDefinition,
+    attachmentKey: string,
     value: EvidenceSlotValue
   ): Promise<{ path: string; fileName: string; fileHash: string }> => {
-    if (!value.file) throw new Error(`No file picked for "${slot.title}"`);
+    const attachment = group.attachments.find((item) => item.key === attachmentKey);
+    if (!value.file || !attachment) {
+      throw new Error(`No file picked for "${group.title} — ${attachmentKey}"`);
+    }
+
     const supabase = createClient();
     const fileHash = await sha256File(value.file);
     const ext = extensionFor(value.file);
     const folder =
-      slot.scope === "vehicle" ? `vehicles/${vehicleId}` : slot.folder;
-    const path = `${userId}/${folder}/${slot.fileBase}-${Date.now()}.${ext}`;
-    setSlotStatus((prev) => ({ ...prev, [slot.key]: "uploading" }));
-    setSlotErrors((prev) => ({ ...prev, [slot.key]: undefined }));
+      group.scope === "vehicle" ? `vehicles/${vehicleId}` : group.folder;
+    const path = `${userId}/${folder}/${attachment.fileBase}-${Date.now()}.${ext}`;
+
+    setGroupStatus((prev) => ({
+      ...prev,
+      [group.key]: { ...prev[group.key], [attachmentKey]: "uploading" },
+    }));
+    setGroupErrors((prev) => ({
+      ...prev,
+      [group.key]: { ...prev[group.key], [attachmentKey]: undefined },
+    }));
 
     const { error: uploadError } = await supabase.storage
       .from("documents")
@@ -402,20 +471,89 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
 
     if (uploadError) {
       const friendly = friendlyError(uploadError);
-      setSlotStatus((prev) => ({ ...prev, [slot.key]: "error" }));
-      setSlotErrors((prev) => ({
+      setGroupStatus((prev) => ({
         ...prev,
-        [slot.key]: friendly,
+        [group.key]: { ...prev[group.key], [attachmentKey]: "error" },
       }));
-      throw new Error(`Upload failed for "${slot.title}": ${friendly}`);
+      setGroupErrors((prev) => ({
+        ...prev,
+        [group.key]: { ...prev[group.key], [attachmentKey]: friendly },
+      }));
+      throw new Error(`Upload failed for "${group.title}": ${friendly}`);
     }
 
-    setSlotStatus((prev) => ({ ...prev, [slot.key]: "uploaded" }));
+    setGroupStatus((prev) => ({
+      ...prev,
+      [group.key]: { ...prev[group.key], [attachmentKey]: "uploaded" },
+    }));
     return { path, fileName: value.file.name, fileHash };
+  };
+
+  const buildUploadedGroups = (
+    groups: readonly DocumentGroupDefinition[],
+    datesByGroup: GroupDatesState,
+    uploadedMetaByGroup: GroupUploadedMetaState,
+    scopeVehicleId: string | null
+  ): CompletePayload["document_groups"] => {
+    const uploadedGroups: CompletePayload["document_groups"] = [];
+
+    for (const group of groups) {
+      const dates = datesByGroup[group.key];
+      const uploadedMeta = uploadedMetaByGroup[group.key] ?? {};
+      const hasAnyUpload = group.attachments.some((item) =>
+        Boolean(uploadedMeta[item.key]?.path)
+      );
+      if (!hasAnyUpload) continue;
+
+      const dateError = validateDocumentDates(
+        group.docType,
+        dates?.issuedAt,
+        dates?.expiresAt
+      );
+      if (dateError) {
+        throw new Error(`${group.title}: ${dateError}`);
+      }
+
+      const uploadedAttachments: CompletePayload["document_groups"][number]["attachments"] =
+        [];
+
+      for (const attachment of group.attachments) {
+        const meta = uploadedMeta[attachment.key];
+        if (!meta) continue;
+        uploadedAttachments.push({
+          label: attachment.label,
+          file_path: meta.path,
+          file_name: meta.fileName,
+          file_hash: meta.fileHash,
+        });
+      }
+
+      if (uploadedAttachments.length === 0) continue;
+
+      uploadedGroups.push({
+        doc_type: group.docType,
+        vehicle_id: scopeVehicleId,
+        issued_at: normalizeIssuedForDocument(
+          dates?.issuedAt ? new Date(dates.issuedAt).toISOString() : null,
+          group.docType
+        ),
+        expires_at: normalizeExpiryForDocument(
+          dates?.expiresAt ? new Date(dates.expiresAt).toISOString() : null,
+          group.docType
+        ),
+        attachments: uploadedAttachments,
+      });
+    }
+
+    return uploadedGroups;
   };
 
   const submitFinal = () => {
     setError(null);
+    if (hasUploadsInProgress) {
+      setError(t("onboarding.waitUploadSubmit"));
+      return;
+    }
     const validationError = validateStep3();
     if (validationError) {
       setError(validationError);
@@ -423,57 +561,19 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
     }
     startTransition(async () => {
       try {
-        const uploadedDocs: CompletePayload["documents"] = [];
-
-        for (const slot of DRIVER_SLOTS) {
-          const value = driverSlots[slot.key];
-          if (!value?.file) continue;
-          const expiryError = validateFutureExpiry(
-            slotExpiries[slot.key],
-            slot.docType
-          );
-          if (expiryError) throw new Error(`${slot.title}: ${expiryError}`);
-          const { path, fileName, fileHash } = await uploadOne(slot, value);
-          uploadedDocs.push({
-            doc_type: slot.docType,
-            label: slot.labelTag,
-            vehicle_id: null,
-            file_path: path,
-            file_name: fileName,
-            file_hash: fileHash,
-            expires_at: normalizeExpiryForDocument(
-              slotExpiries[slot.key]
-                ? new Date(slotExpiries[slot.key]).toISOString()
-                : null,
-              slot.docType
-            ),
-          });
-        }
-
-        for (const slot of VEHICLE_SLOTS) {
-          const value = vehicleSlots[slot.key];
-          if (!value?.file) continue;
-          const expiryError = validateFutureExpiry(
-            slotExpiries[slot.key],
-            slot.docType
-          );
-          if (expiryError) throw new Error(`${slot.title}: ${expiryError}`);
-          const { path, fileName, fileHash } = await uploadOne(slot, value);
-          uploadedDocs.push({
-            doc_type: slot.docType,
-            label: slot.labelTag,
-            vehicle_id: vehicleId,
-            file_path: path,
-            file_name: fileName,
-            file_hash: fileHash,
-            expires_at: normalizeExpiryForDocument(
-              slotExpiries[slot.key]
-                ? new Date(slotExpiries[slot.key]).toISOString()
-                : null,
-              slot.docType
-            ),
-          });
-        }
+        const driverUploads = buildUploadedGroups(
+          DRIVER_DOCUMENT_GROUPS,
+          driverDates,
+          driverUploadedMeta,
+          null
+        );
+        const vehicleUploads = buildUploadedGroups(
+          VEHICLE_DOCUMENT_GROUPS,
+          vehicleDates,
+          vehicleUploadedMeta,
+          vehicleId
+        );
+        const uploadedGroups = [...driverUploads, ...vehicleUploads];
 
         const payload: CompletePayload = {
           personal: {
@@ -499,8 +599,8 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
             insurance_status: vehicle.insurance_status === "true",
             inspection_status: vehicle.inspection_status === "true",
           },
-          documents: uploadedDocs,
-          skip_documents: skipDocuments || uploadedDocs.length === 0,
+          document_groups: uploadedGroups,
+          skip_documents: skipDocuments || uploadedGroups.length === 0,
         };
 
         const result = await completeOnboarding(payload);
@@ -517,11 +617,10 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
     <Card>
       <div className="px-5 py-5 border-b border-stone-200 dark:border-slate-800">
         <h3 className="text-base font-semibold tracking-tight text-stone-900 dark:text-stone-100">
-          Welcome to NJ Safety Driver
+          {t("onboarding.welcomeTitle")}
         </h3>
         <p className="text-sm text-stone-600 dark:text-slate-400 mt-1">
-          Activate your driver profile in three quick steps. You can edit
-          everything later from your dashboard.
+          {t("onboarding.welcomeSubtitle")}
         </p>
         <StepIndicator current={step} />
       </div>
@@ -543,16 +642,17 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
 
         {step === 2 && (
           <DocumentsStep
-            slots={driverSlots}
-            slotStatus={slotStatus}
-            slotErrors={slotErrors}
-            slotExpiries={slotExpiries}
+            groups={driverGroups}
+            dates={driverDates}
+            statuses={groupStatus}
+            errors={groupErrors}
             done={driverDoneCount}
             total={driverRequiredCount}
             disabled={pending}
-            onChange={setDriverSlot}
-            onExpiryChange={(key, value) =>
-              setSlotExpiries((prev) => ({ ...prev, [key]: value }))
+            uploadsInProgress={hasUploadsInProgress}
+            onAttachmentChange={setDriverAttachment}
+            onDatesChange={(groupKey, nextDates) =>
+              setDriverDates((prev) => ({ ...prev, [groupKey]: nextDates }))
             }
             onBack={() => goTo(1)}
             onNext={goToStep3}
@@ -565,17 +665,18 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
           <VehicleStep
             vehicle={vehicle}
             onVehicleChange={setVehicle}
-            slots={vehicleSlots}
-            slotStatus={slotStatus}
-            slotErrors={slotErrors}
-            slotExpiries={slotExpiries}
+            groups={vehicleGroups}
+            dates={vehicleDates}
+            statuses={groupStatus}
+            errors={groupErrors}
             done={vehicleDoneCount}
             total={vehicleRequiredCount}
             pending={pending}
             skippedDocs={skipDocuments}
-            onSlotChange={setVehicleSlot}
-            onExpiryChange={(key, value) =>
-              setSlotExpiries((prev) => ({ ...prev, [key]: value }))
+            uploadsInProgress={hasUploadsInProgress}
+            onAttachmentChange={setVehicleAttachment}
+            onDatesChange={(groupKey, nextDates) =>
+              setVehicleDates((prev) => ({ ...prev, [groupKey]: nextDates }))
             }
             onBack={() => goTo(2)}
             onSubmit={submitFinal}
@@ -587,9 +688,11 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
 }
 
 function StepIndicator({ current }: { current: StepId }) {
+  const { t } = useI18n();
+
   return (
     <ol className="mt-6 flex items-center gap-3">
-      {STEPS.map((s, idx) => {
+      {STEP_DEFS.map((s, idx) => {
         const Icon = s.icon;
         const isDone = current > s.id;
         const isActive = current === s.id;
@@ -621,7 +724,7 @@ function StepIndicator({ current }: { current: StepId }) {
                     : "text-stone-500 dark:text-slate-500"
                 )}
               >
-                Step {s.id}
+                {t("onboarding.stepLabel", { id: s.id })}
               </p>
               <p
                 className={cn(
@@ -631,10 +734,10 @@ function StepIndicator({ current }: { current: StepId }) {
                     : "text-stone-500 dark:text-slate-500"
                 )}
               >
-                {s.label}
+                {t(s.labelKey)}
               </p>
             </div>
-            {idx < STEPS.length - 1 && (
+            {idx < STEP_DEFS.length - 1 && (
               <div
                 className={cn(
                   "flex-1 h-px",
@@ -660,6 +763,7 @@ function PersonalInfoStep({
   userId: string;
   onSubmit: (data: FormData) => void;
 }) {
+  const { t } = useI18n();
   const [fullName, setFullName] = useState(defaults.full_name);
   const [phone, setPhone] = useState(defaults.phone);
   const [nationalId, setNationalId] = useState(defaults.national_id);
@@ -673,20 +777,20 @@ function PersonalInfoStep({
     field: "national_id",
     value: nationalId,
     userId,
-    message: "This National ID is already registered.",
+    message: t("onboarding.nationalIdDuplicate"),
   });
   const driverLicenseWarning = useDuplicateCheck({
     field: "driver_license",
     value: driverLicense,
     userId,
-    message: "This driver's license is already registered.",
+    message: t("onboarding.licenseDuplicate"),
   });
 
   return (
     <form action={onSubmit} className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Input
-          label="Full name"
+          label={t("onboarding.fields.fullName")}
           name="full_name"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
@@ -694,7 +798,7 @@ function PersonalInfoStep({
           autoComplete="name"
         />
         <Input
-          label="Phone number"
+          label={t("onboarding.fields.phone")}
           name="phone"
           type="tel"
           value={phone}
@@ -704,21 +808,21 @@ function PersonalInfoStep({
           placeholder="+241 ..."
         />
         <Input
-          label="National ID number"
+          label={t("onboarding.fields.nationalId")}
           name="national_id"
           value={nationalId}
           onChange={(e) => setNationalId(e.target.value)}
           required
         />
         <Input
-          label="Driver license number"
+          label={t("onboarding.fields.driverLicense")}
           name="driver_license"
           value={driverLicense}
           onChange={(e) => setDriverLicense(e.target.value)}
           required
         />
         <Select
-          label="Nationality"
+          label={t("onboarding.fields.nationality")}
           name="nationality_country"
           value={nationality}
           onChange={(e) => setNationality(e.target.value)}
@@ -742,7 +846,7 @@ function PersonalInfoStep({
         </div>
       )}
       <Textarea
-        label="Address"
+        label={t("onboarding.fields.address")}
         name="address"
         value={address}
         onChange={(e) => setAddress(e.target.value)}
@@ -751,7 +855,7 @@ function PersonalInfoStep({
       />
       <div className="flex justify-end pt-2">
         <Button type="submit" loading={pending}>
-          Continue
+          {t("common.continue")}
         </Button>
       </div>
     </form>
@@ -818,73 +922,75 @@ function useDuplicateCheck({
 }
 
 function DocumentsStep({
-  slots,
-  slotStatus,
-  slotErrors,
-  slotExpiries,
+  groups,
+  dates,
+  statuses,
+  errors,
   done,
   total,
   disabled,
-  onChange,
-  onExpiryChange,
+  uploadsInProgress,
+  onAttachmentChange,
+  onDatesChange,
   onBack,
   onNext,
   onSkip,
   canAdvance,
 }: {
-  slots: SlotsState;
-  slotStatus: SlotStatusState;
-  slotErrors: SlotErrorState;
-  slotExpiries: Record<string, string>;
+  groups: GroupAttachmentsState;
+  dates: GroupDatesState;
+  statuses: GroupStatusState;
+  errors: GroupErrorState;
   done: number;
   total: number;
   disabled: boolean;
-  onChange: (key: string, value: EvidenceSlotValue) => void;
-  onExpiryChange: (key: string, value: string) => void;
+  uploadsInProgress: boolean;
+  onAttachmentChange: (
+    groupKey: string,
+    attachmentKey: string,
+    value: EvidenceSlotValue
+  ) => void;
+  onDatesChange: (groupKey: string, value: DocumentGroupDates) => void;
   onBack: () => void;
   onNext: () => void;
   onSkip: () => void;
   canAdvance: boolean;
 }) {
+  const { t } = useI18n();
+
   return (
     <div className="space-y-5">
-      <Alert variant="warning">
-        You can upload documents now or skip and add them later from your
-        dashboard. Your profile stays <strong>inactive</strong> until an
-        administrator verifies your documents.
-      </Alert>
+      <Alert variant="warning">{t("onboarding.documentsWarning")}</Alert>
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
           <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
-            Personal documents
+            {t("onboarding.documentsTitle")}
           </h4>
           <p className="text-xs text-stone-500 dark:text-slate-400 mt-0.5">
-            Tap a card to upload. Use good lighting and show all four corners of
-            each document.
+            {t("onboarding.documentsHint")}
           </p>
         </div>
         <span className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-full bg-brand-50 dark:bg-brand-950/40 px-3 py-1 text-xs font-medium text-brand-700 dark:text-brand-300">
           <Check className="h-3.5 w-3.5" />
-          {done}/{total} required uploaded
+          {t("onboarding.requiredComplete", { done, total })}
         </span>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
-        {DRIVER_SLOTS.map((slot) => (
-          <EvidenceSlot
-            key={slot.key}
-            title={slot.title}
-            description={slot.description}
-            required={slot.required === true}
-            accept={slot.accept}
-            value={slots[slot.key] ?? { file: null, previewUrl: null }}
-            onChange={(next) => onChange(slot.key, next)}
-            status={slotStatus[slot.key] ?? "idle"}
-            errorMessage={slotErrors[slot.key]}
-            expiresAt={slotExpiries[slot.key]}
-            onExpiresAtChange={(value) => onExpiryChange(slot.key, value)}
-            showExpiry={Boolean(slots[slot.key]?.file) && documentRequiresExpiry(slot.docType)}
+      <div className="max-h-[min(52vh,28rem)] overflow-y-auto overscroll-y-contain pr-1 -mr-1 space-y-3 scroll-smooth">
+        {DRIVER_DOCUMENT_GROUPS.map((group) => (
+          <DocumentGroupUpload
+            key={group.key}
+            group={group}
+            required={group.required === true}
+            attachments={groups[group.key] ?? {}}
+            statuses={statuses[group.key]}
+            errors={errors[group.key]}
+            dates={dates[group.key]}
+            onAttachmentChange={(attachmentKey, value) =>
+              onAttachmentChange(group.key, attachmentKey, value)
+            }
+            onDatesChange={(nextDates) => onDatesChange(group.key, nextDates)}
             disabled={disabled}
           />
         ))}
@@ -897,7 +1003,7 @@ function DocumentsStep({
           onClick={onBack}
           disabled={disabled}
         >
-          Back
+          {t("common.back")}
         </Button>
         <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
           <Button
@@ -906,14 +1012,16 @@ function DocumentsStep({
             onClick={onSkip}
             disabled={disabled}
           >
-            Skip for now
+            {t("common.skipForNow")}
           </Button>
           <Button
             type="button"
             onClick={onNext}
-            disabled={disabled || !canAdvance}
+            disabled={disabled || uploadsInProgress || !canAdvance}
           >
-            Continue with uploads
+            {uploadsInProgress
+              ? t("common.uploading")
+              : t("onboarding.continueWithUploads")}
           </Button>
         </div>
       </div>
@@ -924,34 +1032,41 @@ function DocumentsStep({
 function VehicleStep({
   vehicle,
   onVehicleChange,
-  slots,
-  slotStatus,
-  slotErrors,
-  slotExpiries,
+  groups,
+  dates,
+  statuses,
+  errors,
   done,
   total,
   pending,
   skippedDocs,
-  onSlotChange,
-  onExpiryChange,
+  uploadsInProgress,
+  onAttachmentChange,
+  onDatesChange,
   onBack,
   onSubmit,
 }: {
   vehicle: VehicleInfo;
   onVehicleChange: (next: VehicleInfo) => void;
-  slots: SlotsState;
-  slotStatus: SlotStatusState;
-  slotErrors: SlotErrorState;
-  slotExpiries: Record<string, string>;
+  groups: GroupAttachmentsState;
+  dates: GroupDatesState;
+  statuses: GroupStatusState;
+  errors: GroupErrorState;
   done: number;
   total: number;
   pending: boolean;
   skippedDocs: boolean;
-  onSlotChange: (key: string, value: EvidenceSlotValue) => void;
-  onExpiryChange: (key: string, value: string) => void;
+  uploadsInProgress: boolean;
+  onAttachmentChange: (
+    groupKey: string,
+    attachmentKey: string,
+    value: EvidenceSlotValue
+  ) => void;
+  onDatesChange: (groupKey: string, value: DocumentGroupDates) => void;
   onBack: () => void;
   onSubmit: () => void;
 }) {
+  const { t } = useI18n();
   const update =
     <K extends keyof VehicleInfo>(key: K) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -961,16 +1076,16 @@ function VehicleStep({
     <div className="space-y-6">
       <div>
         <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
-          Vehicle details
+          {t("onboarding.vehicleDetails")}
         </h4>
         <p className="text-xs text-stone-500 dark:text-slate-400 mt-0.5">
-          You can add more vehicles later from your dashboard.
+          {t("onboarding.vehicleDetailsHint")}
         </p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <Select
-          label="Vehicle origin (plate country)"
+          label={t("onboarding.fields.vehicleOrigin")}
           name="registration_country"
           value={vehicle.registration_country}
           onChange={update("registration_country")}
@@ -982,7 +1097,7 @@ function VehicleStep({
           ))}
         </Select>
         <Input
-          label="Plate number"
+          label={t("onboarding.fields.plateNumber")}
           name="plate_number"
           required
           placeholder="GA-1234-AB"
@@ -990,7 +1105,7 @@ function VehicleStep({
           onChange={update("plate_number")}
         />
         <Input
-          label="Brand"
+          label={t("onboarding.fields.brand")}
           name="brand"
           required
           placeholder="Toyota"
@@ -998,7 +1113,7 @@ function VehicleStep({
           onChange={update("brand")}
         />
         <Input
-          label="Model"
+          label={t("onboarding.fields.model")}
           name="model"
           required
           placeholder="Corolla"
@@ -1006,12 +1121,12 @@ function VehicleStep({
           onChange={update("model")}
         />
         <Select
-          label="Color"
+          label={t("onboarding.fields.color")}
           name="color"
           value={vehicle.color}
           onChange={update("color")}
         >
-          <option value="">Select a color</option>
+          <option value="">{t("onboarding.fields.selectColor")}</option>
           <option value="Black">Black</option>
           <option value="White">White</option>
           <option value="Silver">Silver</option>
@@ -1027,7 +1142,7 @@ function VehicleStep({
           <option value="Other">Other</option>
         </Select>
         <Input
-          label="Year"
+          label={t("onboarding.fields.year")}
           name="year"
           type="number"
           min={1900}
@@ -1037,68 +1152,64 @@ function VehicleStep({
           onChange={update("year")}
         />
         <Select
-          label="Insurance status"
+          label={t("onboarding.fields.insuranceStatus")}
           name="insurance_status"
           value={vehicle.insurance_status}
           onChange={update("insurance_status")}
         >
-          <option value="false">Not insured</option>
-          <option value="true">Insured</option>
+          <option value="false">{t("onboarding.fields.notInsured")}</option>
+          <option value="true">{t("onboarding.fields.insured")}</option>
         </Select>
         <Select
-          label="Technical inspection"
+          label={t("onboarding.fields.inspectionStatus")}
           name="inspection_status"
           value={vehicle.inspection_status}
           onChange={update("inspection_status")}
         >
-          <option value="false">Not inspected</option>
-          <option value="true">Inspection valid</option>
+          <option value="false">{t("onboarding.fields.notInspected")}</option>
+          <option value="true">{t("onboarding.fields.inspectionValid")}</option>
         </Select>
       </div>
 
       <div className="pt-2 border-t border-stone-200 dark:border-slate-800" />
 
       {skippedDocs && (
-        <Alert variant="warning">
-          Document uploads were skipped. You can add them later under{" "}
-          <strong>Documents</strong> in your dashboard, then submit for
-          verification.
-        </Alert>
+        <Alert variant="warning">{t("onboarding.skippedDocsWarning")}</Alert>
       )}
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
           <h4 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
-            Vehicle evidence {skippedDocs ? "(optional now)" : ""}
+            {skippedDocs
+              ? t("onboarding.vehicleEvidenceOptional")
+              : t("onboarding.vehicleEvidence")}
           </h4>
           <p className="text-xs text-stone-500 dark:text-slate-400 mt-0.5">
-            Photos and certificates for this vehicle. You can upload these later
-            if you prefer to finish quickly.
+            {t("onboarding.vehicleEvidenceHint")}
           </p>
         </div>
         {!skippedDocs && (
           <span className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-full bg-brand-50 dark:bg-brand-950/40 px-3 py-1 text-xs font-medium text-brand-700 dark:text-brand-300">
             <Check className="h-3.5 w-3.5" />
-            {done}/{total} required uploaded
+            {t("onboarding.requiredComplete", { done, total })}
           </span>
         )}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
-        {VEHICLE_SLOTS.map((slot) => (
-          <EvidenceSlot
-            key={slot.key}
-            title={slot.title}
-            description={slot.description}
-            required={!skippedDocs && isSlotRequired(slot, vehicle)}
-            accept={slot.accept}
-            value={slots[slot.key] ?? { file: null, previewUrl: null }}
-            onChange={(next) => onSlotChange(slot.key, next)}
-            status={slotStatus[slot.key] ?? "idle"}
-            errorMessage={slotErrors[slot.key]}
-            expiresAt={slotExpiries[slot.key]}
-            onExpiresAtChange={(value) => onExpiryChange(slot.key, value)}
-            showExpiry={Boolean(slots[slot.key]?.file) && documentRequiresExpiry(slot.docType)}
+      <div className="max-h-[min(52vh,28rem)] overflow-y-auto overscroll-y-contain pr-1 -mr-1 space-y-3 scroll-smooth">
+        {VEHICLE_DOCUMENT_GROUPS.map((group) => (
+          <DocumentGroupUpload
+            key={group.key}
+            group={group}
+            required={!skippedDocs && isDocumentGroupRequired(group, vehicle)}
+            attachments={groups[group.key] ?? {}}
+            statuses={statuses[group.key]}
+            errors={errors[group.key]}
+            dates={dates[group.key]}
+            onAttachmentChange={(attachmentKey, value) =>
+              onAttachmentChange(group.key, attachmentKey, value)
+            }
+            onDatesChange={(nextDates) => onDatesChange(group.key, nextDates)}
             disabled={pending}
           />
         ))}
@@ -1111,12 +1222,19 @@ function VehicleStep({
           onClick={onBack}
           disabled={pending}
         >
-          Back
+          {t("common.back")}
         </Button>
-        <Button type="button" onClick={onSubmit} loading={pending}>
-          {skippedDocs
-            ? "Finish setup (documents pending)"
-            : "Finish & submit for verification"}
+        <Button
+          type="button"
+          onClick={onSubmit}
+          loading={pending}
+          disabled={uploadsInProgress}
+        >
+          {uploadsInProgress
+            ? t("common.uploading")
+            : skippedDocs
+              ? t("onboarding.finishPending")
+              : t("onboarding.finishSubmit")}
         </Button>
       </div>
     </div>

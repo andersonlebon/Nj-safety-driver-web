@@ -7,15 +7,18 @@ import { Button } from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
 import {
-  DOC_TYPE_LABELS,
   documentTitle,
-  groupDocumentsByType,
+  formatDocumentDate,
+  groupTitle,
   type DocRow,
+  type DocumentGroupWithAttachments,
 } from "@/lib/documents-display";
+import { useI18n } from "@/i18n/context";
 
 type Props = {
   title?: string;
-  documents: DocRow[];
+  documents?: DocRow[];
+  documentGroups?: DocumentGroupWithAttachments[];
   /** Pre-signed URLs keyed by file_path (server-provided) */
   signedUrls?: Record<string, string>;
   emptyMessage?: string;
@@ -23,14 +26,39 @@ type Props = {
 };
 
 export function DocumentGallery({
-  title = "Documents",
-  documents,
+  title,
+  documents = [],
+  documentGroups,
   signedUrls = {},
-  emptyMessage = "No documents uploaded yet.",
+  emptyMessage,
   compact = false,
 }: Props) {
+  const { t } = useI18n();
+  const resolvedTitle = title ?? t("nav.documents");
+  const resolvedEmptyMessage = emptyMessage ?? t("documents.empty");
   const [error, setError] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<string | null>(null);
+
+  const groups =
+    documentGroups ??
+    Object.entries(
+      documents.reduce<Record<string, DocumentGroupWithAttachments>>((acc, doc) => {
+        const key = `${doc.doc_type}:${doc.vehicle_id ?? "driver"}`;
+        if (!acc[key]) {
+          acc[key] = {
+            id: key,
+            doc_type: doc.doc_type,
+            issued_at: null,
+            expires_at: doc.expires_at,
+            verification_status: doc.verification_status,
+            vehicle_id: doc.vehicle_id,
+            attachments: [],
+          };
+        }
+        acc[key].attachments.push(doc);
+        return acc;
+      }, {})
+    ).map(([, group]) => group);
 
   const openDoc = async (doc: DocRow) => {
     const cached = signedUrls[doc.file_path];
@@ -59,31 +87,58 @@ export function DocumentGallery({
     }
   };
 
-  if (documents.length === 0) {
+  if (groups.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-stone-200 dark:border-slate-700 p-4 text-sm text-stone-500 dark:text-slate-400">
-        {emptyMessage}
+        {resolvedEmptyMessage}
       </div>
     );
   }
 
-  const grouped = groupDocumentsByType(documents);
-
   return (
     <div className="space-y-3">
-      <p className="text-sm font-semibold text-stone-900 dark:text-stone-100">{title}</p>
+      <p className="text-sm font-semibold text-stone-900 dark:text-stone-100">{resolvedTitle}</p>
       {error && <Alert variant="error">{error}</Alert>}
-      <div className={compact ? "space-y-3" : "grid grid-cols-1 sm:grid-cols-2 gap-3"}>
-        {Object.entries(grouped).map(([type, docs]) => (
+      <div className={compact ? "space-y-3" : "space-y-3"}>
+        {groups.map((group) => (
           <div
-            key={type}
+            key={group.id}
             className="rounded-lg border border-stone-200 dark:border-slate-800 p-3 bg-stone-50/40 dark:bg-slate-900/40"
           >
-            <p className="text-xs font-medium text-stone-500 dark:text-slate-400 mb-2">
-              {DOC_TYPE_LABELS[type] ?? type}
-            </p>
+            <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <p className="text-xs font-medium text-stone-500 dark:text-slate-400">
+                  {groupTitle(group)}
+                </p>
+                {(group.issued_at || group.expires_at) && (
+                  <p className="mt-1 text-[11px] text-stone-500 dark:text-slate-400">
+                    {formatDocumentDate(group.issued_at)
+                      ? t("documents.deliveredOn", {
+                          date: formatDocumentDate(group.issued_at)!,
+                        })
+                      : null}
+                    {formatDocumentDate(group.issued_at) &&
+                    formatDocumentDate(group.expires_at)
+                      ? " · "
+                      : null}
+                    {formatDocumentDate(group.expires_at)
+                      ? t("documents.expiresOn", {
+                          date: formatDocumentDate(group.expires_at)!,
+                        })
+                      : null}
+                  </p>
+                )}
+              </div>
+              <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-stone-600 dark:bg-slate-800 dark:text-slate-300">
+                {group.attachments.length === 1
+                  ? t("documents.attachments", { count: group.attachments.length })
+                  : t("documents.attachmentsPlural", {
+                      count: group.attachments.length,
+                    })}
+              </span>
+            </div>
             <ul className="space-y-2">
-              {docs.map((doc) => {
+              {group.attachments.map((doc) => {
                 const thumb = signedUrls[doc.file_path];
                 const isImage =
                   thumb &&
@@ -118,7 +173,7 @@ export function DocumentGallery({
                         onClick={() => openDoc(doc)}
                       >
                         <ExternalLink className="h-3 w-3 mr-1" />
-                        View
+                        {t("common.view")}
                       </Button>
                     </div>
                   </li>
@@ -153,10 +208,10 @@ export function DocumentGallery({
                 variant="secondary"
                 onClick={() => setLightbox(null)}
               >
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button type="button" onClick={() => setLightbox(null)}>
-                Close
+                {t("common.close")}
               </Button>
             </div>
           </div>

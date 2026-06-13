@@ -8,7 +8,8 @@ import { DEFAULT_COUNTRY, isDomesticCountry } from "@/lib/countries";
 import { normalizePlateForCountry } from "@/lib/vehicles";
 import {
   normalizeExpiryForDocument,
-  validateFutureExpiry,
+  normalizeIssuedForDocument,
+  validateDocumentDates,
 } from "@/lib/document-rules";
 import type { DocumentType } from "@/lib/types/database";
 
@@ -34,14 +35,17 @@ export type CompletePayload = {
     insurance_status: boolean;
     inspection_status: boolean;
   };
-  documents: Array<{
+  document_groups: Array<{
     doc_type: DocumentType;
-    label: string | null;
     vehicle_id: string | null;
-    file_path: string;
-    file_name: string | null;
-    file_hash: string | null;
+    issued_at: string | null;
     expires_at: string | null;
+    attachments: Array<{
+      label: string | null;
+      file_path: string;
+      file_name: string | null;
+      file_hash: string | null;
+    }>;
   }>;
   skip_documents?: boolean;
 };
@@ -88,6 +92,13 @@ async function deleteStoragePaths(
   await supabase.storage.from("documents").remove(paths);
 }
 
+function groupHasAttachments(
+  group: CompletePayload["document_groups"][number],
+  label: string
+): boolean {
+  return group.attachments.some((attachment) => attachment.label === label);
+}
+
 export async function completeOnboarding(
   payload: CompletePayload
 ): Promise<ActionResult> {
@@ -125,52 +136,43 @@ export async function completeOnboarding(
     return { ok: false, error: "Year must be a valid 4-digit number." };
   }
 
-  if (!payload.documents || payload.documents.length === 0) {
-    // Finishing without uploads is allowed — profile stays pending_documents.
-  }
-
-  const hasIdentityFront = payload.documents.some(
-    (d) => d.doc_type === "identity" && d.label === "front"
+  const identityGroup = payload.document_groups.find(
+    (group) => group.doc_type === "identity" && !group.vehicle_id
   );
-  const hasIdentityBack = payload.documents.some(
-    (d) => d.doc_type === "identity" && d.label === "back"
+  const licenseGroup = payload.document_groups.find(
+    (group) => group.doc_type === "driver_license" && !group.vehicle_id
   );
-  const hasLicenseFront = payload.documents.some(
-    (d) => d.doc_type === "driver_license" && d.label === "front"
+  const vehiclePhotoGroup = payload.document_groups.find(
+    (group) =>
+      group.vehicle_id === payload.vehicle.id && group.doc_type === "vehicle_photo"
   );
-  const hasLicenseBack = payload.documents.some(
-    (d) => d.doc_type === "driver_license" && d.label === "back"
-  );
-  const hasVehiclePhoto = payload.documents.some(
-    (d) =>
-      d.vehicle_id === payload.vehicle.id &&
-      d.doc_type === "vehicle_photo" &&
-      d.label === "front"
-  );
-  const hasRegistration = payload.documents.some(
-    (d) =>
-      d.vehicle_id === payload.vehicle.id &&
-      d.doc_type === "vehicle_registration"
+  const registrationGroup = payload.document_groups.find(
+    (group) =>
+      group.vehicle_id === payload.vehicle.id &&
+      group.doc_type === "vehicle_registration"
   );
 
   let profileVerification: "pending_documents" | "pending_review" =
     "pending_documents";
   if (
-    hasIdentityFront &&
-    hasIdentityBack &&
-    hasLicenseFront &&
-    hasLicenseBack &&
-    hasVehiclePhoto &&
-    hasRegistration
+    identityGroup &&
+    groupHasAttachments(identityGroup, "front") &&
+    groupHasAttachments(identityGroup, "back") &&
+    licenseGroup &&
+    groupHasAttachments(licenseGroup, "front") &&
+    groupHasAttachments(licenseGroup, "back") &&
+    vehiclePhotoGroup &&
+    groupHasAttachments(vehiclePhotoGroup, "front") &&
+    registrationGroup &&
+    registrationGroup.attachments.length > 0
   ) {
     profileVerification = "pending_review";
   }
 
-  // Defensive: every storage path must be scoped under the user's id, otherwise
-  // storage RLS would reject it. Surface this BEFORE we touch the database.
   const ownerPrefix = `${user.id}/`;
-  const badPath = payload.documents.find(
-    (d) => !d.file_path.startsWith(ownerPrefix)
+  const allAttachments = payload.document_groups.flatMap((group) => group.attachments);
+  const badPath = allAttachments.find(
+    (attachment) => !attachment.file_path.startsWith(ownerPrefix)
   );
   if (badPath) {
     return {
@@ -178,28 +180,32 @@ export async function completeOnboarding(
       error: "Uploaded file paths are not scoped to your account.",
     };
   }
-  const uploadedPaths = payload.documents.map((d) => d.file_path);
+  const uploadedPaths = allAttachments.map((attachment) => attachment.file_path);
 
-  const duplicateHash = payload.documents.find((doc, index, docs) => {
-    if (!doc.file_hash) return false;
-    return docs.findIndex((other) => other.file_hash === doc.file_hash) !== index;
+  const duplicateHash = allAttachments.find((attachment, index, attachments) => {
+    if (!attachment.file_hash) return false;
+    return (
+      attachments.findIndex((other) => other.file_hash === attachment.file_hash) !==
+      index
+    );
   });
   if (duplicateHash) {
     await deleteStoragePaths(supabase, uploadedPaths);
     return {
       ok: false,
-      error: "Duplicate document image detected. Please replace one side before submitting.",
+      error: "Duplicate document image detected. Please replace one attachment before submitting.",
     };
   }
 
-  for (const document of payload.documents) {
-    const expiryError = validateFutureExpiry(
-      document.expires_at,
-      document.doc_type
+  for (const group of payload.document_groups) {
+    const dateError = validateDocumentDates(
+      group.doc_type,
+      group.issued_at,
+      group.expires_at
     );
-    if (expiryError) {
+    if (dateError) {
       await deleteStoragePaths(supabase, uploadedPaths);
-      return { ok: false, error: expiryError };
+      return { ok: false, error: dateError };
     }
   }
 
@@ -248,32 +254,49 @@ export async function completeOnboarding(
     notes: `Vehicle registered: ${vehicle.brand ?? ""} ${vehicle.model ?? ""}`.trim(),
   });
 
-  const documentRows = payload.documents.map((d) => ({
-    owner_id: user.id,
-    vehicle_id: d.vehicle_id,
-    doc_type: d.doc_type,
-    label: d.label,
-    file_path: d.file_path,
-    file_name: d.file_name,
-    file_hash: d.file_hash,
-    expires_at: normalizeExpiryForDocument(d.expires_at, d.doc_type),
-    verification_status: "pending_review" as const,
-  }));
+  for (const group of payload.document_groups) {
+    const { data: createdGroup, error: groupError } = await supabase
+      .from("document_groups")
+      .insert({
+        owner_id: user.id,
+        vehicle_id: group.vehicle_id,
+        doc_type: group.doc_type,
+        issued_at: normalizeIssuedForDocument(group.issued_at, group.doc_type),
+        expires_at: normalizeExpiryForDocument(group.expires_at, group.doc_type),
+        verification_status: "pending_review",
+      })
+      .select("id")
+      .single();
 
-  const { error: docsError } =
-    documentRows.length > 0
-      ? await supabase.from("documents").insert(documentRows)
-      : { error: null };
+    if (groupError || !createdGroup) {
+      await supabase.from("vehicles").delete().eq("id", vehicle.id);
+      await deleteStoragePaths(supabase, uploadedPaths);
+      return { ok: false, error: friendlyError(groupError) };
+    }
 
-  if (docsError) {
-    // Roll back the vehicle row + uploaded files so the user can retry cleanly.
-    await supabase.from("vehicles").delete().eq("id", vehicle.id);
-    await deleteStoragePaths(supabase, uploadedPaths);
-    return { ok: false, error: friendlyError(docsError) };
-  }
+    const attachmentRows = group.attachments.map((attachment) => ({
+      owner_id: user.id,
+      vehicle_id: group.vehicle_id,
+      group_id: createdGroup.id,
+      doc_type: group.doc_type,
+      label: attachment.label,
+      file_path: attachment.file_path,
+      file_name: attachment.file_name,
+      file_hash: attachment.file_hash,
+      expires_at: null,
+      verification_status: "pending_review" as const,
+    }));
 
-  if (documentRows.length === 0) {
-    // No documents inserted — that's OK when skipping uploads.
+    const { error: attachmentError } = await supabase
+      .from("documents")
+      .insert(attachmentRows);
+
+    if (attachmentError) {
+      await supabase.from("document_groups").delete().eq("id", createdGroup.id);
+      await supabase.from("vehicles").delete().eq("id", vehicle.id);
+      await deleteStoragePaths(supabase, uploadedPaths);
+      return { ok: false, error: friendlyError(attachmentError) };
+    }
   }
 
   const { error: markOnboardedError } = await supabase

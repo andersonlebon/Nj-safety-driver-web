@@ -1,4 +1,4 @@
-import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { OnboardingHeader } from "./OnboardingHeader";
 
 export default function OnboardingLayout({
   children,
@@ -7,9 +7,7 @@ export default function OnboardingLayout({
 }) {
   return (
     <div className="min-h-screen flex flex-col">
-      <div className="absolute top-4 right-4 z-10">
-        <ThemeToggle size="sm" />
-      </div>
+      <OnboardingHeader />
       <main className="flex-1 flex items-start justify-center px-4 py-10 sm:py-16">
         {children}
       </main>

@@ -219,6 +219,7 @@ export type Database = {
           id: string;
           owner_id: string;
           vehicle_id: string | null;
+          group_id: string | null;
           doc_type: DocumentType;
           label: string | null;
           file_path: string;
@@ -232,6 +233,7 @@ export type Database = {
           id?: string;
           owner_id: string;
           vehicle_id?: string | null;
+          group_id?: string | null;
           doc_type: DocumentType;
           label?: string | null;
           file_path: string;
@@ -245,6 +247,7 @@ export type Database = {
           id?: string;
           owner_id?: string;
           vehicle_id?: string | null;
+          group_id?: string | null;
           doc_type?: DocumentType;
           label?: string | null;
           file_path?: string;
@@ -253,6 +256,42 @@ export type Database = {
           expires_at?: string | null;
           verification_status?: VerificationStatus;
           uploaded_at?: string;
+        };
+        Relationships: [];
+      };
+      document_groups: {
+        Row: {
+          id: string;
+          owner_id: string;
+          vehicle_id: string | null;
+          doc_type: DocumentType;
+          issued_at: string | null;
+          expires_at: string | null;
+          verification_status: VerificationStatus;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          vehicle_id?: string | null;
+          doc_type: DocumentType;
+          issued_at?: string | null;
+          expires_at?: string | null;
+          verification_status?: VerificationStatus;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          vehicle_id?: string | null;
+          doc_type?: DocumentType;
+          issued_at?: string | null;
+          expires_at?: string | null;
+          verification_status?: VerificationStatus;
+          created_at?: string;
+          updated_at?: string;
         };
         Relationships: [];
       };

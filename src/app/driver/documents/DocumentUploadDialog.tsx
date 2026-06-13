@@ -12,10 +12,11 @@ import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
 import {
   documentRequiresExpiry,
-  normalizeExpiryForDocument,
+  documentRequiresIssuedDate,
   todayIsoDate,
-  validateFutureExpiry,
+  validateDocumentDates,
 } from "@/lib/document-rules";
+import { saveDocumentAttachment } from "@/lib/document-groups-client";
 import { sha256File } from "@/lib/file-hash";
 import {
   EvidenceSlot,
@@ -69,6 +70,7 @@ export function DocumentUploadDialog({
   const [docType, setDocType] = useState<DocumentType>("identity");
   const [vehicleId, setVehicleId] = useState("");
   const [label, setLabel] = useState("");
+  const [issuedAt, setIssuedAt] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
   const [evidence, setEvidence] = useState<EvidenceSlotValue>({
     file: null,
@@ -78,6 +80,7 @@ export function DocumentUploadDialog({
   const [error, setError] = useState<string | null>(null);
 
   const scope = docTypes.find((d) => d.value === docType)?.scope ?? "driver";
+  const requiresIssued = documentRequiresIssuedDate(docType);
   const requiresExpiry = documentRequiresExpiry(docType);
 
   const reset = () => {
@@ -85,6 +88,7 @@ export function DocumentUploadDialog({
     setDocType("identity");
     setVehicleId("");
     setLabel("");
+    setIssuedAt("");
     setExpiresAt("");
     setEvidence({ file: null, previewUrl: null });
     setError(null);
@@ -96,7 +100,11 @@ export function DocumentUploadDialog({
       if (scope === "vehicle" && vehicles.length > 0 && !vehicleId) {
         return "Please select a vehicle for this document.";
       }
-      const expiryError = validateFutureExpiry(expiresAt, docType);
+      const expiryError = validateDocumentDates(
+        docType,
+        issuedAt || null,
+        expiresAt || null
+      );
       if (expiryError) return expiryError;
       return null;
     }
@@ -145,24 +153,22 @@ export function DocumentUploadDialog({
       return;
     }
 
-    const { error: dbError } = await supabase.from("documents").insert({
-      owner_id: ownerId,
-      vehicle_id: effectiveVehicleId,
-      doc_type: docType,
+    const saveResult = await saveDocumentAttachment({
+      supabase,
+      ownerId,
+      vehicleId: effectiveVehicleId,
+      docType,
       label: label.trim() || null,
-      file_path: path,
-      file_name: file.name,
-      file_hash: fileHash,
-      expires_at: normalizeExpiryForDocument(
-        expiresAt ? new Date(expiresAt).toISOString() : null,
-        docType
-      ),
-      verification_status: "pending_review",
+      issuedAt: issuedAt ? new Date(issuedAt).toISOString() : null,
+      expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
+      filePath: path,
+      fileName: file.name,
+      fileHash,
     });
 
-    if (dbError) {
+    if (!saveResult.ok) {
       await supabase.storage.from("documents").remove([path]);
-      setError(friendlyError(dbError));
+      setError(saveResult.error);
       setLoading(false);
       return;
     }
@@ -202,7 +208,10 @@ export function DocumentUploadDialog({
                 onChange={(e) => {
                   const next = e.target.value as DocumentType;
                   setDocType(next);
-                  if (!documentRequiresExpiry(next)) setExpiresAt("");
+                  if (!documentRequiresIssuedDate(next) && !documentRequiresExpiry(next)) {
+                    setIssuedAt("");
+                    setExpiresAt("");
+                  }
                 }}
             >
               {docTypes.map((d) => (
@@ -237,6 +246,16 @@ export function DocumentUploadDialog({
                 onChange={(e) => setLabel(e.target.value)}
                 placeholder="e.g. front, back, 2025"
               />
+              {requiresIssued && (
+                <Input
+                  label="Delivered date"
+                  type="date"
+                  name="issued_at"
+                  value={issuedAt}
+                  onChange={(e) => setIssuedAt(e.target.value)}
+                  max={todayIsoDate()}
+                />
+              )}
               {requiresExpiry ? (
                 <Input
                   label="Expiration date"
@@ -244,13 +263,13 @@ export function DocumentUploadDialog({
                   name="expires_at"
                   value={expiresAt}
                   onChange={(e) => setExpiresAt(e.target.value)}
-                  min={todayIsoDate()}
+                  min={issuedAt || todayIsoDate()}
                 />
-              ) : (
+              ) : !requiresIssued ? (
                 <Alert variant="info">
-                  This document type does not need a validity period.
+                  This document type does not need validity dates.
                 </Alert>
-              )}
+              ) : null}
             </div>
           )}
 
@@ -264,7 +283,7 @@ export function DocumentUploadDialog({
               onChange={setEvidence}
               expiresAt={expiresAt}
               onExpiresAtChange={setExpiresAt}
-              showExpiry={requiresExpiry && !expiresAt}
+              showExpiry={false}
             />
           )}
 
