@@ -10,10 +10,11 @@ import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
 import {
   documentRequiresExpiry,
-  normalizeExpiryForDocument,
+  documentRequiresIssuedDate,
   todayIsoDate,
-  validateFutureExpiry,
+  validateDocumentDates,
 } from "@/lib/document-rules";
+import { saveDocumentAttachment } from "@/lib/document-groups-client";
 import { sha256File } from "@/lib/file-hash";
 import type { Database, DocumentType } from "@/lib/types/database";
 
@@ -61,6 +62,7 @@ export function DocumentUploader({
   const [docType, setDocType] = useState<DocumentType>("identity");
   const [vehicleId, setVehicleId] = useState<string>("");
   const [label, setLabel] = useState<string>("");
+  const [issuedAt, setIssuedAt] = useState<string>("");
   const [expiresAt, setExpiresAt] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -69,6 +71,7 @@ export function DocumentUploader({
 
   const currentScope =
     docTypes.find((d) => d.value === docType)?.scope ?? "driver";
+  const requiresIssued = documentRequiresIssuedDate(docType);
   const requiresExpiry = documentRequiresExpiry(docType);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -86,9 +89,13 @@ export function DocumentUploader({
       setLoading(false);
       return;
     }
-    const expiryError = validateFutureExpiry(expiresAt, docType);
-    if (expiryError) {
-      setError(expiryError);
+    const dateError = validateDocumentDates(
+      docType,
+      issuedAt || null,
+      expiresAt || null
+    );
+    if (dateError) {
+      setError(dateError);
       setLoading(false);
       return;
     }
@@ -123,30 +130,29 @@ export function DocumentUploader({
       return;
     }
 
-    const { error: dbError } = await supabase.from("documents").insert({
-      owner_id: ownerId,
-      vehicle_id: effectiveVehicleId,
-      doc_type: docType,
+    const saveResult = await saveDocumentAttachment({
+      supabase,
+      ownerId,
+      vehicleId: effectiveVehicleId,
+      docType,
       label: label.trim() || null,
-      file_path: path,
-      file_name: file.name,
-      file_hash: fileHash,
-      expires_at: normalizeExpiryForDocument(
-        expiresAt ? new Date(expiresAt).toISOString() : null,
-        docType
-      ),
-      verification_status: "pending_review",
+      issuedAt: issuedAt ? new Date(issuedAt).toISOString() : null,
+      expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
+      filePath: path,
+      fileName: file.name,
+      fileHash,
     });
 
-    if (dbError) {
+    if (!saveResult.ok) {
       await supabase.storage.from("documents").remove([path]);
-      setError(friendlyError(dbError));
+      setError(saveResult.error);
       setLoading(false);
       return;
     }
 
     setFile(null);
     setLabel("");
+    setIssuedAt("");
     setExpiresAt("");
     if (fileInputRef.current) fileInputRef.current.value = "";
     setLoading(false);
@@ -164,7 +170,10 @@ export function DocumentUploader({
           onChange={(e) => {
             const next = e.target.value as DocumentType;
             setDocType(next);
-            if (!documentRequiresExpiry(next)) setExpiresAt("");
+            if (!documentRequiresIssuedDate(next) && !documentRequiresExpiry(next)) {
+              setIssuedAt("");
+              setExpiresAt("");
+            }
           }}
         >
           {docTypes.map((d) => (
@@ -195,6 +204,16 @@ export function DocumentUploader({
           onChange={(e) => setLabel(e.target.value)}
           placeholder="e.g. front, back, 2025"
         />
+        {requiresIssued && (
+          <Input
+            label="Delivered date"
+            type="date"
+            name="issued_at"
+            value={issuedAt}
+            onChange={(e) => setIssuedAt(e.target.value)}
+            max={todayIsoDate()}
+          />
+        )}
         {requiresExpiry && (
           <Input
             label="Expiration date"
@@ -202,7 +221,7 @@ export function DocumentUploader({
             name="expires_at"
             value={expiresAt}
             onChange={(e) => setExpiresAt(e.target.value)}
-            min={todayIsoDate()}
+            min={issuedAt || todayIsoDate()}
           />
         )}
         <Input

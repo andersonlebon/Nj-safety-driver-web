@@ -136,12 +136,37 @@ export const vehicles = pgTable("vehicles", {
     .default(sql`now()`),
 });
 
+export const documentGroups = pgTable("document_groups", {
+  id: uuid("id").primaryKey().default(sql`uuid_generate_v4()`),
+  ownerId: uuid("owner_id")
+    .notNull()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  vehicleId: uuid("vehicle_id").references(() => vehicles.id, {
+    onDelete: "cascade",
+  }),
+  docType: documentType("doc_type").notNull(),
+  issuedAt: timestamp("issued_at", { withTimezone: true }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  verificationStatus: verificationStatus("verification_status")
+    .notNull()
+    .default("pending_review"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .default(sql`now()`),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .default(sql`now()`),
+});
+
 export const documents = pgTable("documents", {
   id: uuid("id").primaryKey().default(sql`uuid_generate_v4()`),
   ownerId: uuid("owner_id")
     .notNull()
     .references(() => profiles.id, { onDelete: "cascade" }),
   vehicleId: uuid("vehicle_id").references(() => vehicles.id, {
+    onDelete: "cascade",
+  }),
+  groupId: uuid("group_id").references(() => documentGroups.id, {
     onDelete: "cascade",
   }),
   docType: documentType("doc_type").notNull(),
@@ -260,6 +285,8 @@ export type Vehicle = typeof vehicles.$inferSelect;
 export type NewVehicle = typeof vehicles.$inferInsert;
 export type Document = typeof documents.$inferSelect;
 export type NewDocument = typeof documents.$inferInsert;
+export type DocumentGroup = typeof documentGroups.$inferSelect;
+export type NewDocumentGroup = typeof documentGroups.$inferInsert;
 export type Infraction = typeof infractions.$inferSelect;
 export type NewInfraction = typeof infractions.$inferInsert;
 export type Transaction = typeof transactions.$inferSelect;
