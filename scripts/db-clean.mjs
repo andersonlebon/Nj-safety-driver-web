@@ -3,8 +3,8 @@
 // db:clean — wipe development data from Supabase.
 //
 // What it cleans (lowest blast radius first):
-//   • DEFAULT             — TRUNCATEs `public.documents`, `public.infractions`,
-//                           `public.vehicles`, `public.profiles` (cascades).
+//   • DEFAULT             — TRUNCATEs all public app data tables (profiles,
+//                           vehicles, documents, infractions, transactions, …).
 //                           Schema, RLS, triggers, and storage buckets stay.
 //   • --with-storage      — also empties storage objects in the `documents`
 //                           and `evidence` buckets (the buckets themselves stay).
@@ -50,7 +50,9 @@ if (process.env.NODE_ENV === "production" && !force) {
   process.exit(1);
 }
 
-const targets = ["public data tables (profiles, vehicles, documents, infractions)"];
+const targets = [
+  "public app data (profiles, vehicles, documents, document_groups, infractions, transactions, tracking, messages, templates)",
+];
 if (withStorage) targets.push("storage objects in `documents` + `evidence` buckets");
 if (withAuth) targets.push("ALL rows in `auth.users`");
 
@@ -82,9 +84,17 @@ try {
   console.log("\n▶ Truncating public data tables …");
   await sql.unsafe(
     `truncate table
+       public.transactions,
        public.documents,
+       public.document_groups,
+       public.driver_messages,
        public.infractions,
+       public.vehicle_tracking_events,
        public.vehicles,
+       public.driver_profiles,
+       public.agent_profiles,
+       public.admin_profiles,
+       public.infraction_templates,
        public.profiles
      restart identity cascade;`
   );

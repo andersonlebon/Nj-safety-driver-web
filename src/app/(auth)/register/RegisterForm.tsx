@@ -9,6 +9,10 @@ import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
 import { useI18n } from "@/i18n/context";
 
+function normalizeEmail(value: string): string {
+  return value.trim().toLowerCase();
+}
+
 export function RegisterForm() {
   const { t } = useI18n();
   const router = useRouter();
@@ -25,9 +29,10 @@ export function RegisterForm() {
     setError(null);
     setInfo(null);
 
+    const normalizedEmail = normalizeEmail(email);
     const supabase = createClient();
     const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
+      email: normalizedEmail,
       password,
       options: {
         data: { full_name: fullName, role: "driver" },
@@ -49,7 +54,7 @@ export function RegisterForm() {
       return;
     }
 
-    router.replace("/driver");
+    router.replace("/onboarding");
     router.refresh();
   };
 

@@ -9,6 +9,10 @@ import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
 import { useI18n } from "@/i18n/context";
 
+function normalizeEmail(value: string): string {
+  return value.trim().toLowerCase();
+}
+
 export function LoginForm() {
   const { t } = useI18n();
   const router = useRouter();
@@ -24,14 +28,22 @@ export function LoginForm() {
     setLoading(true);
     setError(null);
 
+    const normalizedEmail = normalizeEmail(email);
     const supabase = createClient();
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
       password,
     });
 
     if (signInError) {
       setError(friendlyError(signInError));
+      setLoading(false);
+      return;
+    }
+
+    const user = data.session?.user ?? data.user;
+    if (!user) {
+      setError("Authentication succeeded but no session was created. Please try again.");
       setLoading(false);
       return;
     }
@@ -42,19 +54,17 @@ export function LoginForm() {
       return;
     }
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      router.replace("/login");
-      return;
-    }
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, onboarded_at")
       .eq("id", user.id)
       .single();
-    router.replace(profile?.role ? `/${profile.role}` : "/driver");
+
+    const role = profile?.role ?? "driver";
+    const destination =
+      role === "driver" && !profile?.onboarded_at ? "/onboarding" : `/${role}`;
+
+    router.replace(destination);
     router.refresh();
   };
 

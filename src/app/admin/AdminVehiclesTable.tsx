@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Car, Eye } from "lucide-react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { Car, Eye, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { CountryBadge } from "@/components/vehicles/CountryBadge";
 import { StaffDocumentsLoader } from "@/components/documents/StaffDocumentsLoader";
@@ -52,6 +53,22 @@ export function AdminVehiclesTable({
     back: null,
   });
   const [, startTransition] = useTransition();
+  const [plateQuery, setPlateQuery] = useState("");
+  const [debouncedPlateQuery, setDebouncedPlateQuery] = useState("");
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedPlateQuery(plateQuery.trim().toUpperCase());
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [plateQuery]);
+
+  const filteredVehicles = useMemo(() => {
+    if (!debouncedPlateQuery) return vehicles;
+    return vehicles.filter((vehicle) =>
+      vehicle.plate_number.toUpperCase().includes(debouncedPlateQuery)
+    );
+  }, [vehicles, debouncedPlateQuery]);
 
   const open = (vehicle: Vehicle) => {
     setSelected(vehicle);
@@ -138,6 +155,21 @@ export function AdminVehiclesTable({
 
   return (
     <>
+      <div className="mb-4 max-w-sm">
+        <Input
+          label="Search by plate"
+          name="plate_search"
+          placeholder="Type plate number…"
+          value={plateQuery}
+          onChange={(e) => setPlateQuery(e.target.value)}
+          autoComplete="off"
+        />
+        {debouncedPlateQuery && (
+          <p className="mt-1 text-xs text-stone-500 dark:text-slate-400">
+            {filteredVehicles.length} of {vehicles.length} vehicles
+          </p>
+        )}
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-left text-stone-500 dark:text-slate-400 border-b border-stone-200 dark:border-slate-800">
@@ -155,7 +187,18 @@ export function AdminVehiclesTable({
             </tr>
           </thead>
           <tbody>
-            {vehicles.map((v) => {
+            {filteredVehicles.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={10}
+                  className="py-8 text-center text-stone-500 dark:text-slate-400"
+                >
+                  <Search className="h-5 w-5 mx-auto mb-2 opacity-60" />
+                  No vehicles match &ldquo;{debouncedPlateQuery}&rdquo;
+                </td>
+              </tr>
+            ) : (
+              filteredVehicles.map((v) => {
               const owner = v.owner_id ? ownerMap[v.owner_id] : null;
               const photoUrl = photoUrls[v.id];
               const status = (v.verification_status ??
@@ -251,7 +294,8 @@ export function AdminVehiclesTable({
                   </td>
                 </tr>
               );
-            })}
+            })
+            )}
           </tbody>
         </table>
       </div>

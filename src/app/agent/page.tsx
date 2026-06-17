@@ -19,7 +19,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { requireRole } from "@/lib/auth";
-import type { PaymentStatus } from "@/lib/types/database";
+import { resolveLedgerStatus } from "@/lib/transactions";
+import type { PaymentStatus, TransactionStatus } from "@/lib/types/database";
 
 type InfractionRow = {
   id: string;
@@ -38,6 +39,7 @@ export default async function AgentOverviewPage() {
     { count: totalInfractions },
     { count: unpaidCount },
     { data: myInfractions },
+    { data: transactions },
   ] = await Promise.all([
     supabase.from("infractions").select("id", { count: "exact", head: true }),
     supabase
@@ -51,11 +53,27 @@ export default async function AgentOverviewPage() {
       )
       .eq("agent_id", profile.id)
       .order("created_at", { ascending: false }),
+    supabase.from("transactions").select("infraction_id, status"),
   ]);
+
+  const transactionStatusByInfraction = Object.fromEntries(
+    (transactions ?? []).map((transaction) => [
+      transaction.infraction_id,
+      transaction.status as TransactionStatus,
+    ])
+  );
 
   const mine: InfractionRow[] = (myInfractions ?? []).map((i) => ({
     ...i,
     fine_amount: Number(i.fine_amount),
+  }));
+
+  const mineWithLedger = mine.map((infraction) => ({
+    ...infraction,
+    ledgerStatus: resolveLedgerStatus(
+      infraction.status,
+      transactionStatusByInfraction[infraction.id]
+    ),
   }));
 
   const weekly = countByWeek(mine, 8);
@@ -64,9 +82,9 @@ export default async function AgentOverviewPage() {
     (s, i) => s + Number(i.fine_amount),
     0
   );
-  const paid = mine.filter((i) => i.status === "paid").length;
-  const pending = mine.filter((i) => i.status === "pending").length;
-  const unpaidMine = mine.filter((i) => i.status === "unpaid").length;
+  const paid = mineWithLedger.filter((i) => i.ledgerStatus === "paid").length;
+  const pending = mineWithLedger.filter((i) => i.ledgerStatus === "pending").length;
+  const unpaidMine = mineWithLedger.filter((i) => i.ledgerStatus === "unpaid").length;
   const denom = paid + pending + unpaidMine;
   const resolutionRate = denom === 0 ? 0 : Math.round((paid / denom) * 1000) / 10;
 
@@ -221,7 +239,12 @@ export default async function AgentOverviewPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {recent.map((i) => (
+                    {recent.map((i) => {
+                      const ledgerStatus = resolveLedgerStatus(
+                        i.status,
+                        transactionStatusByInfraction[i.id]
+                      );
+                      return (
                       <tr
                         key={i.id}
                         className="border-b border-stone-100 dark:border-slate-800 last:border-0"
@@ -239,10 +262,11 @@ export default async function AgentOverviewPage() {
                           {formatCurrency(Number(i.fine_amount))}
                         </td>
                         <td className="py-2 pr-4">
-                          <StatusBadge status={i.status} />
+                          <StatusBadge status={ledgerStatus} />
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
