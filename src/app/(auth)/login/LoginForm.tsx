@@ -2,8 +2,12 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { completeLoginAfterSignIn } from "@/app/auth/actions";
 import { friendlyError } from "@/lib/errors";
+import type { LoginPortal } from "@/lib/auth/profile-session";
+import { portalLabel, portalLoginPath } from "@/lib/auth/profile-session";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
@@ -13,7 +17,13 @@ function normalizeEmail(value: string): string {
   return value.trim().toLowerCase();
 }
 
-export function LoginForm() {
+type Props = {
+  portal?: LoginPortal;
+  title?: string;
+  hint?: string;
+};
+
+export function LoginForm({ portal, title, hint }: Props) {
   const { t } = useI18n();
   const router = useRouter();
   const params = useSearchParams();
@@ -48,29 +58,48 @@ export function LoginForm() {
       return;
     }
 
-    if (redirectTo) {
-      router.replace(redirectTo);
-      router.refresh();
+    const result = await completeLoginAfterSignIn({
+      portal,
+      redirectTo: redirectTo || undefined,
+    });
+
+    if (!result.ok) {
+      setError(result.error);
+      setLoading(false);
       return;
     }
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role, onboarded_at")
-      .eq("id", user.id)
-      .single();
-
-    const role = profile?.role ?? "driver";
-    const destination =
-      role === "driver" && !profile?.onboarded_at ? "/onboarding" : `/${role}`;
-
-    router.replace(destination);
+    router.replace(result.redirectTo);
     router.refresh();
   };
 
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
-      {error && <Alert variant="error">{error}</Alert>}
+      {error && (
+        <Alert variant="error">
+          {error}
+          {portal && (
+            <span className="block mt-2 text-xs">
+              Wrong portal?{" "}
+              <Link href="/login" className="underline">
+                Driver
+              </Link>
+              {" · "}
+              <Link href="/login/agent" className="underline">
+                Agent
+              </Link>
+              {" · "}
+              <Link href="/login/admin" className="underline">
+                Admin
+              </Link>
+            </span>
+          )}
+        </Alert>
+      )}
+      {title && (
+        <p className="text-sm font-medium text-stone-800 dark:text-stone-200">{title}</p>
+      )}
+      {hint && <p className="text-xs text-stone-500 dark:text-slate-400">{hint}</p>}
       <Input
         label={t("auth.email")}
         type="email"
@@ -90,8 +119,16 @@ export function LoginForm() {
         required
       />
       <Button type="submit" loading={loading} className="w-full">
-        {t("auth.signIn")}
+        {portal ? `Sign in as ${portalLabel(portal)}` : t("auth.signIn")}
       </Button>
+      {portal && portal !== "driver" && (
+        <p className="text-xs text-center text-stone-500 dark:text-slate-400">
+          Not {portalLabel(portal).toLowerCase()} staff?{" "}
+          <Link href={portalLoginPath("driver")} className="underline">
+            Driver sign-in
+          </Link>
+        </p>
+      )}
     </form>
   );
 }

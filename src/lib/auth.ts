@@ -1,23 +1,22 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import {
+  getActiveProfileIdFromCookie,
+  listProfilesForUser,
+  resolveActiveProfile,
+  setActiveProfileCookie,
+} from "@/lib/auth/profiles";
+import { loginPathForRole } from "@/lib/auth/profile-session";
 import type { Database, UserRole } from "@/lib/types/database";
 
 /**
- * Roles that are NEVER granted via user-controlled metadata. The lazy
- * profile-create path used to read `role` from `user_metadata`, which let
- * a malicious signup self-promote by passing `data: { role: "admin" }`.
- * Privileged roles are now only assignable through:
- *   - `/setup` (the one-time first-admin bootstrap), or
- *   - the admin role-promotion UI (which goes through `updateUserRole`).
+ * Roles that are NEVER granted via user-controlled metadata. Privileged roles
+ * are only assignable through /setup or admin promotion flows.
  */
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
-/**
- * Cached: only one network round-trip per request, even if the layout, the
- * page, and a child component all call it.
- */
 export const getSessionUser = cache(async () => {
   const supabase = createClient();
   const {
@@ -27,18 +26,23 @@ export const getSessionUser = cache(async () => {
 });
 
 /**
- * Returns the current user's profile.
- * If the auth user exists but the profiles row is missing (e.g. signup happened
- * before the auth trigger was installed, or RLS blocked the trigger), this
- * will lazily create the row from the user's metadata.
- *
- * Cached per request so layouts and pages share the same result.
+ * Returns the active typed profile for the signed-in auth user.
+ * Uses the active-profile cookie when set; otherwise auto-selects when only
+ * one profile exists.
  */
 export const getCurrentProfile = cache(async (): Promise<Profile | null> => {
   const user = await getSessionUser();
   if (!user) return null;
 
+  const active = await resolveActiveProfile(user.id);
+  if (active) return active;
+
   const supabase = createClient();
+  const profiles = await listProfilesForUser(user.id);
+
+  if (profiles.length > 1) {
+    return null;
+  }
 
   const { data: existing } = await supabase
     .from("profiles")
@@ -46,49 +50,78 @@ export const getCurrentProfile = cache(async (): Promise<Profile | null> => {
     .eq("id", user.id)
     .maybeSingle<Profile>();
 
-  if (existing) return existing;
+  if (existing) {
+    await setActiveProfileCookie(existing.id);
+    return existing;
+  }
 
-  const meta = (user.user_metadata ?? {}) as {
-    full_name?: string;
-  };
+  const meta = (user.user_metadata ?? {}) as { full_name?: string };
 
   const { data: created } = await supabase
     .from("profiles")
     .insert({
       id: user.id,
+      user_id: user.id,
       email: user.email ?? null,
       full_name: meta.full_name ?? null,
-      // Hardened: ignore any `role` value sitting in user_metadata. New rows
-      // always default to 'driver'; staff roles are only granted by /setup
-      // (first admin) or by an existing admin via the role-promotion UI.
       role: "driver",
     })
     .select("*")
     .single<Profile>();
 
+  if (created) {
+    await setActiveProfileCookie(created.id);
+  }
+
   return created ?? null;
 });
 
-export async function requireRole(allowed: UserRole[]): Promise<Profile> {
-  const profile = await getCurrentProfile();
-  if (!profile) {
+export async function requireActiveProfileSelection(): Promise<Profile> {
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
+
+  const profiles = await listProfilesForUser(user.id);
+  if (profiles.length <= 1) {
+    const profile = await getCurrentProfile();
+    if (profile) return profile;
     redirect("/login");
   }
+
+  const cookieId = await getActiveProfileIdFromCookie();
+  if (!cookieId) {
+    redirect("/auth/select-profile");
+  }
+
+  const profile = await getCurrentProfile();
+  if (!profile) redirect("/auth/select-profile");
+  return profile;
+}
+
+export async function requireRole(allowed: UserRole[]): Promise<Profile> {
+  const profile = await requireActiveProfileSelection();
   if (!allowed.includes(profile.role)) {
-    redirect(`/${profile.role}`);
+    redirect(loginPathForRole(profile.role));
   }
   return profile;
 }
 
-/** For server actions — return an error instead of redirect (avoids client "Failed to fetch"). */
 export async function requireRoleForAction(
   allowed: UserRole[]
 ): Promise<Profile | { ok: false; error: string }> {
   try {
-    const profile = await getCurrentProfile();
-    if (!profile) {
+    const user = await getSessionUser();
+    if (!user) {
       return { ok: false, error: "Your session expired. Please sign in again." };
     }
+
+    const profile = await getCurrentProfile();
+    if (!profile) {
+      return {
+        ok: false,
+        error: "Choose which profile to continue with before performing this action.",
+      };
+    }
+
     if (!allowed.includes(profile.role)) {
       return { ok: false, error: "You do not have permission to perform this action." };
     }
@@ -100,3 +133,12 @@ export async function requireRoleForAction(
     };
   }
 }
+
+export { listProfilesForUser, createTypedProfile } from "@/lib/auth/profiles";
+export type { LoginPortal, ProfileSummary } from "@/lib/auth/profile-session";
+export {
+  loginPathForRole,
+  portalLabel,
+  portalLoginPath,
+  resolvePostLogin,
+} from "@/lib/auth/profile-session";

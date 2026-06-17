@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { setActiveProfileCookie } from "@/lib/auth/profiles";
 import { friendlyError } from "@/lib/errors";
 
 export type SetupResult =
@@ -76,6 +77,7 @@ export async function bootstrapAdmin(formData: FormData): Promise<SetupResult> {
     .upsert(
       {
         id: userId,
+        user_id: userId,
         email,
         full_name,
         role: "admin",
@@ -84,13 +86,21 @@ export async function bootstrapAdmin(formData: FormData): Promise<SetupResult> {
     );
 
   if (upsertErr) {
-    // Roll back the auth user so the next /setup attempt can re-use the email.
     await admin.auth.admin.deleteUser(userId).catch(() => {});
     return {
       ok: false,
       error: `We couldn't finish creating your admin account. ${friendlyError(upsertErr)}`,
     };
   }
+
+  await admin.from("user_profile_links").upsert(
+    {
+      user_id: userId,
+      profile_id: userId,
+      profile_type: "admin",
+    },
+    { onConflict: "user_id,profile_type" }
+  );
 
   // 3. Sign the new admin in via the regular SSR client so the auth cookies
   //    land on the response and the next request is already authenticated.
@@ -100,13 +110,12 @@ export async function bootstrapAdmin(formData: FormData): Promise<SetupResult> {
     password,
   });
   if (signInErr) {
-    // Account is created — surface the message but don't roll back. The user
-    // can just visit /login.
     return {
       ok: false,
-      error: `Admin account created. Please sign in at /login. (${friendlyError(signInErr)})`,
+      error: `Admin account created. Please sign in at /login/admin. (${friendlyError(signInErr)})`,
     };
   }
 
+  await setActiveProfileCookie(userId);
   redirect("/admin");
 }

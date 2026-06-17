@@ -91,6 +91,7 @@ try {
        public.infractions,
        public.vehicle_tracking_events,
        public.vehicles,
+       public.user_profile_links,
        public.driver_profiles,
        public.agent_profiles,
        public.admin_profiles,

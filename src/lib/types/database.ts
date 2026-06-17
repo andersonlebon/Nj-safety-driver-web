@@ -37,6 +37,7 @@ export type Database = {
       profiles: {
         Row: {
           id: string;
+          user_id: string;
           role: UserRole;
           full_name: string | null;
           phone: string | null;
@@ -56,6 +57,7 @@ export type Database = {
         };
         Insert: {
           id: string;
+          user_id: string;
           role?: UserRole;
           full_name?: string | null;
           phone?: string | null;
@@ -75,6 +77,7 @@ export type Database = {
         };
         Update: {
           id?: string;
+          user_id?: string;
           role?: UserRole;
           full_name?: string | null;
           phone?: string | null;
@@ -138,6 +141,30 @@ export type Database = {
         };
         Update: {
           profile_id?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      user_profile_links: {
+        Row: {
+          id: string;
+          user_id: string;
+          profile_id: string;
+          profile_type: UserRole;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          profile_id: string;
+          profile_type: UserRole;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          profile_id?: string;
+          profile_type?: UserRole;
           created_at?: string;
         };
         Relationships: [];
