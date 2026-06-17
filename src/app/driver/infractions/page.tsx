@@ -4,21 +4,10 @@ import { requireRole } from "@/lib/auth";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Card, CardBody } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { InfractionStatusBadge } from "@/components/ui/InfractionStatusBadge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { resolveLedgerStatus } from "@/lib/transactions";
 import type { PaymentStatus, TransactionStatus } from "@/lib/types/database";
-
-function InfractionStatusBadge({
-  status,
-}: {
-  status: PaymentStatus | TransactionStatus;
-}) {
-  if (status === "initialized") {
-    return <span className="badge-pending">Initialized</span>;
-  }
-  return <StatusBadge status={status as PaymentStatus} />;
-}
 
 export default async function DriverInfractionsPage() {
   const profile = await requireRole(["driver", "admin"]);

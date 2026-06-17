@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Eye } from "lucide-react";
+import { Eye, Users } from "lucide-react";
+import { useTableFilters } from "@/hooks/useTableFilters";
+import {
+  TableToolbar,
+  TablePagination,
+  TableEmptyState,
+} from "@/components/table";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { CountryBadge } from "@/components/vehicles/CountryBadge";
@@ -35,11 +41,62 @@ export function AdminDriversTable({
 }) {
   const [selected, setSelected] = useState<Driver | null>(null);
 
+  const VERIFICATION_FILTER_OPTIONS = [
+    { value: "active", label: "Active" },
+    { value: "pending_review", label: "Pending review" },
+    { value: "pending_documents", label: "Pending documents" },
+    { value: "rejected", label: "Rejected" },
+  ];
+
+  const table = useTableFilters({
+    rows: drivers,
+    pageSize: 25,
+    getSearchText: (row) =>
+      [row.full_name, row.email, row.phone, row.driver_license, row.national_id]
+        .filter(Boolean)
+        .join(" "),
+    getStatus: (row) => row.verification_status ?? "pending_documents",
+    getDate: (row) => row.created_at,
+    initialSort: {
+      getValue: (row) => new Date(row.created_at).getTime(),
+      direction: "desc",
+    },
+  });
+
   const open = (driver: Driver) => setSelected(driver);
   const close = () => setSelected(null);
 
   return (
     <>
+      <TableToolbar
+        search={table.search}
+        onSearchChange={table.setSearch}
+        searchPlaceholder="Name, email, phone, license…"
+        statusValue={table.statusFilter}
+        onStatusChange={table.setStatusFilter}
+        statusOptions={VERIFICATION_FILTER_OPTIONS}
+        dateFrom={table.dateFrom}
+        dateTo={table.dateTo}
+        onDateFromChange={table.setDateFrom}
+        onDateToChange={table.setDateTo}
+        onReset={table.resetFilters}
+        hasActiveFilters={table.hasActiveFilters}
+        summary={
+          table.hasActiveFilters
+            ? `${table.filteredCount} of ${table.totalRows} drivers`
+            : undefined
+        }
+      />
+
+      {table.filteredCount === 0 ? (
+        <TableEmptyState
+          icon={<Users className="h-8 w-8" />}
+          title="No drivers"
+          filtered={table.totalRows > 0}
+          searchTerm={table.debouncedSearch}
+        />
+      ) : (
+        <>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-left text-stone-500 dark:text-slate-400 border-b border-stone-200 dark:border-slate-800">
@@ -56,7 +113,7 @@ export function AdminDriversTable({
             </tr>
           </thead>
           <tbody>
-            {drivers.map((d) => (
+            {table.paginated.map((d) => (
               <tr
                 key={d.id}
                 className="border-b border-stone-100 dark:border-slate-800 last:border-0 cursor-pointer hover:bg-stone-50/80 dark:hover:bg-slate-800/40 transition-colors"
@@ -103,6 +160,15 @@ export function AdminDriversTable({
           </tbody>
         </table>
       </div>
+      <TablePagination
+        page={table.page}
+        totalPages={table.totalPages}
+        filteredCount={table.filteredCount}
+        totalRows={table.totalRows}
+        onPageChange={table.setPage}
+      />
+        </>
+      )}
 
       {selected && (
         <Modal

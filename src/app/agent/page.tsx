@@ -16,22 +16,12 @@ import { chartColors } from "@/components/charts/theme";
 import { countByWeek, topN } from "@/components/dashboard/analytics";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { InfractionStatusBadge } from "@/components/ui/InfractionStatusBadge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { requireRole } from "@/lib/auth";
 import { resolveLedgerStatus } from "@/lib/transactions";
-import type { PaymentStatus, TransactionStatus } from "@/lib/types/database";
-
-function InfractionStatusBadge({
-  status,
-}: {
-  status: PaymentStatus | TransactionStatus;
-}) {
-  if (status === "initialized") {
-    return <span className="badge-pending">Initialized</span>;
-  }
-  return <StatusBadge status={status as PaymentStatus} />;
-}
+import { loadTransactionsForInfractionIds } from "@/lib/queries/infractions";
+import type { PaymentStatus } from "@/lib/types/database";
 
 type InfractionRow = {
   id: string;
@@ -50,7 +40,6 @@ export default async function AgentOverviewPage() {
     { count: totalInfractions },
     { count: unpaidCount },
     { data: myInfractions },
-    { data: transactions },
   ] = await Promise.all([
     supabase.from("infractions").select("id", { count: "exact", head: true }),
     supabase
@@ -64,20 +53,17 @@ export default async function AgentOverviewPage() {
       )
       .eq("agent_id", profile.id)
       .order("created_at", { ascending: false }),
-    supabase.from("transactions").select("infraction_id, status"),
   ]);
-
-  const transactionStatusByInfraction = Object.fromEntries(
-    (transactions ?? []).map((transaction) => [
-      transaction.infraction_id,
-      transaction.status as TransactionStatus,
-    ])
-  );
 
   const mine: InfractionRow[] = (myInfractions ?? []).map((i) => ({
     ...i,
     fine_amount: Number(i.fine_amount),
   }));
+
+  const transactionStatusByInfraction = await loadTransactionsForInfractionIds(
+    supabase,
+    mine.map((i) => i.id)
+  );
 
   const mineWithLedger = mine.map((infraction) => ({
     ...infraction,
