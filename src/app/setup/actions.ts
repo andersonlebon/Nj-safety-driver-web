@@ -5,26 +5,17 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { setActiveProfileCookie } from "@/lib/auth/profiles";
 import { friendlyError } from "@/lib/errors";
+import {
+  adminInstallationExists,
+  finalizeBootstrapAdminProfile,
+  findAuthUserByEmail,
+  removeOrphanProfilesForEmail,
+  rollbackBootstrapAttempt,
+} from "@/lib/auth/bootstrap-admin";
 
 export type SetupResult =
   | { ok: true }
   | { ok: false; error: string };
-
-/**
- * Returns true if at least one admin profile already exists.
- * Uses the service-role client so RLS cannot mask the count.
- */
-async function adminExists(): Promise<boolean> {
-  const admin = createAdminClient();
-  const { count, error } = await admin
-    .from("profiles")
-    .select("id", { count: "exact", head: true })
-    .eq("role", "admin");
-  if (error) {
-    throw new Error(`Failed to check for existing admins: ${error.message}`);
-  }
-  return (count ?? 0) > 0;
-}
 
 export async function bootstrapAdmin(formData: FormData): Promise<SetupResult> {
   const full_name = String(formData.get("full_name") ?? "").trim();
@@ -42,16 +33,23 @@ export async function bootstrapAdmin(formData: FormData): Promise<SetupResult> {
     return { ok: false, error: "Passwords do not match." };
   }
 
-  // Race-safe re-check: even if someone hit this action directly, post-bootstrap
-  // it must refuse to run.
-  if (await adminExists()) {
+  const admin = createAdminClient();
+
+  if (await adminInstallationExists(admin)) {
     throw new Error("Setup is locked");
   }
 
-  const admin = createAdminClient();
+  await removeOrphanProfilesForEmail(admin, email);
 
-  // 1. Create the auth user via the privileged Admin API. `email_confirm: true`
-  //    skips the inbox confirmation hop so the new admin can sign in immediately.
+  const existingAuth = await findAuthUserByEmail(admin, email);
+  if (existingAuth) {
+    return {
+      ok: false,
+      error:
+        "An account with that email already exists. Sign in at /login/admin or use a different email.",
+    };
+  }
+
   const { data: created, error: createErr } = await admin.auth.admin.createUser({
     email,
     password,
@@ -68,47 +66,26 @@ export async function bootstrapAdmin(formData: FormData): Promise<SetupResult> {
 
   const userId = created.user.id;
 
-  // 2. Explicitly upsert the profiles row with role='admin'. We do NOT rely on
-  //    the `handle_new_user` trigger's metadata path: that path is now hardened
-  //    to ALWAYS default to 'driver' (see post-migrations) to prevent
-  //    privilege escalation via the public signup endpoint.
-  const { error: upsertErr } = await admin
-    .from("profiles")
-    .upsert(
-      {
-        id: userId,
-        user_id: userId,
-        email,
-        full_name,
-        role: "admin",
-      },
-      { onConflict: "id" }
-    );
+  const finalized = await finalizeBootstrapAdminProfile(admin, {
+    userId,
+    email,
+    full_name,
+  });
 
-  if (upsertErr) {
-    await admin.auth.admin.deleteUser(userId).catch(() => {});
+  if (!finalized.ok) {
+    await rollbackBootstrapAttempt(admin, { userId, email });
     return {
       ok: false,
-      error: `We couldn't finish creating your admin account. ${friendlyError(upsertErr)}`,
+      error: `We couldn't finish creating your admin account. ${friendlyError(finalized.error)}`,
     };
   }
 
-  await admin.from("user_profile_links").upsert(
-    {
-      user_id: userId,
-      profile_id: userId,
-      profile_type: "admin",
-    },
-    { onConflict: "user_id,profile_type" }
-  );
-
-  // 3. Sign the new admin in via the regular SSR client so the auth cookies
-  //    land on the response and the next request is already authenticated.
   const supabase = createClient();
   const { error: signInErr } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
+
   if (signInErr) {
     return {
       ok: false,
