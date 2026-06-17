@@ -3,16 +3,21 @@ import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Card, CardBody } from "@/components/ui/Card";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { parseTableQuery } from "@/lib/pagination";
 import { AdminDriversTable } from "@/app/admin/AdminDriversTable";
-import { loadDriverDirectoryPageData } from "@/lib/queries/drivers";
+import { loadDriverDirectoryPaginated } from "@/lib/queries/drivers";
 
 export const dynamic = "force-dynamic";
 
-export default async function AgentDriversPage() {
+export default async function AgentDriversPage({
+  searchParams,
+}: {
+  searchParams?: Record<string, string | string[] | undefined>;
+}) {
   const me = await requireRole(["agent", "admin"]);
   const supabase = createClient();
-  const { drivers, vehiclesByDriver } = await loadDriverDirectoryPageData(supabase);
+  const tableQuery = parseTableQuery(searchParams);
+  const pageData = await loadDriverDirectoryPaginated(supabase, tableQuery);
 
   return (
     <div>
@@ -22,21 +27,16 @@ export default async function AgentDriversPage() {
       />
       <Card>
         <CardBody>
-          {drivers.length === 0 ? (
-            <EmptyState
-              icon={<Users className="h-8 w-8" />}
-              title="No drivers"
-              description="Driver accounts will appear here once people register."
-            />
-          ) : (
-            <AdminDriversTable
-              drivers={drivers}
-              staffId={me.id}
-              staffRole={me.role}
-              vehiclesByDriver={vehiclesByDriver}
-              canManageDrivers={false}
-            />
-          )}
+          <AdminDriversTable
+            pathname="/agent/drivers"
+            query={pageData.query}
+            totalCount={pageData.totalCount}
+            drivers={pageData.rows}
+            staffId={me.id}
+            staffRole={me.role}
+            vehiclesByDriver={pageData.vehiclesByDriver}
+            canManageDrivers={false}
+          />
         </CardBody>
       </Card>
     </div>

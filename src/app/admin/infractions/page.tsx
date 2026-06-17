@@ -2,22 +2,27 @@ import { AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Card, CardBody } from "@/components/ui/Card";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { loadInfractionsWithTransactions } from "@/lib/queries/infractions";
+import { parseTableQuery } from "@/lib/pagination";
+import { loadInfractionsPaginated } from "@/lib/queries/infractions";
 import { InfractionsTable } from "@/app/agent/infractions/InfractionsTable";
 import { CreateInfractionDialog } from "@/app/agent/search/CreateInfractionDialog";
 
-export default async function AdminInfractionsPage() {
+export default async function AdminInfractionsPage({
+  searchParams,
+}: {
+  searchParams?: Record<string, string | string[] | undefined>;
+}) {
   const supabase = createClient();
-  const [{ infractions, transactionStatusByInfraction }, { data: templates }] =
-    await Promise.all([
-      loadInfractionsWithTransactions(supabase),
-      supabase
-        .from("infraction_templates")
-        .select("code, label, amount, points, category")
-        .eq("active", true)
-        .order("label", { ascending: true }),
-    ]);
+  const tableQuery = parseTableQuery(searchParams);
+
+  const [pageData, { data: templates }] = await Promise.all([
+    loadInfractionsPaginated(supabase, tableQuery),
+    supabase
+      .from("infraction_templates")
+      .select("code, label, amount, points, category")
+      .eq("active", true)
+      .order("label", { ascending: true }),
+  ]);
 
   return (
     <div>
@@ -33,18 +38,13 @@ export default async function AdminInfractionsPage() {
       />
       <Card>
         <CardBody>
-          {infractions.length === 0 ? (
-            <EmptyState
-              icon={<AlertTriangle className="h-8 w-8" />}
-              title="No infractions"
-              description="Infractions filed by agents will appear here."
-            />
-          ) : (
-            <InfractionsTable
-              infractions={infractions}
-              transactionStatusByInfraction={transactionStatusByInfraction}
-            />
-          )}
+          <InfractionsTable
+            pathname="/admin/infractions"
+            query={pageData.query}
+            totalCount={pageData.totalCount}
+            infractions={pageData.rows}
+            transactionStatusByInfraction={pageData.transactionStatusByInfraction}
+          />
         </CardBody>
       </Card>
     </div>

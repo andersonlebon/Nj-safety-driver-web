@@ -8,7 +8,7 @@ export type TableFilterOption = { value: string; label: string };
 type Props = {
   statusValue: string;
   onStatusChange: (value: string) => void;
-  statusOptions: TableFilterOption[];
+  statusOptions?: TableFilterOption[];
   statusLabel?: string;
   dateFrom: string;
   dateTo: string;
@@ -20,7 +20,7 @@ type Props = {
 export function TableFilters({
   statusValue,
   onStatusChange,
-  statusOptions,
+  statusOptions = [],
   statusLabel = "Status",
   dateFrom,
   dateTo,
@@ -30,20 +30,22 @@ export function TableFilters({
 }: Props) {
   return (
     <>
-      <Select
-        label={statusLabel}
-        name="table_status_filter"
-        value={statusValue}
-        onChange={(e) => onStatusChange(e.target.value)}
-        className="min-w-[140px]"
-      >
-        <option value="">All statuses</option>
-        {statusOptions.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </Select>
+      {statusOptions.length > 0 && (
+        <Select
+          label={statusLabel}
+          name="table_status_filter"
+          value={statusValue}
+          onChange={(e) => onStatusChange(e.target.value)}
+          className="min-w-[140px]"
+        >
+          <option value="">All statuses</option>
+          {statusOptions.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </Select>
+      )}
       {showDateFilters && (
         <>
           <Input

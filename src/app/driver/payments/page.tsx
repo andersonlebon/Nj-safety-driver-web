@@ -4,23 +4,23 @@ import { requireRole } from "@/lib/auth";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Card, CardBody } from "@/components/ui/Card";
 import { StatCard } from "@/components/dashboard/StatCard";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { InfractionStatusBadge } from "@/components/ui/InfractionStatusBadge";
 import { Alert } from "@/components/ui/Alert";
-import { formatCurrency, formatDate } from "@/lib/utils";
-import type { PaymentStatus, TransactionStatus } from "@/lib/types/database";
+import { parseTableQuery } from "@/lib/pagination";
+import { loadInfractionsPaginated } from "@/lib/queries/infractions";
+import { formatCurrency } from "@/lib/utils";
+import type { TransactionStatus } from "@/lib/types/database";
+import { DriverPaymentsTable } from "./DriverPaymentsTable";
 
-export default async function DriverPaymentsPage() {
-  const profile = await requireRole(["driver", "admin"]);
-  const supabase = createClient();
-
+async function loadDriverPaymentStats(
+  supabase: ReturnType<typeof createClient>,
+  driverId: string
+) {
   const { data: infractions } = await supabase
     .from("infractions")
-    .select("*")
-    .eq("driver_id", profile.id)
-    .order("created_at", { ascending: false });
+    .select("id, fine_amount, status")
+    .eq("driver_id", driverId);
 
-  const list = infractions || [];
+  const list = infractions ?? [];
   const infractionIds = list.map((infraction) => infraction.id);
   const { data: transactions } =
     infractionIds.length > 0
@@ -29,24 +29,69 @@ export default async function DriverPaymentsPage() {
           .select("infraction_id, amount, status")
           .in("infraction_id", infractionIds)
       : { data: [] };
+
   const transactionMap = new Map(
-    (transactions ?? []).map((transaction) => [
-      transaction.infraction_id,
-      transaction,
-    ])
+    (transactions ?? []).map((transaction) => [transaction.infraction_id, transaction])
   );
-  const transactionRows = list.map((infraction) => {
+
+  let unpaid = 0;
+  let pending = 0;
+  let paid = 0;
+  let totalDue = 0;
+
+  for (const infraction of list) {
+    const transaction = transactionMap.get(infraction.id);
+    const status = (transaction?.status ?? infraction.status) as TransactionStatus;
+    const amount = Number(transaction?.amount ?? infraction.fine_amount);
+
+    if (status === "unpaid" || status === "initialized") {
+      unpaid += 1;
+      totalDue += amount;
+    } else if (status === "pending") {
+      pending += 1;
+    } else if (status === "paid") {
+      paid += 1;
+    }
+  }
+
+  return { unpaid, pending, paid, totalDue };
+}
+
+export default async function DriverPaymentsPage({
+  searchParams,
+}: {
+  searchParams?: Record<string, string | string[] | undefined>;
+}) {
+  const profile = await requireRole(["driver", "admin"]);
+  const supabase = createClient();
+  const tableQuery = parseTableQuery(searchParams);
+
+  const [pageData, stats] = await Promise.all([
+    loadInfractionsPaginated(supabase, tableQuery, { driverId: profile.id }),
+    loadDriverPaymentStats(supabase, profile.id),
+  ]);
+
+  const infractionIds = pageData.rows.map((row) => row.id);
+  const { data: transactions } =
+    infractionIds.length > 0
+      ? await supabase
+          .from("transactions")
+          .select("infraction_id, amount, status")
+          .in("infraction_id", infractionIds)
+      : { data: [] };
+
+  const transactionMap = new Map(
+    (transactions ?? []).map((transaction) => [transaction.infraction_id, transaction])
+  );
+
+  const ledgerRows = pageData.rows.map((infraction) => {
     const transaction = transactionMap.get(infraction.id);
     return {
       infraction,
       amount: Number(transaction?.amount ?? infraction.fine_amount),
-      status: transaction?.status ?? infraction.status,
+      status: (transaction?.status ?? infraction.status) as TransactionStatus,
     };
   });
-  const unpaid = transactionRows.filter((row) => row.status === "unpaid");
-  const pending = transactionRows.filter((row) => row.status === "pending");
-  const paid = transactionRows.filter((row) => row.status === "paid");
-  const totalDue = unpaid.reduce((sum, row) => sum + row.amount, 0);
 
   return (
     <div className="space-y-6">
@@ -58,12 +103,12 @@ export default async function DriverPaymentsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           label="Total due"
-          value={formatCurrency(totalDue)}
+          value={formatCurrency(stats.totalDue)}
           icon={<Wallet className="h-4 w-4" />}
         />
-        <StatCard label="Unpaid" value={unpaid.length} />
-        <StatCard label="Pending" value={pending.length} />
-        <StatCard label="Paid" value={paid.length} />
+        <StatCard label="Unpaid" value={stats.unpaid} />
+        <StatCard label="Pending" value={stats.pending} />
+        <StatCard label="Paid" value={stats.paid} />
       </div>
 
       <Alert variant="info">
@@ -73,42 +118,15 @@ export default async function DriverPaymentsPage() {
 
       <Card>
         <CardBody>
-          <h3 className="text-sm font-semibold text-slate-900 mb-4">
-            Payment ledger
-          </h3>
-          {list.length === 0 ? (
-            <EmptyState title="Nothing to pay" description="No infractions on record." />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-left text-slate-500 border-b border-slate-200">
-                  <tr>
-                    <th className="py-2 pr-4 font-medium">Date</th>
-                    <th className="py-2 pr-4 font-medium">Plate</th>
-                    <th className="py-2 pr-4 font-medium">Type</th>
-                    <th className="py-2 pr-4 font-medium">Amount</th>
-                    <th className="py-2 pr-4 font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {transactionRows.map(({ infraction, amount, status }) => (
-                    <tr key={infraction.id} className="border-b border-slate-100 last:border-0">
-                      <td className="py-2 pr-4 text-slate-700">{formatDate(infraction.created_at)}</td>
-                      <td className="py-2 pr-4 font-medium text-slate-900">{infraction.plate_number}</td>
-                      <td className="py-2 pr-4 text-slate-700">{infraction.infraction_type}</td>
-                      <td className="py-2 pr-4 text-slate-700">{formatCurrency(amount)}</td>
-                      <td className="py-2 pr-4">
-                        <InfractionStatusBadge status={status} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <h3 className="text-sm font-semibold text-slate-900 mb-4">Payment ledger</h3>
+          <DriverPaymentsTable
+            pathname="/driver/payments"
+            query={pageData.query}
+            totalCount={pageData.totalCount}
+            rows={ledgerRows}
+          />
         </CardBody>
       </Card>
     </div>
   );
 }
-

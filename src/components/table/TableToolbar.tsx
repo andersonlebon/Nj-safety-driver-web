@@ -11,7 +11,8 @@ type Props = {
   searchPlaceholder?: string;
   statusValue: string;
   onStatusChange: (value: string) => void;
-  statusOptions: TableFilterOption[];
+  statusOptions?: TableFilterOption[];
+  statusLabel?: string;
   dateFrom: string;
   dateTo: string;
   onDateFromChange: (value: string) => void;
@@ -28,7 +29,8 @@ export function TableToolbar({
   searchPlaceholder,
   statusValue,
   onStatusChange,
-  statusOptions,
+  statusOptions = [],
+  statusLabel,
   dateFrom,
   dateTo,
   onDateFromChange,
@@ -46,16 +48,19 @@ export function TableToolbar({
           onChange={onSearchChange}
           placeholder={searchPlaceholder}
         />
-        <TableFilters
-          statusValue={statusValue}
-          onStatusChange={onStatusChange}
-          statusOptions={statusOptions}
-          dateFrom={dateFrom}
-          dateTo={dateTo}
-          onDateFromChange={onDateFromChange}
-          onDateToChange={onDateToChange}
-          showDateFilters={showDateFilters}
-        />
+        {(statusOptions.length > 0 || showDateFilters) && (
+          <TableFilters
+            statusValue={statusValue}
+            onStatusChange={onStatusChange}
+            statusOptions={statusOptions}
+            statusLabel={statusLabel}
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+            onDateFromChange={onDateFromChange}
+            onDateToChange={onDateToChange}
+            showDateFilters={showDateFilters}
+          />
+        )}
         {hasActiveFilters && (
           <Button type="button" variant="secondary" onClick={onReset}>
             <RotateCcw className="h-4 w-4 mr-1.5" />
