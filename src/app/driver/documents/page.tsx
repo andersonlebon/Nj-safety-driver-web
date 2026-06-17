@@ -15,7 +15,9 @@ export default async function DriverDocumentsPage() {
   const [{ data: documents }, { data: vehicles }] = await Promise.all([
     supabase
       .from("documents")
-      .select("*")
+      .select(
+        "id, owner_id, group_id, doc_type, label, file_path, file_name, file_hash, verification_status, expires_at, vehicle_id, uploaded_at"
+      )
       .eq("owner_id", profile.id)
       .order("uploaded_at", { ascending: false }),
     supabase

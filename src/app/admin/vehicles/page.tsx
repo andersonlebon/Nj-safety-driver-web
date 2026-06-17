@@ -5,6 +5,7 @@ import { Card, CardBody } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Alert } from "@/components/ui/Alert";
 import { signDocumentPaths } from "@/lib/storage-urls";
+import { loadVehicleDirectoryPageData } from "@/lib/queries/vehicles";
 import { AdminVehiclesTable } from "../AdminVehiclesTable";
 import type { Database } from "@/lib/types/database";
 
@@ -21,67 +22,20 @@ export default async function AdminVehiclesPage({
   const filter = searchParams?.status;
   const origin = searchParams?.origin;
 
-  let query = supabase.from("vehicles").select("*").order("created_at", {
-    ascending: false,
-  });
-
-  if (
+  const verificationStatus =
     filter === "pending_review" ||
     filter === "active" ||
     filter === "rejected" ||
     filter === "pending_documents"
-  ) {
-    query = query.eq("verification_status", filter);
-  }
+      ? (filter as Vehicle["verification_status"])
+      : undefined;
 
-  if (origin === "foreign") {
-    query = query.eq("is_foreign", true);
-  } else if (origin === "domestic") {
-    query = query.or("is_foreign.eq.false,is_foreign.is.null");
-  }
-
-  const { data: vehicles, error } = await query;
-
-  const ownerIds = [
-    ...new Set(
-      (vehicles ?? [])
-        .map((v) => v.owner_id)
-        .filter((id): id is string => id != null)
-    ),
-  ];
-  const { data: owners } =
-    ownerIds.length > 0
-      ? await supabase
-          .from("profiles")
-          .select("id, full_name, email")
-          .in("id", ownerIds)
-      : { data: [] as { id: string; full_name: string | null; email: string | null }[] };
-
-  const ownerMap = Object.fromEntries(
-    (owners ?? []).map((o) => [o.id, o])
-  );
-
-  const vehicleIds = (vehicles ?? []).map((v) => v.id);
-  const { data: photos } =
-    vehicleIds.length > 0
-      ? await supabase
-          .from("documents")
-          .select("vehicle_id, file_path")
-          .in("vehicle_id", vehicleIds)
-          .eq("doc_type", "vehicle_photo")
-          .eq("label", "front")
-      : { data: [] as { vehicle_id: string | null; file_path: string }[] };
-
-  const photoByVehicle: Record<string, string> = {};
-  for (const p of photos ?? []) {
-    if (p.vehicle_id) photoByVehicle[p.vehicle_id] = p.file_path;
-  }
-
-  const signed = await signDocumentPaths(Object.values(photoByVehicle));
-  const photoUrls: Record<string, string> = {};
-  for (const [vehicleId, path] of Object.entries(photoByVehicle)) {
-    photoUrls[vehicleId] = signed[path] ?? "";
-  }
+  const { vehicles, ownerMap, photoUrls, error } =
+    await loadVehicleDirectoryPageData(supabase, {
+      verificationStatus,
+      origin:
+        origin === "foreign" || origin === "domestic" ? origin : undefined,
+    });
 
   const statusTabs = [
     { href: buildHref(undefined, origin), label: "All", key: "all" },

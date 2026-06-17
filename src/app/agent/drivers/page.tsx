@@ -5,32 +5,14 @@ import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Card, CardBody } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { AdminDriversTable } from "@/app/admin/AdminDriversTable";
-import { driverDirectoryQuery } from "@/lib/driver-profiles";
+import { loadDriverDirectoryPageData } from "@/lib/queries/drivers";
 
 export const dynamic = "force-dynamic";
 
 export default async function AgentDriversPage() {
   const me = await requireRole(["agent", "admin"]);
   const supabase = createClient();
-
-  const { data: drivers } = await driverDirectoryQuery(supabase);
-
-  const driverIds = (drivers ?? []).map((driver) => driver.id);
-  const { data: vehicles } =
-    driverIds.length > 0
-      ? await supabase
-          .from("vehicles")
-          .select("id, owner_id, plate_number, registration_country, brand, model, verification_status")
-          .in("owner_id", driverIds)
-          .order("created_at", { ascending: false })
-      : { data: [] };
-
-  const vehiclesByDriver = Object.fromEntries(
-    driverIds.map((id) => [
-      id,
-      (vehicles ?? []).filter((vehicle) => vehicle.owner_id === id),
-    ])
-  );
+  const { drivers, vehiclesByDriver } = await loadDriverDirectoryPageData(supabase);
 
   return (
     <div>
@@ -40,7 +22,7 @@ export default async function AgentDriversPage() {
       />
       <Card>
         <CardBody>
-          {!drivers || drivers.length === 0 ? (
+          {drivers.length === 0 ? (
             <EmptyState
               icon={<Users className="h-8 w-8" />}
               title="No drivers"
@@ -60,4 +42,3 @@ export default async function AgentDriversPage() {
     </div>
   );
 }
-

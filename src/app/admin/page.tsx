@@ -32,6 +32,7 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { loadAdminOverviewData } from "@/lib/queries/admin-overview";
 import type { PaymentStatus } from "@/lib/types/database";
 
 type InfractionRow = {
@@ -42,12 +43,6 @@ type InfractionRow = {
   status: PaymentStatus;
   created_at: string;
   agent_id: string | null;
-};
-
-type VehicleRow = {
-  id: string;
-  insurance_status: boolean;
-  inspection_status: boolean;
 };
 
 type AgentProfile = {
@@ -65,80 +60,22 @@ export default async function AdminOverviewPage() {
   const cutoff30 = new Date(now.getTime() - 30 * MS_PER_DAY).toISOString();
   const cutoff60 = new Date(now.getTime() - 60 * MS_PER_DAY).toISOString();
 
-  const [
-    { count: drivers },
-    { count: agents },
-    { data: vehicleRows },
-    { data: infractionRows },
-    { data: recent },
-    { data: agentProfiles },
-  ] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id", { count: "exact", head: true })
-      .eq("role", "driver"),
-    supabase
-      .from("profiles")
-      .select("id", { count: "exact", head: true })
-      .eq("role", "agent"),
-    supabase
-      .from("vehicles")
-      .select("id, insurance_status, inspection_status"),
-    supabase
-      .from("infractions")
-      .select(
-        "id, plate_number, infraction_type, fine_amount, status, created_at, agent_id"
-      )
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("infractions")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(8),
-    supabase
-      .from("profiles")
-      .select("id, full_name, email")
-      .eq("role", "agent"),
-  ]);
+  const overview = await loadAdminOverviewData(supabase);
 
-  const vehicles: VehicleRow[] = vehicleRows ?? [];
-  const infractions: InfractionRow[] = (infractionRows ?? []).map((i) => ({
-    ...i,
-    fine_amount: Number(i.fine_amount),
-  }));
+  const infractions: InfractionRow[] = overview.analyticsInfractions;
+  const recent = overview.recentInfractions;
+  const financialRows = overview.financialRows;
+  const vehicles = {
+    length: overview.vehicleTotal,
+    insured: overview.vehicleInsured,
+    inspected: overview.vehicleInspected,
+  };
 
-  const totalInfractions = infractions.length;
-  const infractionIds = infractions.map((infraction) => infraction.id);
-  const { data: transactionRows } =
-    infractionIds.length > 0
-      ? await supabase
-          .from("transactions")
-          .select("infraction_id, amount, status, created_at")
-          .in("infraction_id", infractionIds)
-      : { data: [] };
-  const transactionMap = new Map(
-    (transactionRows ?? []).map((transaction) => [
-      transaction.infraction_id,
-      transaction,
-    ])
-  );
-  const financialRows = infractions.map((infraction) => {
-    const transaction = transactionMap.get(infraction.id);
-    return {
-      fine_amount: Number(transaction?.amount ?? infraction.fine_amount),
-      status:
-        transaction?.status === "initialized"
-          ? ("unpaid" as const)
-          : transaction?.status ?? infraction.status,
-      created_at: transaction?.created_at ?? infraction.created_at,
-    };
-  });
   const totals = totalsByPaymentStatus(financialRows);
   const collected = totals.paid;
   const pendingTotal = totals.pending;
   const unpaidTotal = totals.unpaid;
 
-  // Deltas: current 30-day window vs previous 30-day window
   const cur = infractions.filter((i) => i.created_at >= cutoff30);
   const prev = infractions.filter(
     (i) => i.created_at < cutoff30 && i.created_at >= cutoff60
@@ -168,12 +105,12 @@ export default async function AdminOverviewPage() {
   const topAgents = topN(infractions, (i) => i.agent_id ?? null, 5);
 
   const agentLookup = new Map<string, AgentProfile>();
-  for (const a of (agentProfiles ?? []) as AgentProfile[]) {
+  for (const a of overview.agentProfiles as AgentProfile[]) {
     agentLookup.set(a.id, a);
   }
 
-  const insured = vehicles.filter((v) => v.insurance_status).length;
-  const inspected = vehicles.filter((v) => v.inspection_status).length;
+  const insured = vehicles.insured;
+  const inspected = vehicles.inspected;
 
   const insuranceSlices: DonutSlice[] = [
     { label: "Insured", value: insured, color: chartColors.brand },
@@ -203,13 +140,13 @@ export default async function AdminOverviewPage() {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <KpiCard
           label="Drivers"
-          value={drivers ?? 0}
+          value={overview.drivers}
           icon={<Users className="h-4 w-4" />}
           accent="brand"
         />
         <KpiCard
           label="Agents"
-          value={agents ?? 0}
+          value={overview.agents}
           icon={<ShieldCheck className="h-4 w-4" />}
           accent="navy"
         />
@@ -222,7 +159,7 @@ export default async function AdminOverviewPage() {
         />
         <KpiCard
           label="Infractions"
-          value={totalInfractions}
+          value={overview.totalInfractions}
           icon={<AlertTriangle className="h-4 w-4" />}
           accent="gold"
           delta={pctDelta(curCount, prevCount)}

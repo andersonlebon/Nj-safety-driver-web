@@ -35,11 +35,10 @@ export const getSessionUser = cache(async () => {
  * Cached per request so layouts and pages share the same result.
  */
 export const getCurrentProfile = cache(async (): Promise<Profile | null> => {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSessionUser();
   if (!user) return null;
+
+  const supabase = createClient();
 
   const { data: existing } = await supabase
     .from("profiles")
