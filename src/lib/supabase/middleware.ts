@@ -1,5 +1,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { ACTIVE_PROFILE_COOKIE } from "@/lib/auth/profile-session";
+import { destinationForProfile } from "@/lib/auth/profile-session";
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({
@@ -34,13 +36,11 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Explicit public routes — never bounce unauthenticated visitors away from
-  // these. `/setup` is intentionally public because it is the one-time
-  // first-admin bootstrap (which gates itself server-side).
   const isPublicRoute =
     pathname.startsWith("/login") ||
     pathname.startsWith("/register") ||
-    pathname.startsWith("/setup");
+    pathname.startsWith("/setup") ||
+    pathname.startsWith("/auth/select-profile");
 
   const isAuthRoute =
     pathname.startsWith("/login") || pathname.startsWith("/register");
@@ -62,30 +62,99 @@ export async function updateSession(request: NextRequest) {
     return response;
   }
 
-  if (user && isAuthRoute) {
-    const { data } = await supabase
-      .from("profiles")
-      .select("role, agent_application_status")
-      .eq("id", user.id)
-      .maybeSingle();
+  if (user && isProtectedRoute) {
+    const activeProfileId = request.cookies.get(ACTIVE_PROFILE_COOKIE)?.value;
 
-    const profile = data as {
-      role?: string;
-      agent_application_status?: string | null;
-    } | null;
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, role, onboarded_at, agent_application_status")
+      .eq("user_id", user.id);
+
+    let rows = profiles ?? [];
+    if (rows.length === 0) {
+      const { data: legacy } = await supabase
+        .from("profiles")
+        .select("id, role, onboarded_at, agent_application_status")
+        .eq("id", user.id)
+        .maybeSingle();
+      rows = legacy ? [legacy] : [];
+    }
+
+    if (rows.length > 1 && !activeProfileId) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/auth/select-profile";
+      url.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(url);
+    }
+
+    const active =
+      rows.find((row) => row.id === activeProfileId) ?? (rows.length === 1 ? rows[0] : null);
+
+    if (!active) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/auth/select-profile";
+      return NextResponse.redirect(url);
+    }
+
+    const expectedPrefix = `/${active.role}`;
+    if (
+      !pathname.startsWith(expectedPrefix) &&
+      !(active.role === "admin" && (pathname.startsWith("/driver") || pathname.startsWith("/agent")))
+    ) {
+      const url = request.nextUrl.clone();
+      url.pathname = destinationForProfile(active);
+      return NextResponse.redirect(url);
+    }
 
     if (
-      profile?.role === "driver" &&
-      profile.agent_application_status === "pending"
+      active.role === "driver" &&
+      active.agent_application_status === "pending" &&
+      !pathname.startsWith("/register/agent/pending")
     ) {
       const url = request.nextUrl.clone();
       url.pathname = "/register/agent/pending";
       return NextResponse.redirect(url);
     }
+  }
 
-    if (profile?.role) {
+  if (user && isAuthRoute) {
+    const activeProfileId = request.cookies.get(ACTIVE_PROFILE_COOKIE)?.value;
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, role, onboarded_at, agent_application_status")
+      .eq("user_id", user.id);
+
+    let rows = profiles ?? [];
+    if (rows.length === 0) {
+      const { data: legacy } = await supabase
+        .from("profiles")
+        .select("id, role, onboarded_at, agent_application_status")
+        .eq("id", user.id)
+        .maybeSingle();
+      rows = legacy ? [legacy] : [];
+    }
+
+    if (rows.length > 1 && !activeProfileId) {
       const url = request.nextUrl.clone();
-      url.pathname = `/${profile.role}`;
+      url.pathname = "/auth/select-profile";
+      return NextResponse.redirect(url);
+    }
+
+    const active =
+      rows.find((row) => row.id === activeProfileId) ?? (rows.length === 1 ? rows[0] : null);
+
+    if (active) {
+      if (
+        active.role === "driver" &&
+        active.agent_application_status === "pending"
+      ) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/register/agent/pending";
+        return NextResponse.redirect(url);
+      }
+
+      const url = request.nextUrl.clone();
+      url.pathname = destinationForProfile(active);
       return NextResponse.redirect(url);
     }
   }

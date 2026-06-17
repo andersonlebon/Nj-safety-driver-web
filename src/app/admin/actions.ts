@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { friendlyError } from "@/lib/errors";
-import { requireRole, requireRoleForAction } from "@/lib/auth";
+import { requireRole, requireRoleForAction, createTypedProfile } from "@/lib/auth";
 import { canAssignAdminRole } from "@/lib/staff";
 import type { UserRole } from "@/lib/types/database";
 
@@ -54,6 +54,39 @@ export async function updateUserRole(
   }
 
   const supabase = createClient();
+  const { data: targetProfile, error: loadError } = await supabase
+    .from("profiles")
+    .select("id, user_id, email, full_name, phone, agent_badge_id")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (loadError || !targetProfile) {
+    return { ok: false, error: "Profile not found." };
+  }
+
+  const authUserId = targetProfile.user_id ?? targetProfile.id;
+
+  if (role === "admin" || role === "agent") {
+    const created = await createTypedProfile({
+      userId: authUserId,
+      role,
+      email: targetProfile.email,
+      full_name: targetProfile.full_name,
+      phone: targetProfile.phone,
+      agent_badge_id: targetProfile.agent_badge_id,
+      agent_application_status: role === "agent" ? "approved" : null,
+    });
+
+    if (!created.ok) {
+      return { ok: false, error: created.error };
+    }
+
+    revalidatePath("/admin");
+    revalidatePath("/admin/drivers");
+    revalidatePath("/admin/agents");
+    return { ok: true };
+  }
+
   const { error } = await supabase
     .from("profiles")
     .update({ role })
@@ -122,15 +155,40 @@ export async function reviewAgentApplication(
   const supabase = createClient();
 
   if (decision === "approve") {
+    const { data: applicant, error: loadError } = await supabase
+      .from("profiles")
+      .select("id, user_id, email, full_name, phone, agent_badge_id")
+      .eq("id", userId)
+      .eq("agent_application_status", "pending")
+      .maybeSingle();
+
+    if (loadError || !applicant) {
+      return { ok: false, error: "Pending application not found." };
+    }
+
+    const authUserId = applicant.user_id ?? applicant.id;
+
+    const created = await createTypedProfile({
+      userId: authUserId,
+      role: "agent",
+      email: applicant.email,
+      full_name: applicant.full_name,
+      phone: applicant.phone,
+      agent_badge_id: applicant.agent_badge_id,
+      agent_application_status: "approved",
+    });
+
+    if (!created.ok) {
+      return { ok: false, error: created.error };
+    }
+
     const { error } = await supabase
       .from("profiles")
       .update({
-        role: "agent",
         agent_application_status: "approved",
         admin_message: null,
       })
-      .eq("id", userId)
-      .eq("agent_application_status", "pending");
+      .eq("id", userId);
 
     if (error) return { ok: false, error: friendlyError(error) };
   } else {

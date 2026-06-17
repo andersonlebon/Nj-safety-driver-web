@@ -46,14 +46,17 @@ export default async function LoginPage() {
         </Link>
       )}
       <h1 className="text-xl font-semibold text-stone-900 dark:text-stone-100">
-        {t("auth.signIn")}
+        Driver sign-in
       </h1>
       <p className="mt-1 text-sm text-stone-600 dark:text-slate-400">
         {t("auth.signInHint")}
       </p>
       <div className="mt-6">
         <Suspense>
-          <LoginForm />
+          <LoginForm
+            portal="driver"
+            hint="Agents and administrators must use their own sign-in pages."
+          />
         </Suspense>
       </div>
       <p className="mt-6 text-sm text-stone-600 dark:text-slate-400">
@@ -63,6 +66,16 @@ export default async function LoginPage() {
           className="text-brand-700 dark:text-brand-300 font-medium hover:underline"
         >
           {t("auth.createAccount")}
+        </Link>
+      </p>
+      <p className="mt-3 text-sm text-stone-600 dark:text-slate-400">
+        Staff access:{" "}
+        <Link href="/login/agent" className="text-brand-700 dark:text-brand-300 font-medium hover:underline">
+          Agent sign-in
+        </Link>
+        {" · "}
+        <Link href="/login/admin" className="text-brand-700 dark:text-brand-300 font-medium hover:underline">
+          Admin sign-in
         </Link>
       </p>
       <p className="mt-3 text-sm text-stone-600 dark:text-slate-400">

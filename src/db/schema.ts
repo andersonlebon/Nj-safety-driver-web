@@ -53,6 +53,7 @@ export const agentApplicationStatus = pgEnum("agent_application_status", [
 
 export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey().notNull(),
+  userId: uuid("user_id").notNull(),
   role: userRole("role").notNull().default("driver"),
   fullName: text("full_name"),
   phone: text("phone"),
@@ -100,6 +101,19 @@ export const adminProfiles = pgTable("admin_profiles", {
   profileId: uuid("profile_id")
     .primaryKey()
     .references(() => profiles.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .default(sql`now()`),
+});
+
+/** Links one auth user to one or more typed profiles (driver, agent, admin). */
+export const userProfileLinks = pgTable("user_profile_links", {
+  id: uuid("id").primaryKey().default(sql`uuid_generate_v4()`),
+  userId: uuid("user_id").notNull(),
+  profileId: uuid("profile_id")
+    .notNull()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  profileType: userRole("profile_type").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .default(sql`now()`),
