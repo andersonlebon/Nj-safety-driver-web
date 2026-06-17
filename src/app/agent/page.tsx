@@ -22,6 +22,17 @@ import { requireRole } from "@/lib/auth";
 import { resolveLedgerStatus } from "@/lib/transactions";
 import type { PaymentStatus, TransactionStatus } from "@/lib/types/database";
 
+function InfractionStatusBadge({
+  status,
+}: {
+  status: PaymentStatus | TransactionStatus;
+}) {
+  if (status === "initialized") {
+    return <span className="badge-pending">Initialized</span>;
+  }
+  return <StatusBadge status={status as PaymentStatus} />;
+}
+
 type InfractionRow = {
   id: string;
   plate_number: string;
@@ -262,7 +273,7 @@ export default async function AgentOverviewPage() {
                           {formatCurrency(Number(i.fine_amount))}
                         </td>
                         <td className="py-2 pr-4">
-                          <StatusBadge status={ledgerStatus} />
+                          <InfractionStatusBadge status={ledgerStatus} />
                         </td>
                       </tr>
                       );
