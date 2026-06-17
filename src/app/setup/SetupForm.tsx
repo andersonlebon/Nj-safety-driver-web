@@ -15,14 +15,20 @@ export function SetupForm() {
   const handleSubmit = (formData: FormData) => {
     setError(null);
     startTransition(async () => {
-      const result = await bootstrapAdmin(formData);
-      // `bootstrapAdmin` redirects on success, so we only ever observe a
-      // returned value when something went wrong.
-      if (result && !result.ok) {
-        setError(result.error);
-        return;
+      try {
+        const result = await bootstrapAdmin(formData);
+        // `bootstrapAdmin` redirects on success, so we only ever observe a
+        // returned value when something went wrong.
+        if (result && !result.ok) {
+          console.error("Setup failed", { error: result.error });
+          setError(result.error);
+          return;
+        }
+        router.refresh();
+      } catch (error) {
+        console.error("Setup submission crashed", error);
+        setError("Setup failed unexpectedly. Check the console and try again.");
       }
-      router.refresh();
     });
   };
 

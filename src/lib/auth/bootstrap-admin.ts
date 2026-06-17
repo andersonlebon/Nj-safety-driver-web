@@ -4,12 +4,49 @@ import type { Database } from "@/lib/types/database";
 type AdminClient = SupabaseClient<Database>;
 
 export async function adminInstallationExists(admin: AdminClient): Promise<boolean> {
-  const [{ count: adminProfileCount }, { count: adminRoleCount }] = await Promise.all([
-    admin.from("admin_profiles").select("profile_id", { count: "exact", head: true }),
-    admin.from("profiles").select("id", { count: "exact", head: true }).eq("role", "admin"),
+  const [{ data: adminRoleProfiles }, { data: adminTypedProfiles }] = await Promise.all([
+    admin.from("profiles").select("id, user_id, role").eq("role", "admin"),
+    admin.from("admin_profiles").select("profile_id"),
   ]);
 
-  return (adminProfileCount ?? 0) > 0 || (adminRoleCount ?? 0) > 0;
+  const adminProfileIds = new Set<string>();
+  for (const row of adminRoleProfiles ?? []) {
+    adminProfileIds.add(row.id);
+  }
+  for (const row of adminTypedProfiles ?? []) {
+    adminProfileIds.add(row.profile_id);
+  }
+
+  for (const profileId of adminProfileIds) {
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("id, user_id, role")
+      .eq("id", profileId)
+      .maybeSingle();
+
+    if (!profile) {
+      await admin.from("admin_profiles").delete().eq("profile_id", profileId);
+      await admin.from("user_profile_links").delete().eq("profile_id", profileId);
+      continue;
+    }
+
+    const authId = profile.user_id ?? profile.id;
+    const { data: authUser, error } = await admin.auth.admin.getUserById(authId);
+
+    if (error || !authUser.user) {
+      await deleteProfileGraph(admin, profile.id);
+      continue;
+    }
+
+    if (profile.role !== "admin") {
+      await admin.from("admin_profiles").delete().eq("profile_id", profile.id);
+      continue;
+    }
+
+    return true;
+  }
+
+  return false;
 }
 
 /** Returns a user-facing message when multi-profile migrations were not applied. */
@@ -103,6 +140,7 @@ export async function finalizeBootstrapAdminProfile(
   const { userId, email, full_name } = input;
 
   await admin.from("user_profile_links").delete().eq("user_id", userId);
+  await admin.from("user_profile_links").delete().eq("profile_id", userId);
   await admin.from("driver_profiles").delete().eq("profile_id", userId);
   await admin.from("agent_profiles").delete().eq("profile_id", userId);
   await admin.from("admin_profiles").delete().eq("profile_id", userId);
@@ -140,11 +178,13 @@ export async function finalizeBootstrapAdminProfile(
     if (error) return { ok: false, error: error.message };
   }
 
-  const { error: linkError } = await admin.from("user_profile_links").insert({
-    user_id: userId,
-    profile_id: userId,
-    profile_type: "admin",
-  });
+  // The sync_user_profile_link trigger fires when the profile role is updated
+  // to "admin" above and may have already inserted this row. Use upsert so we
+  // don't fail with a unique constraint violation.
+  const { error: linkError } = await admin.from("user_profile_links").upsert(
+    { user_id: userId, profile_id: userId, profile_type: "admin" },
+    { onConflict: "user_id,profile_type" }
+  );
 
   if (linkError) return { ok: false, error: linkError.message };
 

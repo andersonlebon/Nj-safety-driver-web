@@ -1,36 +1,27 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Clock } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
+import { getSessionUser, requireActiveProfileSelection } from "@/lib/auth";
 
 export const metadata = {
   title: "Application pending | NJ Safety Driver",
 };
 
 export default async function AgentPendingPage() {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const user = await getSessionUser();
   if (!user) {
     redirect("/login?redirect=/register/agent/pending");
   }
+  const profile = await requireActiveProfileSelection();
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, agent_application_status, admin_message")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (profile?.role === "agent" || profile?.role === "admin") {
+  if (profile.role === "agent" || profile.role === "admin") {
     redirect(`/${profile.role}`);
   }
 
-  if (profile?.agent_application_status === "rejected") {
+  if (profile.agent_application_status === "rejected") {
     return (
       <Card>
         <CardBody className="text-center space-y-4">
@@ -48,7 +39,7 @@ export default async function AgentPendingPage() {
     );
   }
 
-  if (profile?.agent_application_status !== "pending") {
+  if (profile.agent_application_status !== "pending") {
     redirect("/register/agent");
   }
 
