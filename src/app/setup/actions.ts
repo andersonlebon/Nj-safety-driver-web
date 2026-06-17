@@ -9,6 +9,7 @@ import {
   adminInstallationExists,
   finalizeBootstrapAdminProfile,
   findAuthUserByEmail,
+  getSetupSchemaError,
   removeOrphanProfilesForEmail,
   rollbackBootstrapAttempt,
 } from "@/lib/auth/bootstrap-admin";
@@ -37,6 +38,11 @@ export async function bootstrapAdmin(formData: FormData): Promise<SetupResult> {
 
   if (await adminInstallationExists(admin)) {
     throw new Error("Setup is locked");
+  }
+
+  const schemaError = await getSetupSchemaError(admin);
+  if (schemaError) {
+    return { ok: false, error: schemaError };
   }
 
   await removeOrphanProfilesForEmail(admin, email);
@@ -76,7 +82,7 @@ export async function bootstrapAdmin(formData: FormData): Promise<SetupResult> {
     await rollbackBootstrapAttempt(admin, { userId, email });
     return {
       ok: false,
-      error: `We couldn't finish creating your admin account. ${friendlyError(finalized.error)}`,
+      error: `We couldn't finish creating your admin account. ${friendlyError({ message: finalized.error })}`,
     };
   }
 

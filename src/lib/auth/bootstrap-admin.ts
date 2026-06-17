@@ -12,6 +12,42 @@ export async function adminInstallationExists(admin: AdminClient): Promise<boole
   return (adminProfileCount ?? 0) > 0 || (adminRoleCount ?? 0) > 0;
 }
 
+/** Returns a user-facing message when multi-profile migrations were not applied. */
+export async function getSetupSchemaError(admin: AdminClient): Promise<string | null> {
+  const { error: profileError } = await admin.from("profiles").select("user_id").limit(1);
+  if (profileError) {
+    const message = profileError.message.toLowerCase();
+    if (message.includes("user_id") || message.includes("column")) {
+      return "Database setup is incomplete: the profiles.user_id column is missing. Run npm run db:push against production, then retry.";
+    }
+  }
+
+  const { error: linkError } = await admin.from("user_profile_links").select("id").limit(1);
+  if (linkError) {
+    const message = linkError.message.toLowerCase();
+    if (
+      message.includes("user_profile_links") ||
+      message.includes("does not exist") ||
+      message.includes("schema cache")
+    ) {
+      return "Database setup is incomplete: the user_profile_links table is missing. Run npm run db:push against production, then retry.";
+    }
+  }
+
+  const { error: adminProfileError } = await admin
+    .from("admin_profiles")
+    .select("profile_id")
+    .limit(1);
+  if (adminProfileError) {
+    const message = adminProfileError.message.toLowerCase();
+    if (message.includes("admin_profiles") || message.includes("does not exist")) {
+      return "Database setup is incomplete: admin_profiles table is missing. Run npm run db:push against production, then retry.";
+    }
+  }
+
+  return null;
+}
+
 async function deleteProfileGraph(admin: AdminClient, profileId: string): Promise<void> {
   await admin.from("user_profile_links").delete().eq("profile_id", profileId);
   await admin.from("driver_profiles").delete().eq("profile_id", profileId);
@@ -20,7 +56,6 @@ async function deleteProfileGraph(admin: AdminClient, profileId: string): Promis
   await admin.from("profiles").delete().eq("id", profileId);
 }
 
-/** Remove profile rows left behind when auth user creation was rolled back. */
 export async function removeOrphanProfilesForEmail(
   admin: AdminClient,
   email: string
@@ -61,10 +96,6 @@ export async function findAuthUserByEmail(
   return null;
 }
 
-/**
- * Convert the auto-created driver profile from `handle_new_user` into the
- * one-time super admin (profile + admin_profiles + user_profile_links).
- */
 export async function finalizeBootstrapAdminProfile(
   admin: AdminClient,
   input: { userId: string; email: string; full_name: string }

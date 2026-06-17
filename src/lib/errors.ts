@@ -284,6 +284,12 @@ export function friendlyError(err: unknown): string {
   if (fromNetwork) return fromNetwork;
 
   const lower = message.toLowerCase();
+  if (lower.includes("user_id") && lower.includes("column")) {
+    return "Database setup is incomplete. Run npm run db:push on production, then retry /setup.";
+  }
+  if (lower.includes("user_profile_links") && lower.includes("does not exist")) {
+    return "Database setup is incomplete. Run npm run db:push on production, then retry /setup.";
+  }
   if (
     lower.includes("is_border_transit") ||
     lower.includes("border_checkpoint") ||
