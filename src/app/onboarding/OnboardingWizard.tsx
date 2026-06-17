@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Camera, Car, Check, User } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -152,6 +153,7 @@ type Props = {
 
 export function OnboardingWizard({ initialStep, initialProfile, userId }: Props) {
   const { t } = useI18n();
+  const router = useRouter();
   const [step, setStep] = useState<StepId>(initialStep);
   const [personal, setPersonal] = useState<PersonalInfo>(initialProfile);
   const [vehicle, setVehicle] = useState<VehicleInfo>({
@@ -604,9 +606,12 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
         };
 
         const result = await completeOnboarding(payload);
-        if (result && !result.ok) {
+        if (!result.ok) {
           setError(result.error);
+          return;
         }
+        router.replace("/driver");
+        router.refresh();
       } catch (err) {
         setError(friendlyError(err));
       }

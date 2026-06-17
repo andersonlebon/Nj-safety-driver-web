@@ -39,9 +39,12 @@ export default async function AdminTrackingPage({
     plates.length > 0
       ? await supabase
           .from("vehicle_tracking_events")
-          .select("*")
+          .select(
+            "id, plate_number, vehicle_id, event_type, location, latitude, longitude, notes, created_at"
+          )
           .in("plate_number", plates)
           .order("created_at", { ascending: false })
+          .limit(300)
       : { data: [] };
 
   const eventsByPlate: Record<string, TrackingEvent[]> = {};

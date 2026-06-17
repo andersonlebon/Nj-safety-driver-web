@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Car, Eye } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { PaginatedTableFrame } from "@/components/table";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
@@ -11,12 +12,12 @@ import { StaffDocumentsLoader } from "@/components/documents/StaffDocumentsLoade
 import { VehicleDetailContent } from "@/components/vehicles/VehicleDetailContent";
 import { VehicleVerificationActions } from "./VehicleVerificationActions";
 import { formatDate } from "@/lib/utils";
+import type { TableQuery } from "@/lib/pagination";
 import { VERIFICATION_LABELS } from "@/lib/verification";
 import { isForeignVehicle } from "@/lib/vehicles";
 import type { TrackingEvent } from "@/lib/tracking";
 import type { TransitIdDocRow, TransitIdDocUrls } from "@/lib/transit-id-documents";
 import {
-  assessTransitIdAuthenticity,
   TRANSIT_ID_DOC_TYPE,
   TRANSIT_ID_LABEL_BACK,
   TRANSIT_ID_LABEL_FRONT,
@@ -27,12 +28,28 @@ import { vehicleDetailSectionLinks } from "@/lib/vehicle-detail-sections";
 type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
 type Infraction = Database["public"]["Tables"]["infractions"]["Row"];
 
+const VERIFICATION_FILTER_OPTIONS = [
+  { value: "active", label: "Active" },
+  { value: "pending_review", label: "Pending review" },
+  { value: "rejected", label: "Rejected" },
+];
+
 export function AdminVehiclesTable({
+  pathname,
+  query,
+  totalCount,
+  preserveParams,
+  showStatusFilter = true,
   vehicles,
   ownerMap,
   photoUrls,
   canManageVehicles = true,
 }: {
+  pathname: string;
+  query: TableQuery;
+  totalCount: number;
+  preserveParams?: Record<string, string>;
+  showStatusFilter?: boolean;
   vehicles: Vehicle[];
   ownerMap: Record<
     string,
@@ -138,24 +155,36 @@ export function AdminVehiclesTable({
 
   return (
     <>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="text-left text-stone-500 dark:text-slate-400 border-b border-stone-200 dark:border-slate-800">
-            <tr>
-              <th className="py-2 pr-4 font-medium">Photo</th>
-              <th className="py-2 pr-4 font-medium">Plate</th>
-              <th className="py-2 pr-4 font-medium">Country</th>
-              <th className="py-2 pr-4 font-medium">Vehicle</th>
-              <th className="py-2 pr-4 font-medium">Owner</th>
-              <th className="py-2 pr-4 font-medium">Insurance</th>
-              <th className="py-2 pr-4 font-medium">Inspection</th>
-              <th className="py-2 pr-4 font-medium">Registered</th>
-              <th className="py-2 pr-4 font-medium">Status</th>
-              <th className="py-2 pr-4 font-medium w-28">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {vehicles.map((v) => {
+      <PaginatedTableFrame
+        pathname={pathname}
+        query={query}
+        totalCount={totalCount}
+        preserveParams={preserveParams}
+        statusOptions={showStatusFilter ? VERIFICATION_FILTER_OPTIONS : undefined}
+        statusLabel="Verification"
+        searchPlaceholder="Plate, brand, model…"
+        emptyIcon={<Car className="h-8 w-8" />}
+        emptyTitle="No vehicles"
+        unfilteredHint={`${totalCount} vehicle${totalCount === 1 ? "" : "s"}`}
+      >
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-left text-stone-500 dark:text-slate-400 border-b border-stone-200 dark:border-slate-800">
+              <tr>
+                <th className="py-2 pr-4 font-medium">Photo</th>
+                <th className="py-2 pr-4 font-medium">Plate</th>
+                <th className="py-2 pr-4 font-medium">Country</th>
+                <th className="py-2 pr-4 font-medium">Vehicle</th>
+                <th className="py-2 pr-4 font-medium">Owner</th>
+                <th className="py-2 pr-4 font-medium">Insurance</th>
+                <th className="py-2 pr-4 font-medium">Inspection</th>
+                <th className="py-2 pr-4 font-medium">Registered</th>
+                <th className="py-2 pr-4 font-medium">Status</th>
+                <th className="py-2 pr-4 font-medium w-28">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {vehicles.map((v) => {
               const owner = v.owner_id ? ownerMap[v.owner_id] : null;
               const photoUrl = photoUrls[v.id];
               const status = (v.verification_status ??
@@ -255,6 +284,7 @@ export function AdminVehiclesTable({
           </tbody>
         </table>
       </div>
+      </PaginatedTableFrame>
 
       {selected && (
         <Modal

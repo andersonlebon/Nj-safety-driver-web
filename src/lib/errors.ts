@@ -31,6 +31,8 @@ const UNIQUE_CONSTRAINT_MESSAGES: Record<string, string> = {
     "This plate number is already registered.",
   vehicles_plate_country_unique:
     "This plate is already registered for that country.",
+  vehicles_pkey:
+    "This vehicle was already registered during a previous attempt. Please try finalizing again.",
   documents_pkey: "This document has already been uploaded.",
 };
 
@@ -170,16 +172,20 @@ function handleAuthMessage(message: string): string | undefined {
   const lower = message.toLowerCase();
 
   if (lower.includes("invalid login credentials")) {
-    return "The email or password is incorrect.";
+    return "The email or password is incorrect. If you just registered, confirm your email first.";
+  }
+  if (
+    lower.includes("email not confirmed") ||
+    lower.includes("email address not confirmed") ||
+    lower.includes("email_not_confirmed")
+  ) {
+    return "Please confirm your email before signing in.";
   }
   if (
     lower.includes("user already registered") ||
     (lower.includes("duplicate") && lower.includes("auth.users"))
   ) {
     return "An account with that email already exists. Try signing in instead.";
-  }
-  if (lower.includes("email not confirmed")) {
-    return "Please confirm your email before signing in.";
   }
   if (lower.includes("password should be at least")) {
     return "Your password must be at least 8 characters.";

@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { AddVehicleDialog } from "./AddVehicleDialog";
 import { VehicleList } from "./VehicleList";
 import { signDocumentPaths } from "@/lib/storage-urls";
+import { loadDriverVehicleLastLocations } from "@/lib/queries/vehicles";
 
 export default async function DriverVehiclesPage() {
   const profile = await requireRole(["driver", "admin"]);
@@ -39,25 +40,10 @@ export default async function DriverVehiclesPage() {
     photoUrls[vehicleId] = signedPhotos[path] ?? "";
   }
 
-  const plates = (vehicles ?? []).map((v) => v.plate_number);
-  const { data: trackingRows } =
-    plates.length > 0
-      ? await supabase
-          .from("vehicle_tracking_events")
-          .select("vehicle_id, plate_number, location, created_at")
-          .in("plate_number", plates)
-          .not("location", "is", null)
-          .order("created_at", { ascending: false })
-      : { data: [] };
-
-  const lastLocations: Record<string, { location: string; at: string }> = {};
-  for (const row of trackingRows ?? []) {
-    const vid =
-      row.vehicle_id ??
-      vehicles?.find((v) => v.plate_number === row.plate_number)?.id;
-    if (!vid || lastLocations[vid] || !row.location) continue;
-    lastLocations[vid] = { location: row.location, at: row.created_at };
-  }
+  const lastLocations = await loadDriverVehicleLastLocations(
+    supabase,
+    (vehicles ?? []).map((v) => ({ id: v.id, plate_number: v.plate_number }))
+  );
 
   return (
     <div className="space-y-6">

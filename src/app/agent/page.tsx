@@ -16,9 +16,11 @@ import { chartColors } from "@/components/charts/theme";
 import { countByWeek, topN } from "@/components/dashboard/analytics";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { InfractionStatusBadge } from "@/components/ui/InfractionStatusBadge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { requireRole } from "@/lib/auth";
+import { resolveLedgerStatus } from "@/lib/transactions";
+import { loadTransactionsForInfractionIds } from "@/lib/queries/infractions";
 import type { PaymentStatus } from "@/lib/types/database";
 
 type InfractionRow = {
@@ -58,15 +60,28 @@ export default async function AgentOverviewPage() {
     fine_amount: Number(i.fine_amount),
   }));
 
+  const transactionStatusByInfraction = await loadTransactionsForInfractionIds(
+    supabase,
+    mine.map((i) => i.id)
+  );
+
+  const mineWithLedger = mine.map((infraction) => ({
+    ...infraction,
+    ledgerStatus: resolveLedgerStatus(
+      infraction.status,
+      transactionStatusByInfraction[infraction.id]
+    ),
+  }));
+
   const weekly = countByWeek(mine, 8);
   const topTypes = topN(mine, (i) => i.infraction_type, 5);
   const totalFinesIssued = mine.reduce(
     (s, i) => s + Number(i.fine_amount),
     0
   );
-  const paid = mine.filter((i) => i.status === "paid").length;
-  const pending = mine.filter((i) => i.status === "pending").length;
-  const unpaidMine = mine.filter((i) => i.status === "unpaid").length;
+  const paid = mineWithLedger.filter((i) => i.ledgerStatus === "paid").length;
+  const pending = mineWithLedger.filter((i) => i.ledgerStatus === "pending").length;
+  const unpaidMine = mineWithLedger.filter((i) => i.ledgerStatus === "unpaid").length;
   const denom = paid + pending + unpaidMine;
   const resolutionRate = denom === 0 ? 0 : Math.round((paid / denom) * 1000) / 10;
 
@@ -221,7 +236,12 @@ export default async function AgentOverviewPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {recent.map((i) => (
+                    {recent.map((i) => {
+                      const ledgerStatus = resolveLedgerStatus(
+                        i.status,
+                        transactionStatusByInfraction[i.id]
+                      );
+                      return (
                       <tr
                         key={i.id}
                         className="border-b border-stone-100 dark:border-slate-800 last:border-0"
@@ -239,10 +259,11 @@ export default async function AgentOverviewPage() {
                           {formatCurrency(Number(i.fine_amount))}
                         </td>
                         <td className="py-2 pr-4">
-                          <StatusBadge status={i.status} />
+                          <InfractionStatusBadge status={ledgerStatus} />
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
