@@ -101,15 +101,6 @@ try {
   );
   console.log("  ✔ public tables emptied");
 
-  if (withStorage) {
-    console.log("\n▶ Clearing storage objects …");
-    const deleted = await sql.unsafe(
-      `delete from storage.objects
-       where bucket_id in ('documents', 'evidence')
-       returning id;`
-    );
-    console.log(`  ✔ removed ${deleted.length} object(s)`);
-  }
 
   if (withAuth) {
     console.log("\n▶ Deleting all auth users …");
