@@ -4,34 +4,20 @@ import { CheckCircle2, ShieldCheck } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/Card";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/auth";
+import { adminInstallationExists } from "@/lib/auth/bootstrap-admin";
 import { SetupForm } from "./SetupForm";
 
 export const dynamic = "force-dynamic";
 
-async function countAdmins(): Promise<number> {
-  const admin = createAdminClient();
-  const { count, error } = await admin
-    .from("profiles")
-    .select("id", { count: "exact", head: true })
-    .eq("role", "admin");
-  if (error) {
-    // If we can't reach Postgres we treat the route as locked rather than
-    // accidentally bootstrap a second admin during a transient outage.
-    throw new Error(`Setup gate could not check admin count: ${error.message}`);
-  }
-  return count ?? 0;
-}
-
 export default async function SetupPage() {
   const profile = await getCurrentProfile();
 
-  // Signed-in admin? Send them straight to their dashboard.
   if (profile?.role === "admin") {
     redirect("/admin");
   }
 
-  const adminCount = await countAdmins();
-  const locked = adminCount > 0;
+  const admin = createAdminClient();
+  const locked = await adminInstallationExists(admin);
 
   return (
     <div className="w-full max-w-md">
@@ -62,10 +48,10 @@ export default async function SetupPage() {
               </p>
               <div className="mt-6">
                 <Link
-                  href="/login"
+                  href="/login/admin"
                   className="btn-primary w-full inline-flex justify-center"
                 >
-                  Go to sign in
+                  Go to admin sign-in
                 </Link>
               </div>
             </div>
