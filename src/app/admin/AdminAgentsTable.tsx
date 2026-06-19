@@ -9,6 +9,13 @@ import type { Database, UserRole } from "@/lib/types/database";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
+function primaryRole(types: UserRole[] | null | undefined): UserRole {
+  const t = types ?? [];
+  if (t.includes("admin")) return "admin";
+  if (t.includes("agent")) return "agent";
+  return "driver";
+}
+
 export function AdminAgentsTable({
   pathname,
   query,
@@ -67,7 +74,7 @@ export function AdminAgentsTable({
                   {agent.phone || "—"}
                 </td>
                 <td className="py-2 pr-4">
-                  <RoleBadge role={agent.role as UserRole} />
+                  <RoleBadge role={primaryRole(agent.profile_types as UserRole[])} />
                 </td>
                 <td className="py-2 pr-4 text-stone-700 dark:text-slate-300">
                   {formatDate(agent.created_at)}
@@ -75,7 +82,7 @@ export function AdminAgentsTable({
                 <td className="py-2 pr-4">
                   <RoleChanger
                     userId={agent.id}
-                    currentRole={agent.role as UserRole}
+                    currentRole={primaryRole(agent.profile_types as UserRole[])}
                     isSelf={agent.id === currentUserId}
                   />
                 </td>

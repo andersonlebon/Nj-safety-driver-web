@@ -17,6 +17,14 @@ import {
 import type { Database, UserRole } from "@/lib/types/database";
 
 type Driver = Database["public"]["Tables"]["profiles"]["Row"];
+
+function primaryRole(types: UserRole[] | null | undefined): UserRole {
+  const t = types ?? [];
+  if (t.includes("admin")) return "admin";
+  if (t.includes("agent")) return "agent";
+  return "driver";
+}
+
 type DriverVehicle = Pick<
   Database["public"]["Tables"]["vehicles"]["Row"],
   "id" | "plate_number" | "registration_country" | "brand" | "model" | "verification_status"
@@ -115,7 +123,7 @@ export function AdminDriversTable({
                     />
                   </td>
                   <td className="py-2 pr-4">
-                    <RoleBadge role={d.role as UserRole} />
+                    <RoleBadge role={primaryRole(d.profile_types as UserRole[])} />
                   </td>
                   <td className="py-2 pr-4" onClick={(e) => e.stopPropagation()}>
                     <Button
@@ -240,7 +248,7 @@ function DriverDetailModalBody({
         </dd>
         <dt className="text-stone-500 dark:text-slate-400">Current role</dt>
         <dd>
-          <RoleBadge role={driver.role as UserRole} />
+          <RoleBadge role={primaryRole(driver.profile_types as UserRole[])} />
         </dd>
         {driver.admin_message && (
           <>
@@ -269,7 +277,7 @@ function DriverDetailModalBody({
             </h3>
             <RoleChanger
               userId={driver.id}
-              currentRole={driver.role as UserRole}
+              currentRole={primaryRole(driver.profile_types as UserRole[])}
               isSelf={driver.id === staffId}
               actorRole={staffRole}
             />

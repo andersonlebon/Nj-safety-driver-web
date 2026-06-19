@@ -14,7 +14,7 @@ export default async function AgentDriversPage({
 }: {
   searchParams?: Record<string, string | string[] | undefined>;
 }) {
-  const me = await requireRole(["agent", "admin"]);
+  const { profile: me, role: myRole } = await requireRole(["agent", "admin"]);
   const supabase = createClient();
   const tableQuery = parseTableQuery(searchParams);
   const pageData = await loadDriverDirectoryPaginated(supabase, tableQuery);
@@ -33,7 +33,7 @@ export default async function AgentDriversPage({
             totalCount={pageData.totalCount}
             drivers={pageData.rows}
             staffId={me.id}
-            staffRole={me.role}
+            staffRole={myRole}
             vehiclesByDriver={pageData.vehiclesByDriver}
             canManageDrivers={false}
           />

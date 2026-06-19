@@ -35,7 +35,7 @@ export function RegisterForm() {
       email: normalizedEmail,
       password,
       options: {
-        data: { full_name: fullName, role: "driver" },
+        data: { full_name: fullName },
         emailRedirectTo:
           (process.env.NEXT_PUBLIC_SITE_URL || window.location.origin) +
           "/login",
@@ -54,7 +54,7 @@ export function RegisterForm() {
       return;
     }
 
-    router.replace("/onboarding");
+    router.replace("/profile");
     router.refresh();
   };
 

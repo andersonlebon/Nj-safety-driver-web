@@ -8,15 +8,15 @@ import { OnboardingWizard } from "./OnboardingWizard";
 export const dynamic = "force-dynamic";
 
 export default async function OnboardingPage() {
-  const profile = await requireRole(["driver", "agent", "admin"]);
+  const { profile, role } = await requireRole(["driver", "agent", "admin"]);
   const { t } = await getTranslations();
 
   if (profile.onboarded_at) {
-    redirect(`/${profile.role}`);
+    redirect(`/${role}`);
   }
 
-  if (profile.role !== "driver") {
-    redirect(`/${profile.role}`);
+  if (role !== "driver") {
+    redirect(`/${role}`);
   }
 
   const initialStep: 1 | 2 | 3 =

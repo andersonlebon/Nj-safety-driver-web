@@ -16,8 +16,8 @@ const REQUIRED_PERSONAL: Array<{ doc_type: DocumentType; label: string }> = [
 ];
 
 export async function submitDocumentsForReview(): Promise<DriverActionResult> {
-  const profile = await requireRole(["driver", "admin"]);
-  if (profile.role !== "driver") {
+  const { profile, role } = await requireRole(["driver", "admin"]);
+  if (role !== "driver") {
     return { ok: false, error: "Only drivers can submit documents for review." };
   }
 

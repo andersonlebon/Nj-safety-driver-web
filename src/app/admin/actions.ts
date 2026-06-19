@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { friendlyError } from "@/lib/errors";
-import { requireRole, requireRoleForAction, createTypedProfile } from "@/lib/auth";
+import { requireRole, requireRoleForAction, promoteToAdmin, registerRole } from "@/lib/auth";
 import { canAssignAdminRole } from "@/lib/staff";
 import type { UserRole } from "@/lib/types/database";
 
@@ -28,7 +28,7 @@ export async function updateUserRole(
 ): Promise<AdminActionResult> {
   const auth = await requireRoleForAction(["admin"]);
   if ("ok" in auth) return auth;
-  const me = auth;
+  const { profile: me, role: meRole } = auth;
 
   if (!ROLES.includes(role)) {
     return { ok: false, error: `Unknown role: ${role}` };
@@ -38,7 +38,7 @@ export async function updateUserRole(
     return { ok: false, error: "Missing user id." };
   }
 
-  if (role === "admin" && !canAssignAdminRole(me.role)) {
+  if (role === "admin" && !canAssignAdminRole(meRole)) {
     return {
       ok: false,
       error: "Only administrators can assign or remove the admin role.",
@@ -64,36 +64,29 @@ export async function updateUserRole(
     return { ok: false, error: "Profile not found." };
   }
 
-  const authUserId = targetProfile.user_id ?? targetProfile.id;
-
-  if (role === "admin" || role === "agent") {
-    const created = await createTypedProfile({
-      userId: authUserId,
-      role,
+  if (role === "admin") {
+    const result = await promoteToAdmin(me.id, targetProfile.id);
+    if (!result.ok) return { ok: false, error: result.error };
+  } else if (role === "agent") {
+    const result = await registerRole({
+      userId: targetProfile.id,
+      role: "agent",
       email: targetProfile.email,
-      full_name: targetProfile.full_name,
+      fullName: targetProfile.full_name,
       phone: targetProfile.phone,
-      agent_badge_id: targetProfile.agent_badge_id,
-      agent_application_status: role === "agent" ? "approved" : null,
+      badgeId: targetProfile.agent_badge_id,
+      agentApplicationStatus: "approved",
     });
-
-    if (!created.ok) {
-      return { ok: false, error: created.error };
-    }
-
-    revalidatePath("/admin");
-    revalidatePath("/admin/drivers");
-    revalidatePath("/admin/agents");
-    return { ok: true };
-  }
-
-  const { error } = await supabase
-    .from("profiles")
-    .update({ role })
-    .eq("id", userId);
-
-  if (error) {
-    return { ok: false, error: friendlyError(error) };
+    if (!result.ok) return { ok: false, error: result.error };
+  } else if (role === "driver") {
+    const result = await registerRole({
+      userId: targetProfile.id,
+      role: "driver",
+      email: targetProfile.email,
+      fullName: targetProfile.full_name,
+      phone: targetProfile.phone,
+    });
+    if (!result.ok) return { ok: false, error: result.error };
   }
 
   revalidatePath("/admin");
@@ -109,6 +102,7 @@ export async function updateDriverVerification(
 ): Promise<AdminActionResult> {
   const auth = await requireRoleForAction(["admin"]);
   if ("ok" in auth) return auth;
+  const { profile: me } = auth;
   if (!userId) return { ok: false, error: "Missing user id." };
 
   const supabase = createClient();
@@ -119,8 +113,7 @@ export async function updateDriverVerification(
       verification_status: status,
       admin_message: message,
     })
-    .eq("id", userId)
-    .eq("role", "driver");
+    .eq("id", userId);
 
   if (error) return { ok: false, error: friendlyError(error) };
 
@@ -129,7 +122,7 @@ export async function updateDriverVerification(
       .from("driver_messages")
       .insert({
         driver_id: userId,
-        sender_id: auth.id,
+        sender_id: me.id,
         body: message,
       });
 
@@ -166,16 +159,14 @@ export async function reviewAgentApplication(
       return { ok: false, error: "Pending application not found." };
     }
 
-    const authUserId = applicant.user_id ?? applicant.id;
-
-    const created = await createTypedProfile({
-      userId: authUserId,
+    const created = await registerRole({
+      userId: applicant.id,
       role: "agent",
       email: applicant.email,
-      full_name: applicant.full_name,
+      fullName: applicant.full_name,
       phone: applicant.phone,
-      agent_badge_id: applicant.agent_badge_id,
-      agent_application_status: "approved",
+      badgeId: applicant.agent_badge_id,
+      agentApplicationStatus: "approved",
     });
 
     if (!created.ok) {
