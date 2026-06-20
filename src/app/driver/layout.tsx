@@ -2,11 +2,9 @@ import {
   LayoutDashboard,
   User,
   Car,
-  FileText,
   AlertTriangle,
   Wallet,
 } from "lucide-react";
-import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import type { NavItem } from "@/components/dashboard/Sidebar";
 import { DriverStatusBanner } from "@/components/dashboard/DriverStatusBanner";
@@ -20,10 +18,6 @@ export default async function DriverLayout({
 }) {
   const { profile } = await requireDriverProfile();
   const { t } = await getTranslations();
-
-  if (!profile.onboarded_at) {
-    redirect("/onboarding");
-  }
 
   const navItems: NavItem[] = [
     {
@@ -40,11 +34,6 @@ export default async function DriverLayout({
       href: "/driver/vehicles",
       label: t("nav.vehicles"),
       icon: <Car className="h-4 w-4" />,
-    },
-    {
-      href: "/driver/documents",
-      label: t("nav.documents"),
-      icon: <FileText className="h-4 w-4" />,
     },
     {
       href: "/driver/infractions",
@@ -70,6 +59,7 @@ export default async function DriverLayout({
         <DriverStatusBanner
           verificationStatus={profile.verification_status ?? "pending_documents"}
           adminMessage={profile.admin_message}
+          onboardedAt={profile.onboarded_at}
         />
       }
     >

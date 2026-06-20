@@ -124,6 +124,15 @@ export function DocumentUploadDialog({
 
     const effectiveVehicleId = scope === "vehicle" ? vehicleId || null : null;
     const supabase = createClient();
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser();
+    if (!authUser) {
+      setError("Not signed in.");
+      setLoading(false);
+      return;
+    }
+
     const fileHash = await sha256File(file);
     const { data: duplicate } = await supabase
       .from("documents")
@@ -141,7 +150,7 @@ export function DocumentUploadDialog({
 
     const ext = file.name.split(".").pop() || "bin";
     const folder = folderFor(docType, effectiveVehicleId);
-    const path = `${ownerId}/${folder}/${docType}-${Date.now()}.${ext}`;
+    const path = `${authUser.id}/${folder}/${docType}-${Date.now()}.${ext}`;
 
     const { error: uploadError } = await supabase.storage
       .from("documents")

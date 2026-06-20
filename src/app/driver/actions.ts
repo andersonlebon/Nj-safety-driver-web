@@ -83,7 +83,7 @@ export async function submitDocumentsForReview(): Promise<DriverActionResult> {
   if (error) return { ok: false, error: friendlyError(error) };
 
   revalidatePath("/driver");
-  revalidatePath("/driver/documents");
+  revalidatePath("/driver/profile");
   revalidatePath("/admin/drivers");
   return { ok: true };
 }

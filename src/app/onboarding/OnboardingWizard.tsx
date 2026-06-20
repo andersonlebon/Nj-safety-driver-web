@@ -448,11 +448,18 @@ export function OnboardingWizard({ initialStep, initialProfile, userId }: Props)
     }
 
     const supabase = createClient();
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser();
+    if (!authUser) {
+      throw new Error("Not signed in.");
+    }
+
     const fileHash = await sha256File(value.file);
     const ext = extensionFor(value.file);
     const folder =
       group.scope === "vehicle" ? `vehicles/${vehicleId}` : group.folder;
-    const path = `${userId}/${folder}/${attachment.fileBase}-${Date.now()}.${ext}`;
+    const path = `${authUser.id}/${folder}/${attachment.fileBase}-${Date.now()}.${ext}`;
 
     setGroupStatus((prev) => ({
       ...prev,
@@ -982,7 +989,7 @@ function DocumentsStep({
         </span>
       </div>
 
-      <div className="max-h-[min(52vh,28rem)] overflow-y-auto overscroll-y-contain pr-1 -mr-1 space-y-3 scroll-smooth">
+      <div className="max-h-[min(52vh,28rem)] overflow-y-auto overscroll-y-contain pr-1 -mr-1 grid grid-cols-1 sm:grid-cols-2 gap-3 scroll-smooth">
         {DRIVER_DOCUMENT_GROUPS.map((group) => (
           <DocumentGroupUpload
             key={group.key}
@@ -1030,6 +1037,7 @@ function DocumentsStep({
           </Button>
         </div>
       </div>
+      <div/>
     </div>
   );
 }
@@ -1201,7 +1209,7 @@ function VehicleStep({
         )}
       </div>
 
-      <div className="max-h-[min(52vh,28rem)] overflow-y-auto overscroll-y-contain pr-1 -mr-1 space-y-3 scroll-smooth">
+      <div className="max-h-[min(52vh,28rem)] overflow-y-auto overscroll-y-contain pr-1 -mr-1 grid grid-cols-1 sm:grid-cols-2 gap-3 scroll-smooth">
         {VEHICLE_DOCUMENT_GROUPS.map((group) => (
           <DocumentGroupUpload
             key={group.key}

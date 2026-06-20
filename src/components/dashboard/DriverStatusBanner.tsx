@@ -1,35 +1,35 @@
 "use client";
 
-import { useTransition } from "react";
+import Link from "next/link";
 import { AlertTriangle, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { Alert } from "@/components/ui/Alert";
-import { Button } from "@/components/ui/Button";
-import { submitDocumentsForReview } from "@/app/driver/actions";
 import type { VerificationStatus } from "@/lib/types/database";
 import { VERIFICATION_LABELS } from "@/lib/verification";
 
 type Props = {
   verificationStatus: VerificationStatus;
   adminMessage: string | null;
+  onboardedAt: string | null;
 };
 
 export function DriverStatusBanner({
   verificationStatus,
   adminMessage,
+  onboardedAt,
 }: Props) {
-  const [pending, startTransition] = useTransition();
-
   if (verificationStatus === "active" && !adminMessage) {
     return null;
   }
 
-  const handleSubmit = () => {
-    startTransition(async () => {
-      const result = await submitDocumentsForReview();
-      if (!result.ok) alert(result.error);
-      else window.location.reload();
-    });
-  };
+  const completeHref = onboardedAt
+    ? "/driver/profile#documents"
+    : "/driver/profile";
+
+  const completeLabel = !onboardedAt
+    ? "Complete profile"
+    : verificationStatus === "rejected"
+      ? "Update documents"
+      : "Upload documents";
 
   return (
     <div className="mb-6 space-y-3">
@@ -58,9 +58,9 @@ export function DriverStatusBanner({
                 </p>
                 {verificationStatus === "pending_documents" && (
                   <p className="text-sm mt-1 opacity-90">
-                    Your profile is not fully active yet. Upload your identity
-                    documents and vehicle papers, then submit them for admin
-                    verification.
+                    Your profile is not fully active yet. Complete your personal
+                    information and upload the required documents on your profile
+                    page.
                   </p>
                 )}
                 {verificationStatus === "pending_review" && (
@@ -71,21 +71,20 @@ export function DriverStatusBanner({
                 )}
                 {verificationStatus === "rejected" && (
                   <p className="text-sm mt-1 opacity-90">
-                    Your account was not approved. Please review the message
-                    below and update your documents.
+                    Your account was not approved. Review the message below and
+                    update your profile or documents.
                   </p>
                 )}
               </div>
             </div>
-            {verificationStatus === "pending_documents" && (
-              <Button
-                type="button"
-                loading={pending}
-                onClick={handleSubmit}
-                className="shrink-0 text-sm py-2 px-3"
+            {(verificationStatus === "pending_documents" ||
+              verificationStatus === "rejected") && (
+              <Link
+                href={completeHref}
+                className="btn-secondary shrink-0 text-sm py-2 px-3 text-center"
               >
-                Submit for verification
-              </Button>
+                {completeLabel}
+              </Link>
             )}
           </div>
         </Alert>

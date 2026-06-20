@@ -2,6 +2,7 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { friendlyError } from "@/lib/errors";
 import { ACTIVE_PROFILE_COOKIE } from "@/lib/auth/profile-session";
 import type { ProfileRole, StaffRole } from "@/lib/types/database";
 import type {
@@ -204,7 +205,7 @@ export async function registerDriverProfile(
     if (error || !created)
       return {
         ok: false,
-        error: error?.message ?? "Failed to create driver profile.",
+        error: friendlyError(error ?? "Failed to create driver profile."),
       };
     profileId = created.id;
   }
@@ -213,7 +214,7 @@ export async function registerDriverProfile(
   const { error: subError } = await admin
     .from("driver_profiles")
     .upsert({ profile_id: profileId }, { onConflict: "profile_id" });
-  if (subError) return { ok: false, error: subError.message };
+  if (subError) return { ok: false, error: friendlyError(subError) };
 
   return { ok: true, profileId };
 }
@@ -271,7 +272,7 @@ export async function registerStaffProfile(
     if (error || !created)
       return {
         ok: false,
-        error: error?.message ?? "Failed to create staff profile.",
+        error: friendlyError(error ?? "Failed to create staff profile."),
       };
     profileId = created.id;
   }
@@ -289,7 +290,7 @@ export async function registerStaffProfile(
       },
       { onConflict: "profile_id" }
     );
-  if (subError) return { ok: false, error: subError.message };
+  if (subError) return { ok: false, error: friendlyError(subError) };
 
   return { ok: true, profileId };
 }

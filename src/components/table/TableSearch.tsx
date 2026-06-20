@@ -7,6 +7,7 @@ type Props = {
   onChange: (value: string) => void;
   placeholder?: string;
   label?: string;
+  className?: string;
 };
 
 export function TableSearch({
@@ -14,6 +15,7 @@ export function TableSearch({
   onChange,
   placeholder = "Search…",
   label = "Search",
+  className,
 }: Props) {
   return (
     <Input
@@ -23,6 +25,7 @@ export function TableSearch({
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       autoComplete="off"
+      className={className}
     />
   );
 }

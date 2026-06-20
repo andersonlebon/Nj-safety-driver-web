@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
@@ -67,9 +68,14 @@ export function AgentRegisterForm({ defaultFullName = "", defaultPhone = "" }: P
         rows={3}
         placeholder="Your role, station, or supervisor contact..."
       />
-      <Button type="submit" loading={pending} className="w-full">
-        Submit agent application
-      </Button>
+      <div className="flex flex-col gap-2 pt-1">
+        <Button type="submit" loading={pending} className="w-full">
+          Submit agent application
+        </Button>
+        <Link href="/profile" className="btn-secondary w-full text-center">
+          Back to profile
+        </Link>
+      </div>
     </form>
   );
 }

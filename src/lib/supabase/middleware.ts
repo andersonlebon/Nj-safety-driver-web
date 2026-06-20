@@ -152,19 +152,8 @@ export async function updateSession(request: NextRequest) {
       }
     }
 
-    // For driver routes, check onboarding
-    if (isDriverRoute) {
-      const driverProfile = profiles.find((p) => p.id === profileId);
-      if (
-        driverProfile &&
-        !driverProfile.onboarded_at &&
-        pathname.startsWith("/driver")
-      ) {
-        const url = request.nextUrl.clone();
-        url.pathname = "/onboarding";
-        return NextResponse.redirect(url);
-      }
-    }
+    // Driver routes remain accessible before onboarding completes; profile page
+    // hosts the onboarding wizard and document uploads.
   }
 
   return response;

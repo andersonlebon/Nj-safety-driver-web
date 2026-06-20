@@ -146,7 +146,11 @@ export async function finalizeBootstrapAdminProfile(
   const { error: staffError } = await admin
     .from("staff_profiles")
     .upsert(
-      { profile_id: profileId, staff_role: "admin" },
+      {
+        profile_id: profileId,
+        staff_role: "admin",
+        application_status: "approved",
+      },
       { onConflict: "profile_id" }
     );
   if (staffError) return { ok: false, error: staffError.message };

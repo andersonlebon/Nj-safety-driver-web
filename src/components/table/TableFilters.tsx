@@ -2,6 +2,7 @@
 
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
+import { cn } from "@/lib/utils";
 
 export type TableFilterOption = { value: string; label: string };
 
@@ -15,6 +16,8 @@ type Props = {
   onDateFromChange: (value: string) => void;
   onDateToChange: (value: string) => void;
   showDateFilters?: boolean;
+  showStatus?: boolean;
+  className?: string;
 };
 
 export function TableFilters({
@@ -27,16 +30,18 @@ export function TableFilters({
   onDateFromChange,
   onDateToChange,
   showDateFilters = true,
+  showStatus = true,
+  className,
 }: Props) {
   return (
     <>
-      {statusOptions.length > 0 && (
+      {showStatus && statusOptions.length > 0 && (
         <Select
           label={statusLabel}
           name="table_status_filter"
           value={statusValue}
           onChange={(e) => onStatusChange(e.target.value)}
-          className="min-w-[140px]"
+          className={cn("min-w-0", className)}
         >
           <option value="">All statuses</option>
           {statusOptions.map((opt) => (
@@ -54,7 +59,7 @@ export function TableFilters({
             type="date"
             value={dateFrom}
             onChange={(e) => onDateFromChange(e.target.value)}
-            className="min-w-[140px]"
+            className={cn("min-w-0", className)}
           />
           <Input
             label="To"
@@ -62,7 +67,7 @@ export function TableFilters({
             type="date"
             value={dateTo}
             onChange={(e) => onDateToChange(e.target.value)}
-            className="min-w-[140px]"
+            className={cn("min-w-0", className)}
           />
         </>
       )}

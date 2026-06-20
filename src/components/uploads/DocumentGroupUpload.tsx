@@ -2,6 +2,7 @@
 
 import { Check } from "lucide-react";
 import { Input } from "@/components/ui/Input";
+import { RequiredMark } from "@/components/ui/RequiredMark";
 import {
   EvidenceSlot,
   type EvidenceSlotStatus,
@@ -87,11 +88,7 @@ export function DocumentGroupUpload({
         <div className="min-w-0">
           <h5 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
             {title}
-            {required ? (
-              <span className="ml-1 text-red-500" aria-hidden>
-                *
-              </span>
-            ) : (
+            {required ? <RequiredMark /> : (
               <span className="ml-1.5 text-[10px] uppercase tracking-wider text-stone-400 dark:text-slate-500">
                 {t("common.optional")}
               </span>
@@ -153,15 +150,14 @@ export function DocumentGroupUpload({
         </div>
       )}
 
-      <div className="flex gap-3 overflow-x-auto pb-1">
+      <div
+        className={cn(
+          "grid grid-cols-1 gap-3",
+          group.attachments.length > 1 && "sm:grid-cols-2"
+        )}
+      >
         {group.attachments.map((attachment) => (
-          <div
-            key={attachment.key}
-            className={cn(
-              "min-w-[min(100%,18rem)] flex-1",
-              group.attachments.length > 1 && "sm:min-w-[14rem] sm:max-w-[18rem]"
-            )}
-          >
+          <div key={attachment.key} className="min-w-0">
             <EvidenceSlot
               layout="list"
               title={translateAttachmentTitle(attachment.key, attachment.title, t)}

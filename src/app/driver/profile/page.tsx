@@ -2,12 +2,41 @@ import { requireDriverProfile } from "@/lib/auth";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Card, CardBody } from "@/components/ui/Card";
 import { ProfileEditDialog } from "./ProfileEditDialog";
+import { DriverDocumentsSection } from "./DriverDocumentsSection";
 import { formatDate } from "@/lib/utils";
+import { OnboardingWizard } from "@/app/onboarding/OnboardingWizard";
 
 export default async function DriverProfilePage() {
   const { profile } = await requireDriverProfile();
+
+  if (!profile.onboarded_at) {
+    const initialStep: 1 | 2 | 3 =
+      profile.full_name && profile.national_id ? 2 : 1;
+
+    return (
+      <div>
+        <PageHeader
+          title="Complete your profile"
+          description="Add your personal details, documents, and vehicle to activate your driver account."
+        />
+        <OnboardingWizard
+          initialStep={initialStep}
+          userId={profile.id}
+          initialProfile={{
+            full_name: profile.full_name ?? "",
+            phone: profile.phone ?? "",
+            national_id: profile.national_id ?? "",
+            driver_license: profile.driver_license ?? "",
+            address: profile.address ?? "",
+            nationality_country: profile.nationality_country ?? "GA",
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div>
+    <div className="space-y-8">
       <PageHeader
         title="Personal information"
         description="Your official profile on the national road safety platform."
@@ -61,6 +90,8 @@ export default async function DriverProfilePage() {
           </dl>
         </CardBody>
       </Card>
+
+      <DriverDocumentsSection profileId={profile.id} />
     </div>
   );
 }

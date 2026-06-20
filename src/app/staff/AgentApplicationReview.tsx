@@ -13,6 +13,7 @@ type Applicant = {
   email?: string | null;
   phone?: string | null;
   application_note?: string | null;
+  badge_id?: string | null;
 };
 
 export function AgentApplicationReview({ applicants }: { applicants: Applicant[] }) {
@@ -64,6 +65,11 @@ function ApplicantRow({ applicant }: { applicant: Applicant }) {
         {applicant.application_note && (
           <p className="text-xs text-stone-500 dark:text-slate-400 mt-1 italic">
             {applicant.application_note}
+          </p>
+        )}
+        {applicant.badge_id && (
+          <p className="text-xs text-stone-500 dark:text-slate-400 mt-1">
+            Badge: {applicant.badge_id}
           </p>
         )}
       </div>

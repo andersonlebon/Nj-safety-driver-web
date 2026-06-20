@@ -19,7 +19,7 @@ export function destinationForProfile(
   profile: Pick<Profile, "role" | "onboarded_at">
 ): string {
   if (profile.role === "driver") {
-    return profile.onboarded_at ? "/driver" : "/onboarding";
+    return profile.onboarded_at ? "/driver" : "/driver/profile";
   }
   return "/staff";
 }

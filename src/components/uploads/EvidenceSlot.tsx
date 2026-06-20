@@ -10,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { RequiredMark } from "@/components/ui/RequiredMark";
 import { useI18n } from "@/i18n/context";
 
 export const MAX_EVIDENCE_BYTES = 10 * 1024 * 1024;
@@ -51,9 +52,11 @@ function bytesToMb(n: number) {
   return (n / (1024 * 1024)).toFixed(1);
 }
 
-function isImage(file: File | null): boolean {
-  if (!file) return false;
-  return file.type.startsWith("image/") && !file.type.includes("heic");
+function previewUrlForFile(file: File): string | null {
+  if (!file.type.startsWith("image/") || file.type === "application/pdf") {
+    return null;
+  }
+  return URL.createObjectURL(file);
 }
 
 function isPdf(file: File | null): boolean {
@@ -126,7 +129,7 @@ export function EvidenceSlot({
         setLocalError(err);
         return;
       }
-      const previewUrl = isImage(file) ? URL.createObjectURL(file) : null;
+      const previewUrl = previewUrlForFile(file);
       onChange({ file, previewUrl });
     },
     [accept_check, onChange]
@@ -163,11 +166,7 @@ export function EvidenceSlot({
     <div className="min-w-0">
       <p className="text-sm font-medium text-stone-900 dark:text-stone-100">
         {title}
-        {required ? (
-          <span className="ml-1 text-red-500" aria-hidden>
-            *
-          </span>
-        ) : (
+        {required ? <RequiredMark /> : (
           <span className="ml-1.5 text-[10px] uppercase tracking-wider text-stone-400 dark:text-slate-500">
             {t("common.optional")}
           </span>
@@ -181,11 +180,15 @@ export function EvidenceSlot({
     </div>
   );
 
+  const openFilePicker = () => {
+    if (!isBusy) inputRef.current?.click();
+  };
+
   const previewBox = (
     <div
       className={cn(
         "relative overflow-hidden rounded-lg border border-stone-200/70 bg-white dark:border-slate-800 dark:bg-slate-900",
-        isListLayout ? "h-20 w-20 shrink-0 sm:h-24 sm:w-24" : "w-full"
+        isListLayout ? "aspect-square w-full" : "w-full"
       )}
     >
       <div
@@ -212,104 +215,92 @@ export function EvidenceSlot({
             </span>
           </button>
         ) : hasFile && isPdf(value.file) ? (
-          <div className="flex flex-col items-center gap-0.5 text-stone-500 dark:text-slate-400">
-            <FileText className={cn(isListLayout ? "h-6 w-6" : "h-8 w-8")} />
-            <span className="text-[10px]">PDF</span>
+          <div className="flex h-full w-full flex-col items-center justify-center gap-0.5 bg-stone-100 text-stone-500 dark:bg-slate-800 dark:text-slate-400">
+            <FileText className={cn(isListLayout ? "h-8 w-8" : "h-10 w-10")} />
+            <span className="max-w-[90%] truncate px-2 text-[10px]">
+              {value.file?.name}
+            </span>
           </div>
         ) : hasFile ? (
-          <div className="flex flex-col items-center gap-0.5 text-stone-500 dark:text-slate-400">
-            <ImageIcon className={cn(isListLayout ? "h-6 w-6" : "h-8 w-8")} />
-            <span className="text-[10px]">{t("evidence.ready")}</span>
+          <div className="flex h-full w-full flex-col items-center justify-center gap-0.5 bg-stone-100 text-stone-500 dark:bg-slate-800 dark:text-slate-400">
+            <ImageIcon className={cn(isListLayout ? "h-8 w-8" : "h-10 w-10")} />
+            <span className="max-w-[90%] truncate px-2 text-[10px]">
+              {value.file?.name}
+            </span>
           </div>
         ) : (
           <button
             type="button"
-            onClick={() => inputRef.current?.click()}
+            onClick={openFilePicker}
             disabled={isBusy}
             className={cn(
-              "flex h-full w-full flex-col items-center justify-center gap-0.5 px-2 text-center transition-colors hover:text-stone-600 dark:hover:text-slate-300",
-              isListLayout ? "py-2" : compactPreview ? "py-3" : "py-4"
+              "flex h-full w-full flex-col items-center justify-center gap-1 px-2 text-center transition-colors hover:bg-stone-50 hover:text-stone-600 dark:hover:bg-slate-800/80 dark:hover:text-slate-300",
+              isListLayout ? "py-4" : compactPreview ? "py-3" : "py-4"
             )}
           >
-            <UploadCloud className={cn(isListLayout ? "h-5 w-5" : "h-7 w-7")} />
+            <UploadCloud className={cn(isListLayout ? "h-7 w-7" : "h-7 w-7")} />
+            <span className="text-xs font-medium">{t("common.upload")}</span>
             {!isListLayout && (
-              <>
-                <span className="text-xs font-medium">{t("evidence.dropOrClick")}</span>
-                <span className="text-[10px] text-stone-400 dark:text-slate-500">
-                  {t("evidence.fileFormats", {
-                    pdfSuffix: accept.includes("pdf")
-                      ? t("evidence.fileFormatsPdfSuffix")
-                      : "",
-                    maxMb: bytesToMb(maxBytes),
-                  })}
-                </span>
-              </>
-            )}
-            {isListLayout && (
-              <span className="text-[10px] font-medium leading-tight">{t("common.upload")}</span>
+              <span className="text-[10px] text-stone-400 dark:text-slate-500">
+                {t("evidence.fileFormats", {
+                  pdfSuffix: accept.includes("pdf")
+                    ? t("evidence.fileFormatsPdfSuffix")
+                    : "",
+                  maxMb: bytesToMb(maxBytes),
+                })}
+              </span>
             )}
           </button>
         )}
       </div>
+
+      {hasFile && !isBusy && (
+        <div className="absolute right-1.5 top-1.5 flex items-center gap-1">
+          <button
+            type="button"
+            onClick={openFilePicker}
+            className="rounded-md bg-black/55 px-1.5 py-0.5 text-[10px] font-medium text-white hover:bg-black/70"
+          >
+            {t("common.replace")}
+          </button>
+          <button
+            type="button"
+            onClick={clearSelection}
+            className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-black/55 text-white hover:bg-black/70"
+            aria-label={t("evidence.removeFile")}
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
 
       {isUploading && (
         <div className="absolute inset-0 grid place-items-center bg-white/70 backdrop-blur-sm dark:bg-slate-900/70">
           <Loader2 className="h-4 w-4 animate-spin text-brand-700 dark:text-brand-300" />
         </div>
       )}
+
+      {isDone && !isUploading && (
+        <div className="absolute left-1.5 top-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand-600 text-white shadow-sm">
+          <Check className="h-3.5 w-3.5" />
+        </div>
+      )}
     </div>
   );
 
-  const actionRow = (
-    <div
-      className={cn(
-        "flex items-center gap-2",
-        isListLayout ? "flex-wrap" : "justify-between"
-      )}
-    >
-      {!isListLayout && (
-        <p className="min-w-0 truncate text-[11px] text-stone-500 dark:text-slate-400">
-          {hasFile ? value.file!.name : t("common.noFileSelected")}
-        </p>
-      )}
-      <div className={cn("flex items-center gap-1", isListLayout && "ml-auto")}>
-        {hasFile && (
-          <button
-            type="button"
-            onClick={clearSelection}
-            disabled={isBusy}
-            className={cn(
-              "inline-flex items-center gap-1 text-[11px] font-medium",
-              "text-stone-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400",
-              "disabled:opacity-50"
-            )}
-            aria-label={t("evidence.removeFile")}
-          >
-            <X className="h-3.5 w-3.5" />
-            {t("common.remove")}
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          disabled={isBusy}
-          className="inline-flex items-center gap-1 text-[11px] font-medium text-brand-700 hover:text-brand-800 disabled:opacity-50 dark:text-brand-300 dark:hover:text-brand-200"
-        >
-          <UploadCloud className="h-3.5 w-3.5" />
-          {hasFile ? t("common.replace") : t("common.chooseFile")}
-        </button>
-      </div>
-    </div>
-  );
+  const actionRow =
+    !isListLayout && hasFile ? (
+      <p className="truncate text-[11px] text-stone-500 dark:text-slate-400">
+        {value.file!.name}
+      </p>
+    ) : null;
 
   const expiryField =
     showExpiry && hasFile && onExpiresAtChange ? (
       <div className={cn(isListLayout && "sm:max-w-xs")}>
         <label className="mb-1 block text-xs font-medium text-stone-700 dark:text-slate-300">
           {t("common.expirationDate")}
-          {required ? (
-            <span className="ml-1 text-red-500">*</span>
-          ) : (
+          {required ? <RequiredMark /> : (
             <span className="ml-1 font-normal text-stone-400 dark:text-slate-500">
               {t("evidence.recommended")}
             </span>
@@ -346,24 +337,16 @@ export function EvidenceSlot({
     >
       {isListLayout ? (
         <div className="flex flex-col gap-2 p-3 sm:p-3.5">
-          <div className="flex items-start gap-3">
-            <div className="min-w-0 flex-1 space-y-1.5">
-              <div className="flex items-start justify-between gap-2">
-                {titleBlock}
-                {isDone && (
-                  <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-medium text-brand-700 dark:text-brand-300">
-                    <Check className="h-3.5 w-3.5" />
-                    {t("evidence.done")}
-                  </span>
-                )}
-              </div>
-              <p className="truncate text-[11px] text-stone-500 dark:text-slate-400">
-                {hasFile ? value.file!.name : t("common.noFileSelected")}
-              </p>
-              {actionRow}
-            </div>
-            {previewBox}
+          <div className="flex items-start justify-between gap-2">
+            {titleBlock}
+            {isDone && (
+              <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-medium text-brand-700 dark:text-brand-300">
+                <Check className="h-3.5 w-3.5" />
+                {t("evidence.done")}
+              </span>
+            )}
           </div>
+          {previewBox}
           {shownError && (
             <p className="text-xs text-red-600 dark:text-red-400">{shownError}</p>
           )}

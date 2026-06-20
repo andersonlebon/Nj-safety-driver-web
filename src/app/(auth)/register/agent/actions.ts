@@ -39,7 +39,7 @@ export async function submitAgentApplication(input: {
     applicationStatus: "pending",
   });
 
-  if (!result.ok) return { ok: false, error: result.error };
+  if (!result.ok) return { ok: false, error: friendlyError(result.error) };
 
   revalidatePath("/staff/agents");
   redirect("/register/agent/pending");

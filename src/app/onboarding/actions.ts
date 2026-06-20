@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireDriverProfileForAction } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { friendlyError } from "@/lib/errors";
 import { DEFAULT_COUNTRY, isDomesticCountry } from "@/lib/countries";
@@ -51,22 +52,26 @@ export type CompletePayload = {
 
 async function rollbackOnboardingWrites(
   supabase: ReturnType<typeof createClient>,
-  userId: string,
+  profileId: string,
   vehicleId: string,
   uploadedPaths: string[]
 ) {
-  await supabase.from("documents").delete().eq("owner_id", userId);
-  await supabase.from("document_groups").delete().eq("owner_id", userId);
-  await supabase.from("vehicles").delete().eq("id", vehicleId).eq("owner_id", userId);
+  await supabase.from("documents").delete().eq("owner_id", profileId);
+  await supabase.from("document_groups").delete().eq("owner_id", profileId);
+  await supabase
+    .from("vehicles")
+    .delete()
+    .eq("id", vehicleId)
+    .eq("owner_id", profileId);
   await deleteStoragePaths(supabase, uploadedPaths);
 }
 
 export async function savePersonalInfo(formData: FormData): Promise<ActionResult> {
+  const authResult = await requireDriverProfileForAction();
+  if ("ok" in authResult) return authResult;
+  const { profile } = authResult;
+
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Not authenticated." };
 
   const full_name = String(formData.get("full_name") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
@@ -91,11 +96,12 @@ export async function savePersonalInfo(formData: FormData): Promise<ActionResult
       address,
       nationality_country,
     })
-    .eq("id", user.id);
+    .eq("id", profile.id);
 
   if (error) return { ok: false, error: friendlyError(error) };
 
   revalidatePath("/onboarding");
+  revalidatePath("/driver/profile");
   return { ok: true };
 }
 
@@ -117,19 +123,17 @@ function groupHasAttachments(
 export async function completeOnboarding(
   payload: CompletePayload
 ): Promise<ActionResult> {
+  const authResult = await requireDriverProfileForAction();
+  if ("ok" in authResult) return authResult;
+  const { profile } = authResult;
+
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Not authenticated." };
 
-  const { data: existingProfile } = await supabase
-    .from("profiles")
-    .select("onboarded_at")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (existingProfile?.onboarded_at) {
+  if (profile.onboarded_at) {
     revalidatePath("/driver");
     return { ok: true };
   }
@@ -246,7 +250,7 @@ export async function completeOnboarding(
       nationality_country:
         personal.nationality_country?.trim() || DEFAULT_COUNTRY,
     })
-    .eq("id", user.id);
+    .eq("id", profile.id);
 
   if (profileUpdateError) {
     await deleteStoragePaths(supabase, uploadedPaths);
@@ -261,11 +265,11 @@ export async function completeOnboarding(
     .from("vehicles")
     .delete()
     .eq("id", vehicle.id)
-    .eq("owner_id", user.id);
+    .eq("owner_id", profile.id);
 
   const { error: vehicleError } = await supabase.from("vehicles").insert({
     id: vehicle.id,
-    owner_id: user.id,
+    owner_id: profile.id,
     plate_number,
     registration_country,
     is_foreign: !isDomesticCountry(registration_country),
@@ -297,7 +301,7 @@ export async function completeOnboarding(
     const { data: createdGroup, error: groupError } = await supabase
       .from("document_groups")
       .insert({
-        owner_id: user.id,
+        owner_id: profile.id,
         vehicle_id: group.vehicle_id,
         doc_type: group.doc_type,
         issued_at: normalizeIssuedForDocument(group.issued_at, group.doc_type),
@@ -308,7 +312,7 @@ export async function completeOnboarding(
       .single();
 
     if (groupError || !createdGroup) {
-      await rollbackOnboardingWrites(supabase, user.id, vehicle.id, uploadedPaths);
+      await rollbackOnboardingWrites(supabase, profile.id, vehicle.id, uploadedPaths);
       return {
         ok: false,
         error: `Document could not be saved: ${friendlyError(groupError)}`,
@@ -316,7 +320,7 @@ export async function completeOnboarding(
     }
 
     const attachmentRows = group.attachments.map((attachment) => ({
-      owner_id: user.id,
+      owner_id: profile.id,
       vehicle_id: group.vehicle_id,
       group_id: createdGroup.id,
       doc_type: group.doc_type,
@@ -333,7 +337,7 @@ export async function completeOnboarding(
       .insert(attachmentRows);
 
     if (attachmentError) {
-      await rollbackOnboardingWrites(supabase, user.id, vehicle.id, uploadedPaths);
+      await rollbackOnboardingWrites(supabase, profile.id, vehicle.id, uploadedPaths);
       return {
         ok: false,
         error: `Document upload failed: ${friendlyError(attachmentError)}`,
@@ -347,10 +351,10 @@ export async function completeOnboarding(
       onboarded_at: new Date().toISOString(),
       verification_status: profileVerification,
     })
-    .eq("id", user.id);
+    .eq("id", profile.id);
 
   if (markOnboardedError) {
-    await rollbackOnboardingWrites(supabase, user.id, vehicle.id, uploadedPaths);
+    await rollbackOnboardingWrites(supabase, profile.id, vehicle.id, uploadedPaths);
     return {
       ok: false,
       error: `Unable to complete onboarding: ${friendlyError(markOnboardedError)}`,
@@ -358,5 +362,6 @@ export async function completeOnboarding(
   }
 
   revalidatePath("/driver");
+  revalidatePath("/driver/profile");
   return { ok: true };
 }

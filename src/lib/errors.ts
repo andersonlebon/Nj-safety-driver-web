@@ -33,6 +33,8 @@ const UNIQUE_CONSTRAINT_MESSAGES: Record<string, string> = {
     "This plate is already registered for that country.",
   profiles_user_id_unique:
     "This account already has a profile.",
+  profiles_user_id_role_unique:
+    "You already have a profile of this type on your account.",
   vehicles_pkey:
     "This vehicle was already registered during a previous attempt. Please try finalizing again.",
   documents_pkey: "This document has already been uploaded.",
