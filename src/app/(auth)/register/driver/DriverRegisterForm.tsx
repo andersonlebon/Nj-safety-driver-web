@@ -49,7 +49,7 @@ export function DriverRegisterForm({ defaultFullName = "", defaultPhone = "" }: 
         defaultValue={defaultPhone}
       />
       <Button type="submit" loading={pending} className="w-full">
-        Continue as driver
+        {defaultFullName ? "Continue as driver" : "Create driver profile"}
       </Button>
     </form>
   );

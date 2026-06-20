@@ -6,6 +6,7 @@ import {
   getProfilesForUser,
   getProfileWithDriver,
   getProfileWithStaff,
+  getDriverWorkspacesForUser,
   setActiveProfileCookie,
 } from "@/lib/auth/profiles";
 import type { ProfileRole, StaffRole } from "@/lib/types/database";
@@ -50,15 +51,12 @@ export const getActiveDriverProfile = cache(
       const p = await getProfileWithDriver(activeId);
       if (p?.user_id === user.id) return p;
     }
-    // Auto-select if only one driver profile
-    const all = await getProfilesForUser(user.id);
-    const driverProfiles = all.filter((p) => p.role === "driver");
-    if (driverProfiles.length === 1) {
-      const p = await getProfileWithDriver(driverProfiles[0].id);
-      if (p) {
-        await setActiveProfileCookie(p.id);
-        return p;
-      }
+    // Auto-select if only one driver workspace
+    const workspaces = await getDriverWorkspacesForUser(user.id);
+    if (workspaces.length === 1) {
+      const p = workspaces[0];
+      await setActiveProfileCookie(p.id);
+      return p;
     }
     return null;
   }
@@ -227,6 +225,7 @@ export {
   setActiveProfileCookie,
   clearActiveProfileCookie,
   getActiveProfileId,
+  getDriverWorkspacesForUser,
 } from "@/lib/auth/profiles";
 
 export {

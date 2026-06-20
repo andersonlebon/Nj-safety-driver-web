@@ -80,7 +80,11 @@ export async function updateSession(request: NextRequest) {
   const isStaffRoute = pathname.startsWith("/staff");
   const isProfileRoute = pathname === "/profile";
   const isProtectedRoute = isDriverRoute || isStaffRoute || isProfileRoute;
-  const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/register");
+  const isLoginRoute = pathname.startsWith("/login");
+  const isSignupRoute = pathname === "/register";
+  const isRoleRegisterRoute =
+    pathname.startsWith("/register/driver") ||
+    pathname.startsWith("/register/agent");
   const isSetupRoute = pathname.startsWith("/setup");
 
   // Unauthenticated → redirect to login for protected routes
@@ -97,12 +101,15 @@ export async function updateSession(request: NextRequest) {
 
   const activeProfileId = request.cookies.get(ACTIVE_PROFILE_COOKIE)?.value ?? null;
 
-  // Redirect authenticated users away from login/register
-  if (isAuthRoute) {
+  // Redirect authenticated users away from login/signup (not role registration)
+  if (isLoginRoute || isSignupRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/profile";
     return NextResponse.redirect(url);
   }
+
+  // Role registration flows are for signed-in users without that profile yet
+  if (isRoleRegisterRoute) return response;
 
   // /profile is always accessible to authenticated users
   if (isProfileRoute) return response;

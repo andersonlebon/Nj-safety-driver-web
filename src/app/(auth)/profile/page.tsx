@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Car, Shield } from "lucide-react";
-import { getSessionUser, getProfiles, getActiveProfileId } from "@/lib/auth";
+import { getSessionUser, getProfiles, getActiveProfileId, getDriverWorkspacesForUser } from "@/lib/auth";
 import { getProfileWithStaff } from "@/lib/auth/profiles";
 import { AuthDialogCard } from "@/components/ui/AuthDialogCard";
 import { ProfileCard, PendingStaffCard } from "./RoleCard";
@@ -59,12 +59,12 @@ export default async function ProfilePage({
   if (!user) redirect("/login");
 
   const profiles = await getProfiles();
+  const driverWorkspaces = await getDriverWorkspacesForUser(user.id);
   const activeProfileId = await getActiveProfileId();
   const redirectTo = searchParams.redirect?.startsWith("/")
     ? searchParams.redirect
     : undefined;
 
-  const driverProfiles = profiles.filter((p) => p.role === "driver");
   const staffProfiles = profiles.filter((p) => p.role === "staff");
 
   // Load staff sub-rows to know agent vs admin and application_status
@@ -74,10 +74,10 @@ export default async function ProfilePage({
 
   const displayName = profiles[0]?.full_name || profiles[0]?.email || user.email;
 
-  const hasDriverProfile = driverProfiles.length > 0;
+  const hasDriverProfile = driverWorkspaces.length > 0;
   const hasStaffProfile = staffProfiles.length > 0;
   const selectableCount =
-    driverProfiles.length +
+    driverWorkspaces.length +
     staffWithSub.filter(
       (p) =>
         p?.staffProfile &&
@@ -102,7 +102,7 @@ export default async function ProfilePage({
 
       <div className="mt-6 space-y-3">
         {/* Driver profiles */}
-        {driverProfiles.map((p) => (
+        {driverWorkspaces.map((p) => (
           <ProfileCard
             key={p.id}
             profileId={p.id}

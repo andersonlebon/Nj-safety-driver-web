@@ -41,12 +41,46 @@ export async function clearActiveProfileCookie(): Promise<void> {
 export const getProfilesForUser = cache(
   async (userId: string): Promise<Profile[]> => {
     const supabase = createClient();
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: true });
-    return (data as Profile[]) ?? [];
+    const [{ data: byUserId }, { data: byId }] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .maybeSingle<Profile>(),
+    ]);
+
+    const merged = new Map<string, Profile>();
+    for (const row of byUserId ?? []) merged.set(row.id, row as Profile);
+    if (byId) merged.set(byId.id, byId);
+
+    return Array.from(merged.values()).sort((a, b) =>
+      a.created_at.localeCompare(b.created_at)
+    );
+  }
+);
+
+/** Driver workspaces owned by the user (role=driver or legacy driver_profiles row). */
+export const getDriverWorkspacesForUser = cache(
+  async (userId: string): Promise<ProfileWithDriver[]> => {
+    const profiles = await getProfilesForUser(userId);
+    const results: ProfileWithDriver[] = [];
+    const seen = new Set<string>();
+
+    for (const profile of profiles) {
+      const enriched = await getProfileWithDriver(profile.id);
+      if (!enriched || seen.has(enriched.id)) continue;
+      if (enriched.role === "driver" || enriched.driverProfile) {
+        seen.add(enriched.id);
+        results.push(enriched);
+      }
+    }
+
+    return results;
   }
 );
 
@@ -60,13 +94,15 @@ export async function getProfileWithDriver(
     .select("*")
     .eq("id", profileId)
     .maybeSingle<Profile>();
-  if (!profile || profile.role !== "driver") return null;
+  if (!profile) return null;
 
   const { data: driverProfile } = await supabase
     .from("driver_profiles")
     .select("*")
     .eq("profile_id", profileId)
     .maybeSingle<DriverProfile>();
+
+  if (profile.role !== "driver" && !driverProfile) return null;
 
   return { ...profile, driverProfile: driverProfile ?? null };
 }
@@ -111,13 +147,24 @@ export async function registerDriverProfile(
 ): Promise<{ ok: true; profileId: string } | { ok: false; error: string }> {
   const admin = createAdminClient() as any;
 
-  // Check if this user already has a driver profile
-  const { data: existing } = await admin
+  // Check if this user already has a driver profile (incl. legacy id = userId)
+  const { data: byUserId } = await admin
     .from("profiles")
     .select("id")
     .eq("user_id", input.userId)
     .eq("role", "driver")
     .maybeSingle();
+
+  const { data: byId } = !byUserId
+    ? await admin
+        .from("profiles")
+        .select("id")
+        .eq("id", input.userId)
+        .eq("role", "driver")
+        .maybeSingle()
+    : { data: null };
+
+  const existing = byUserId ?? byId;
 
   let profileId: string;
 

@@ -1,6 +1,12 @@
 import { redirect } from "next/navigation";
 import { AuthDialogCard } from "@/components/ui/AuthDialogCard";
-import { getSessionUser, getProfiles } from "@/lib/auth";
+import {
+  getSessionUser,
+  getProfiles,
+  getDriverWorkspacesForUser,
+} from "@/lib/auth";
+import { setActiveProfileCookie } from "@/lib/auth/profiles";
+import { destinationForProfile } from "@/lib/auth/profile-session";
 import { DriverRegisterForm } from "./DriverRegisterForm";
 
 export const metadata = {
@@ -9,14 +15,27 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
+function authDisplayName(user: NonNullable<Awaited<ReturnType<typeof getSessionUser>>>) {
+  const meta = user.user_metadata as { full_name?: string } | undefined;
+  return meta?.full_name?.trim() ?? "";
+}
+
 export default async function DriverRegisterPage() {
   const user = await getSessionUser();
   if (!user) redirect("/login?redirect=/register/driver");
 
-  const profiles = await getProfiles();
-  if (profiles.some((p) => p.role === "driver")) redirect("/driver");
+  const driverWorkspaces = await getDriverWorkspacesForUser(user.id);
+  if (driverWorkspaces.length > 0) {
+    const profile = driverWorkspaces[0];
+    await setActiveProfileCookie(profile.id);
+    redirect(destinationForProfile(profile));
+  }
 
-  const anyProfile = profiles[0];
+  const profiles = await getProfiles();
+  const accountProfile = profiles[0];
+  const defaultFullName =
+    accountProfile?.full_name?.trim() || authDisplayName(user);
+  const defaultPhone = accountProfile?.phone ?? "";
 
   return (
     <AuthDialogCard>
@@ -24,12 +43,14 @@ export default async function DriverRegisterPage() {
         Register as a driver
       </h1>
       <p className="mt-1 text-sm text-stone-600 dark:text-slate-400">
-        Set up your driver profile to manage vehicles, documents, and infractions.
+        {defaultFullName
+          ? "Confirm your details to open your driver workspace."
+          : "Set up your driver profile to manage vehicles, documents, and infractions."}
       </p>
       <div className="mt-6">
         <DriverRegisterForm
-          defaultFullName={anyProfile?.full_name ?? ""}
-          defaultPhone={anyProfile?.phone ?? ""}
+          defaultFullName={defaultFullName}
+          defaultPhone={defaultPhone}
         />
       </div>
     </AuthDialogCard>

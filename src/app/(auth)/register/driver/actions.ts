@@ -2,7 +2,11 @@
 
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
-import { registerRole } from "@/lib/auth/profiles";
+import {
+  registerDriverProfile,
+  setActiveProfileCookie,
+} from "@/lib/auth/profiles";
+import { destinationForProfile } from "@/lib/auth/profile-session";
 
 export type DriverRegisterResult =
   | { ok: true }
@@ -22,16 +26,20 @@ export async function registerAsDriver(input: {
     return { ok: false, error: "Full name is required." };
   }
 
-  const result = await registerRole({
+  const result = await registerDriverProfile({
     userId: user.id,
-    role: "driver",
     email: user.email,
     fullName: full_name,
     phone: phone || null,
-    verificationStatus: "pending_documents",
   });
 
   if (!result.ok) return { ok: false, error: result.error };
 
-  redirect("/onboarding");
+  await setActiveProfileCookie(result.profileId);
+
+  const destination = destinationForProfile({
+    role: "driver",
+    onboarded_at: null,
+  });
+  redirect(destination);
 }
