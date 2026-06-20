@@ -21,21 +21,18 @@ export type StaffDirectoryRow = Database["public"]["Tables"]["profiles"]["Row"] 
   application_status: Database["public"]["Tables"]["staff_profiles"]["Row"]["application_status"];
 };
 
-type ProfileJoinRow = Database["public"]["Tables"]["profiles"]["Row"] & {
-  staff_profiles: {
-    staff_role: StaffRole;
-    application_status: Database["public"]["Tables"]["staff_profiles"]["Row"]["application_status"];
-  };
+type StaffProfileMeta = {
+  profile_id: string;
+  staff_role: StaffRole;
+  application_status: Database["public"]["Tables"]["staff_profiles"]["Row"]["application_status"];
 };
 
 export async function loadPendingAgentApplications(
   admin: AdminClient
 ): Promise<PendingAgentApplication[]> {
-  const { data, error } = await admin
+  const { data: staffRows, error } = await admin
     .from("staff_profiles")
-    .select(
-      "profile_id, application_note, badge_id, created_at, profiles!inner(full_name, email, phone)"
-    )
+    .select("profile_id, application_note, badge_id, created_at")
     .eq("application_status", "pending")
     .eq("staff_role", "agent")
     .order("created_at", { ascending: false });
@@ -45,26 +42,45 @@ export async function loadPendingAgentApplications(
     return [];
   }
 
-  return (data ?? []).map((row) => {
-    const entry = row as {
-      profile_id: string;
-      application_note: string | null;
-      badge_id: string | null;
-      created_at: string;
-      profiles: {
-        full_name: string | null;
-        email: string | null;
-        phone: string | null;
-      };
-    };
+  if (!staffRows?.length) return [];
+
+  const typedStaffRows = staffRows as Array<{
+    profile_id: string;
+    application_note: string | null;
+    badge_id: string | null;
+    created_at: string;
+  }>;
+
+  const profileIds = typedStaffRows.map((row) => row.profile_id);
+  const { data: profiles, error: profileError } = await admin
+    .from("profiles")
+    .select("id, full_name, email, phone")
+    .in("id", profileIds);
+
+  if (profileError) {
+    console.error("loadPendingAgentApplications profiles:", profileError.message);
+    return [];
+  }
+
+  const typedProfiles = (profiles ?? []) as Array<{
+    id: string;
+    full_name: string | null;
+    email: string | null;
+    phone: string | null;
+  }>;
+
+  const profileById = new Map(typedProfiles.map((profile) => [profile.id, profile]));
+
+  return typedStaffRows.map((row) => {
+    const profile = profileById.get(row.profile_id);
     return {
-      staff_profile_id: entry.profile_id,
-      full_name: entry.profiles.full_name,
-      email: entry.profiles.email,
-      phone: entry.profiles.phone,
-      application_note: entry.application_note,
-      badge_id: entry.badge_id,
-      created_at: entry.created_at,
+      staff_profile_id: row.profile_id,
+      full_name: profile?.full_name ?? null,
+      email: profile?.email ?? null,
+      phone: profile?.phone ?? null,
+      application_note: row.application_note,
+      badge_id: row.badge_id,
+      created_at: row.created_at,
     };
   });
 }
@@ -76,15 +92,32 @@ export async function loadStaffDirectoryPaginated(
 ): Promise<{ rows: StaffDirectoryRow[]; totalCount: number; query: TableQuery }> {
   const { from, to } = rangeForPage(tableQuery.page, tableQuery.pageSize);
 
+  const { data: staffRows, error: staffError } = await admin
+    .from("staff_profiles")
+    .select("profile_id, staff_role, application_status")
+    .or("staff_role.eq.admin,application_status.eq.approved");
+
+  if (staffError) {
+    console.error("loadStaffDirectoryPaginated staff_profiles:", staffError.message);
+    return { rows: [], totalCount: 0, query: tableQuery };
+  }
+
+  const activeStaff = (staffRows ?? []) as StaffProfileMeta[];
+  const activeProfileIds = activeStaff.map((row) => row.profile_id);
+
+  if (activeProfileIds.length === 0) {
+    return { rows: [], totalCount: 0, query: tableQuery };
+  }
+
+  const staffByProfileId = new Map(
+    activeStaff.map((row) => [row.profile_id, row])
+  );
+
   let query = admin
     .from("profiles")
-    .select("*, staff_profiles!inner(staff_role, application_status)", {
-      count: "exact",
-    })
+    .select("*", { count: "exact" })
     .eq("role", "staff")
-    .or("staff_role.eq.admin,application_status.eq.approved", {
-      referencedTable: "staff_profiles",
-    });
+    .in("id", activeProfileIds);
 
   query = applyTableQueryFilters(query, tableQuery, {
     searchColumns: [{ column: "full_name" }, { column: "email" }, { column: "phone" }],
@@ -96,16 +129,17 @@ export async function loadStaffDirectoryPaginated(
     .range(from, to);
 
   if (error) {
-    console.error("loadStaffDirectoryPaginated:", error.message);
+    console.error("loadStaffDirectoryPaginated profiles:", error.message);
     return { rows: [], totalCount: 0, query: tableQuery };
   }
 
-  const rows = (data ?? []).map((row) => {
-    const joined = row as ProfileJoinRow;
+  const rows = (data ?? []).map((profile) => {
+    const row = profile as Database["public"]["Tables"]["profiles"]["Row"];
+    const staff = staffByProfileId.get(row.id);
     return {
-      ...joined,
-      staff_role: joined.staff_profiles.staff_role,
-      application_status: joined.staff_profiles.application_status,
+      ...row,
+      staff_role: staff?.staff_role ?? "agent",
+      application_status: staff?.application_status ?? null,
     };
   });
 
