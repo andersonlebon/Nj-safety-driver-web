@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { unstable_cache } from "next/cache";
 import { ShieldCheck } from "lucide-react";
 import { LoginForm } from "./LoginForm";
 import { AuthDialogCard } from "@/components/ui/AuthDialogCard";
@@ -8,18 +9,28 @@ import { getTranslations } from "@/i18n/server";
 
 export const dynamic = "force-dynamic";
 
-async function adminExists(): Promise<boolean> {
-  try {
-    const admin = createAdminClient();
-    const { count } = await admin
-      .from("profiles")
-      .select("id", { count: "exact", head: true })
-      .eq("role", "admin");
-    return (count ?? 0) > 0;
-  } catch {
-    return true;
-  }
-}
+/**
+ * Whether any admin exists controls the first-run setup banner. This only ever
+ * flips false → true (once), so a cached value avoids a service-role DB query
+ * on every login page view. A short TTL keeps the banner correct shortly after
+ * initial setup.
+ */
+const adminExists = unstable_cache(
+  async (): Promise<boolean> => {
+    try {
+      const admin = createAdminClient();
+      const { count } = await admin
+        .from("staff_profiles")
+        .select("profile_id", { count: "exact", head: true })
+        .eq("staff_role", "admin");
+      return (count ?? 0) > 0;
+    } catch {
+      return true;
+    }
+  },
+  ["login-admin-exists"],
+  { revalidate: 300, tags: ["admin-exists"] }
+);
 
 export default async function LoginPage() {
   const hasAdmin = await adminExists();
@@ -46,17 +57,14 @@ export default async function LoginPage() {
         </Link>
       )}
       <h1 className="text-xl font-semibold text-stone-900 dark:text-stone-100">
-        Driver sign-in
+        Sign in
       </h1>
       <p className="mt-1 text-sm text-stone-600 dark:text-slate-400">
         {t("auth.signInHint")}
       </p>
       <div className="mt-6">
         <Suspense>
-          <LoginForm
-            portal="driver"
-            hint="Agents and administrators must use their own sign-in pages."
-          />
+          <LoginForm />
         </Suspense>
       </div>
       <p className="mt-6 text-sm text-stone-600 dark:text-slate-400">
@@ -66,16 +74,6 @@ export default async function LoginPage() {
           className="text-brand-700 dark:text-brand-300 font-medium hover:underline"
         >
           {t("auth.createAccount")}
-        </Link>
-      </p>
-      <p className="mt-3 text-sm text-stone-600 dark:text-slate-400">
-        Staff access:{" "}
-        <Link href="/login/agent" className="text-brand-700 dark:text-brand-300 font-medium hover:underline">
-          Agent sign-in
-        </Link>
-        {" · "}
-        <Link href="/login/admin" className="text-brand-700 dark:text-brand-300 font-medium hover:underline">
-          Admin sign-in
         </Link>
       </p>
       <p className="mt-3 text-sm text-stone-600 dark:text-slate-400">

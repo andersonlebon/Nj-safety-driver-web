@@ -1,6 +1,6 @@
 import { AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { requireRole } from "@/lib/auth";
+import { requireDriverProfile } from "@/lib/auth";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Card, CardBody } from "@/components/ui/Card";
 import { parseTableQuery } from "@/lib/pagination";
@@ -12,7 +12,7 @@ export default async function DriverInfractionsPage({
 }: {
   searchParams?: Record<string, string | string[] | undefined>;
 }) {
-  const profile = await requireRole(["driver", "admin"]);
+  const { profile } = await requireDriverProfile();
   const supabase = createClient();
   const tableQuery = parseTableQuery(searchParams);
   const pageData = await loadInfractionsPaginated(supabase, tableQuery, {

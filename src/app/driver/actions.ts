@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { friendlyError } from "@/lib/errors";
-import { requireRole } from "@/lib/auth";
+import { requireDriverProfileForAction } from "@/lib/auth";
 import type { DocumentType } from "@/lib/types/database";
 
 export type DriverActionResult = { ok: true } | { ok: false; error: string };
@@ -16,10 +16,9 @@ const REQUIRED_PERSONAL: Array<{ doc_type: DocumentType; label: string }> = [
 ];
 
 export async function submitDocumentsForReview(): Promise<DriverActionResult> {
-  const { profile, role } = await requireRole(["driver", "admin"]);
-  if (role !== "driver") {
-    return { ok: false, error: "Only drivers can submit documents for review." };
-  }
+  const auth = await requireDriverProfileForAction();
+  if ("ok" in auth) return auth;
+  const { profile } = auth;
 
   const supabase = createClient();
   const { data: docs } = await supabase

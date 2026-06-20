@@ -57,6 +57,13 @@
       "when": 1779366000000,
       "tag": "0007_passport_document_type",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1781975778364,
+      "tag": "0008_curious_eddie_brock",
+      "breakpoints": true
     }
   ]
 }

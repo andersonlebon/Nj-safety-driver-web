@@ -1,8 +1,7 @@
 import { redirect } from "next/navigation";
 import { AuthDialogCard } from "@/components/ui/AuthDialogCard";
-import { getSessionUser, getProfile } from "@/lib/auth";
+import { getSessionUser, getProfiles } from "@/lib/auth";
 import { DriverRegisterForm } from "./DriverRegisterForm";
-import type { UserRole } from "@/lib/types/database";
 
 export const metadata = {
   title: "Register as driver | NJ Safety Driver",
@@ -14,10 +13,10 @@ export default async function DriverRegisterPage() {
   const user = await getSessionUser();
   if (!user) redirect("/login?redirect=/register/driver");
 
-  const profile = await getProfile();
+  const profiles = await getProfiles();
+  if (profiles.some((p) => p.role === "driver")) redirect("/driver");
 
-  const types = (profile?.profile_types as UserRole[]) ?? [];
-  if (types.includes("driver")) redirect("/driver");
+  const anyProfile = profiles[0];
 
   return (
     <AuthDialogCard>
@@ -29,8 +28,8 @@ export default async function DriverRegisterPage() {
       </p>
       <div className="mt-6">
         <DriverRegisterForm
-          defaultFullName={profile?.full_name ?? ""}
-          defaultPhone={profile?.phone ?? ""}
+          defaultFullName={anyProfile?.full_name ?? ""}
+          defaultPhone={anyProfile?.phone ?? ""}
         />
       </div>
     </AuthDialogCard>

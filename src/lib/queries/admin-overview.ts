@@ -1,8 +1,12 @@
+import { unstable_cache } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database, PaymentStatus } from "@/lib/types/database";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const ANALYTICS_WINDOW_DAYS = 90;
+/** Headline financial totals are all-time; counts/charts tolerate brief staleness. */
+const OVERVIEW_REVALIDATE_SECONDS = 30;
 
 export type AdminInfractionRow = {
   id: string;
@@ -35,7 +39,7 @@ export type AdminOverviewData = {
   }>;
 };
 
-export async function loadAdminOverviewData(
+async function queryAdminOverviewData(
   supabase: SupabaseClient<Database>
 ): Promise<AdminOverviewData> {
   const now = Date.now();
@@ -58,9 +62,9 @@ export async function loadAdminOverviewData(
       .select("id", { count: "exact", head: true })
       .eq("role", "driver"),
     supabase
-      .from("profiles")
-      .select("id", { count: "exact", head: true })
-      .eq("role", "agent"),
+      .from("staff_profiles")
+      .select("profile_id", { count: "exact", head: true })
+      .eq("staff_role", "agent"),
     supabase.from("vehicles").select("id", { count: "exact", head: true }),
     supabase
       .from("vehicles")
@@ -86,7 +90,10 @@ export async function loadAdminOverviewData(
       )
       .order("created_at", { ascending: false })
       .limit(8),
-    supabase.from("profiles").select("id, full_name, email").eq("role", "agent"),
+    supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .eq("role", "staff"),
     supabase
       .from("transactions")
       .select("infraction_id, amount, status, created_at"),
@@ -113,11 +120,12 @@ export async function loadAdminOverviewData(
   const analyticsInfractions = (analyticsInfractionRows ?? []).map(mapInfraction);
   const recentInfractions = (recentInfractionRows ?? []).map(mapInfraction);
 
-  const transactionMap = new Map(
-    (transactionRows ?? []).map((transaction) => [transaction.infraction_id, transaction])
-  );
+  type TxRow = { infraction_id: string; amount: string; status: string; created_at: string };
+  const txRows = (transactionRows ?? []) as TxRow[];
 
-  const financialRows = (transactionRows ?? []).map((transaction) => ({
+  const transactionMap = new Map(txRows.map((transaction) => [transaction.infraction_id, transaction]));
+
+  const financialRows = txRows.map((transaction) => ({
     fine_amount: Number(transaction.amount),
     status:
       transaction.status === "initialized"
@@ -153,4 +161,25 @@ export async function loadAdminOverviewData(
     agentProfiles: agentProfiles ?? [],
     financialRows,
   };
+}
+
+const loadCachedAdminOverviewData = unstable_cache(
+  async () => queryAdminOverviewData(createAdminClient() as SupabaseClient<Database>),
+  ["admin-overview"],
+  { revalidate: OVERVIEW_REVALIDATE_SECONDS, tags: ["admin-overview"] }
+);
+
+/**
+ * Admin overview aggregates. The admin route is already gated by
+ * `requireRole(["admin"])`, and an administrator can see all rows, so we read
+ * via the service-role client inside `unstable_cache`. This:
+ *  - removes the per-row RLS subquery cost on the `transactions` scan,
+ *  - dedupes repeated dashboard loads (30s TTL) so the heavy aggregation runs
+ *    at most once per window instead of on every visit.
+ * The `supabase` parameter is kept for backwards compatibility and ignored.
+ */
+export async function loadAdminOverviewData(
+  _supabase?: SupabaseClient<Database>
+): Promise<AdminOverviewData> {
+  return loadCachedAdminOverviewData();
 }

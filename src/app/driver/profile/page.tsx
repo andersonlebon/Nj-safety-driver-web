@@ -1,11 +1,11 @@
-import { requireRole } from "@/lib/auth";
+import { requireDriverProfile } from "@/lib/auth";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Card, CardBody } from "@/components/ui/Card";
 import { ProfileEditDialog } from "./ProfileEditDialog";
 import { formatDate } from "@/lib/utils";
 
 export default async function DriverProfilePage() {
-  const profile = await requireRole(["driver", "admin"]);
+  const { profile } = await requireDriverProfile();
   return (
     <div>
       <PageHeader

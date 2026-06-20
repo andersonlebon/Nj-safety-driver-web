@@ -3,17 +3,18 @@ import { redirect } from "next/navigation";
 import { CheckCircle2, ShieldCheck } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/Card";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getCurrentProfile } from "@/lib/auth";
+import { getProfiles } from "@/lib/auth";
 import { adminInstallationExists } from "@/lib/auth/bootstrap-admin";
 import { SetupForm } from "./SetupForm";
 
 export const dynamic = "force-dynamic";
 
-export default async function SetupPage() {
-  const profile = await getCurrentProfile();
+const ALLOWED_SETUP_EMAIL = "buyananderson@gmail.com";
 
-  if (profile?.role === "admin") {
-    redirect("/admin");
+export default async function SetupPage() {
+  const profiles = await getProfiles();
+  if (profiles.some((p) => p.role === "staff")) {
+    redirect("/staff");
   }
 
   const admin = createAdminClient();
@@ -48,10 +49,10 @@ export default async function SetupPage() {
               </p>
               <div className="mt-6">
                 <Link
-                  href="/login/admin"
+                  href="/login"
                   className="btn-primary w-full inline-flex justify-center"
                 >
-                  Go to admin sign-in
+                  Go to sign-in
                 </Link>
               </div>
             </div>
@@ -65,6 +66,10 @@ export default async function SetupPage() {
                 NJ Safety Driver installation. Once you submit, this route
                 permanently locks and any further admins must be promoted from
                 the admin dashboard.
+              </p>
+              <p className="mt-2 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
+                Only <strong>{ALLOWED_SETUP_EMAIL}</strong> is authorised to
+                complete this setup.
               </p>
               <div className="mt-6">
                 <SetupForm />

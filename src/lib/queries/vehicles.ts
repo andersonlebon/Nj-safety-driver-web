@@ -128,8 +128,9 @@ export async function loadDriverVehicleLastLocations(
     .order("created_at", { ascending: false })
     .limit(Math.min(plates.length * 5, 100));
 
+  type TrackingRow = { vehicle_id: string | null; plate_number: string; location: string | null; created_at: string };
   const lastLocations: Record<string, { location: string; at: string }> = {};
-  for (const row of trackingRows ?? []) {
+  for (const row of (trackingRows ?? []) as TrackingRow[]) {
     const vehicleId =
       row.vehicle_id ?? vehicles.find((v) => v.plate_number === row.plate_number)?.id;
     if (!vehicleId || lastLocations[vehicleId] || !row.location) continue;

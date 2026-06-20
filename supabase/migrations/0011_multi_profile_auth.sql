@@ -20,10 +20,22 @@ CREATE TABLE IF NOT EXISTS "public"."user_profile_links" (
   CONSTRAINT "user_profile_links_user_type_unique" UNIQUE ("user_id", "profile_type")
 );
 
-INSERT INTO "public"."user_profile_links" ("user_id", "profile_id", "profile_type")
-SELECT "user_id", "id", "role"
-FROM "public"."profiles"
-ON CONFLICT ("user_id", "profile_type") DO NOTHING;
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'profiles'
+      and column_name = 'role'
+      and udt_name = 'user_role'
+  ) then
+    insert into "public"."user_profile_links" ("user_id", "profile_id", "profile_type")
+    select "user_id", "id", "role"
+    from "public"."profiles"
+    on conflict ("user_id", "profile_type") do nothing;
+  end if;
+end $$;
 
 CREATE INDEX IF NOT EXISTS "profiles_user_id_idx" ON "public"."profiles" ("user_id");
 CREATE INDEX IF NOT EXISTS "user_profile_links_user_id_idx" ON "public"."user_profile_links" ("user_id");

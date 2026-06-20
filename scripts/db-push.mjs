@@ -61,6 +61,22 @@ function splitStatements(content) {
     .filter((s) => s.length > 0);
 }
 
+/** Skip legacy migrations superseded by a later schema (see file header comment). */
+async function shouldSkipMigration(content) {
+  const match = content.match(/^--\s*@skip-if\s+(.+)$/m);
+  if (!match) return false;
+
+  const condition = match[1].trim();
+  if (condition === "staff_profiles exists") {
+    const [{ skip }] = await sql`
+      select to_regclass('public.staff_profiles') is not null as skip
+    `;
+    return skip;
+  }
+
+  return false;
+}
+
 async function applyTablesMigrations() {
   if (!existsSync(migrationsDir)) {
     console.log("• no supabase/migrations folder — skipping");
@@ -81,6 +97,12 @@ async function applyTablesMigrations() {
   for (const file of files) {
     process.stdout.write(`  • ${file} ... `);
     const content = readFileSync(join(migrationsDir, file), "utf8");
+
+    if (await shouldSkipMigration(content)) {
+      console.log("skipped (superseded)");
+      continue;
+    }
+
     const statements = splitStatements(content);
 
     let applied = 0;

@@ -1,22 +1,18 @@
 import { redirect } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { requireRole } from "@/lib/auth";
+import { requireDriverProfile } from "@/lib/auth";
 import { getTranslations } from "@/i18n/server";
 import { OnboardingWizard } from "./OnboardingWizard";
 
 export const dynamic = "force-dynamic";
 
 export default async function OnboardingPage() {
-  const { profile, role } = await requireRole(["driver", "agent", "admin"]);
+  const { profile } = await requireDriverProfile();
   const { t } = await getTranslations();
 
   if (profile.onboarded_at) {
-    redirect(`/${role}`);
-  }
-
-  if (role !== "driver") {
-    redirect(`/${role}`);
+    redirect("/driver");
   }
 
   const initialStep: 1 | 2 | 3 =
@@ -33,7 +29,7 @@ export default async function OnboardingPage() {
             {t("app.legacyName")}
           </span>
         </Link>
-        <form action="/auth/signout" method="post">
+        <form action="/signout" method="post">
           <button
             type="submit"
             className="text-sm text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-stone-100"

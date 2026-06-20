@@ -31,10 +31,8 @@ const UNIQUE_CONSTRAINT_MESSAGES: Record<string, string> = {
     "This plate number is already registered.",
   vehicles_plate_country_unique:
     "This plate is already registered for that country.",
-  user_profile_links_user_type_unique:
-    "This account already has a profile of that type.",
-  user_profile_links_user_profile_unique:
-    "This profile is already linked to the account.",
+  profiles_user_id_unique:
+    "This account already has a profile.",
   vehicles_pkey:
     "This vehicle was already registered during a previous attempt. Please try finalizing again.",
   documents_pkey: "This document has already been uploaded.",
@@ -287,7 +285,7 @@ export function friendlyError(err: unknown): string {
   if (lower.includes("user_id") && lower.includes("column")) {
     return "Database setup is incomplete. Run npm run db:push on production, then retry /setup.";
   }
-  if (lower.includes("user_profile_links") && lower.includes("does not exist")) {
+  if (lower.includes("profile_types") && lower.includes("column")) {
     return "Database setup is incomplete. Run npm run db:push on production, then retry /setup.";
   }
   if (

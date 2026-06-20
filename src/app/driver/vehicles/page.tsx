@@ -1,6 +1,6 @@
 import { Car } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { requireRole } from "@/lib/auth";
+import { requireDriverProfile } from "@/lib/auth";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Card, CardBody } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -10,7 +10,7 @@ import { signDocumentPaths } from "@/lib/storage-urls";
 import { loadDriverVehicleLastLocations } from "@/lib/queries/vehicles";
 
 export default async function DriverVehiclesPage() {
-  const profile = await requireRole(["driver", "admin"]);
+  const { profile } = await requireDriverProfile();
   const supabase = createClient();
 
   const { data: vehicles } = await supabase

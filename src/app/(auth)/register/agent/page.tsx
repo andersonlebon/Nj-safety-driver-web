@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import { AuthDialogCard } from "@/components/ui/AuthDialogCard";
-import { getSessionUser, getProfile } from "@/lib/auth";
+import { getSessionUser, getProfiles } from "@/lib/auth";
 import { AgentRegisterForm } from "./AgentRegisterForm";
-import type { UserRole } from "@/lib/types/database";
 
 export const metadata = {
   title: "Apply as agent | NJ Safety Driver",
@@ -14,14 +14,22 @@ export default async function AgentRegisterPage() {
   const user = await getSessionUser();
   if (!user) redirect("/login?redirect=/register/agent");
 
-  const profile = await getProfile();
+  const profiles = await getProfiles();
+  const staffProfile = profiles.find((p) => p.role === "staff");
 
-  const types = (profile?.profile_types as UserRole[]) ?? [];
-  if (types.includes("agent")) redirect("/profile");
+  if (staffProfile) {
+    const supabase = createClient();
+    const { data: sp } = await supabase
+      .from("staff_profiles")
+      .select("application_status")
+      .eq("profile_id", staffProfile.id)
+      .single();
 
-  if (profile?.agent_application_status === "pending") {
-    redirect("/register/agent/pending");
+    if (sp?.application_status === "pending") redirect("/register/agent/pending");
+    redirect("/profile");
   }
+
+  const anyProfile = profiles[0];
 
   return (
     <AuthDialogCard className="max-w-lg">
@@ -34,8 +42,8 @@ export default async function AgentRegisterPage() {
       </p>
       <div className="mt-6">
         <AgentRegisterForm
-          defaultFullName={profile?.full_name ?? ""}
-          defaultPhone={profile?.phone ?? ""}
+          defaultFullName={anyProfile?.full_name ?? ""}
+          defaultPhone={anyProfile?.phone ?? ""}
         />
       </div>
     </AuthDialogCard>

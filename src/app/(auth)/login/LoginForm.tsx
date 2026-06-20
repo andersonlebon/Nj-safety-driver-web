@@ -2,12 +2,9 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { completeLoginAfterSignIn } from "@/app/auth/actions";
+import { completeLoginAfterSignIn } from "@/lib/auth/actions";
 import { friendlyError } from "@/lib/errors";
-import type { LoginPortal } from "@/lib/auth/profile-session";
-import { portalLabel, portalLoginPath } from "@/lib/auth/profile-session";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
@@ -18,12 +15,11 @@ function normalizeEmail(value: string): string {
 }
 
 type Props = {
-  portal?: LoginPortal;
   title?: string;
   hint?: string;
 };
 
-export function LoginForm({ portal, title, hint }: Props) {
+export function LoginForm({ title, hint }: Props) {
   const { t } = useI18n();
   const router = useRouter();
   const params = useSearchParams();
@@ -59,7 +55,6 @@ export function LoginForm({ portal, title, hint }: Props) {
     }
 
     const result = await completeLoginAfterSignIn({
-      portal,
       redirectTo: redirectTo || undefined,
     });
 
@@ -78,22 +73,6 @@ export function LoginForm({ portal, title, hint }: Props) {
       {error && (
         <Alert variant="error">
           {error}
-          {portal && (
-            <span className="block mt-2 text-xs">
-              Wrong portal?{" "}
-              <Link href="/login" className="underline">
-                Driver
-              </Link>
-              {" · "}
-              <Link href="/login/agent" className="underline">
-                Agent
-              </Link>
-              {" · "}
-              <Link href="/login/admin" className="underline">
-                Admin
-              </Link>
-            </span>
-          )}
         </Alert>
       )}
       {title && (
@@ -119,16 +98,8 @@ export function LoginForm({ portal, title, hint }: Props) {
         required
       />
       <Button type="submit" loading={loading} className="w-full">
-        {portal ? `Sign in as ${portalLabel(portal)}` : t("auth.signIn")}
+        {t("auth.signIn")}
       </Button>
-      {portal && portal !== "driver" && (
-        <p className="text-xs text-center text-stone-500 dark:text-slate-400">
-          Not {portalLabel(portal).toLowerCase()} staff?{" "}
-          <Link href={portalLoginPath("driver")} className="underline">
-            Driver sign-in
-          </Link>
-        </p>
-      )}
     </form>
   );
 }

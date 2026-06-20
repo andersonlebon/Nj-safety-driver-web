@@ -10,7 +10,13 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-export const userRole = pgEnum("user_role", ["driver", "agent", "admin"]);
+// ── Top-level workspace roles ────────────────────────────────────────────────
+export const profileRole = pgEnum("profile_role", ["driver", "staff"]);
+
+// ── Sub-roles within the staff workspace ────────────────────────────────────
+export const staffRoleEnum = pgEnum("staff_role", ["agent", "admin"]);
+
+// ── Shared domain enums ──────────────────────────────────────────────────────
 export const paymentStatus = pgEnum("payment_status", [
   "unpaid",
   "paid",
@@ -51,25 +57,24 @@ export const agentApplicationStatus = pgEnum("agent_application_status", [
   "rejected",
 ]);
 
+// ── profiles ─────────────────────────────────────────────────────────────────
+// One row per workspace. A user can have both a driver row and a staff row.
 export const profiles = pgTable("profiles", {
-  id: uuid("id").primaryKey().notNull(),
+  id: uuid("id").primaryKey().default(sql`uuid_generate_v4()`),
   userId: uuid("user_id").notNull(),
-  role: userRole("role").notNull().default("driver"),
+  role: profileRole("role").notNull(),
   fullName: text("full_name"),
   phone: text("phone"),
-  nationalId: text("national_id").unique(),
-  driverLicense: text("driver_license").unique(),
+  nationalId: text("national_id"),
+  driverLicense: text("driver_license"),
   address: text("address"),
   email: text("email"),
+  nationalityCountry: text("nationality_country").default("GA"),
   onboardedAt: timestamp("onboarded_at", { withTimezone: true }),
   verificationStatus: verificationStatus("verification_status")
     .notNull()
     .default("pending_documents"),
   adminMessage: text("admin_message"),
-  agentApplicationStatus: agentApplicationStatus("agent_application_status"),
-  agentBadgeId: text("agent_badge_id"),
-  agentApplicationNote: text("agent_application_note"),
-  nationalityCountry: text("nationality_country").default("GA"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .default(sql`now()`),
@@ -78,6 +83,7 @@ export const profiles = pgTable("profiles", {
     .default(sql`now()`),
 });
 
+// ── driver_profiles ───────────────────────────────────────────────────────────
 export const driverProfiles = pgTable("driver_profiles", {
   profileId: uuid("profile_id")
     .primaryKey()
@@ -87,42 +93,29 @@ export const driverProfiles = pgTable("driver_profiles", {
     .default(sql`now()`),
 });
 
-export const agentProfiles = pgTable("agent_profiles", {
+// ── staff_profiles ────────────────────────────────────────────────────────────
+// Sub-role row for every staff profile. staff_role='admin' has elevated access.
+export const staffProfiles = pgTable("staff_profiles", {
   profileId: uuid("profile_id")
     .primaryKey()
     .references(() => profiles.id, { onDelete: "cascade" }),
+  staffRole: staffRoleEnum("staff_role").notNull().default("agent"),
   badgeId: text("badge_id"),
+  applicationStatus: agentApplicationStatus("application_status").default(
+    "pending"
+  ),
+  applicationNote: text("application_note"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .default(sql`now()`),
 });
 
-export const adminProfiles = pgTable("admin_profiles", {
-  profileId: uuid("profile_id")
-    .primaryKey()
-    .references(() => profiles.id, { onDelete: "cascade" }),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .default(sql`now()`),
-});
-
-/** Links one auth user to one or more typed profiles (driver, agent, admin). */
-export const userProfileLinks = pgTable("user_profile_links", {
-  id: uuid("id").primaryKey().default(sql`uuid_generate_v4()`),
-  userId: uuid("user_id").notNull(),
-  profileId: uuid("profile_id")
-    .notNull()
-    .references(() => profiles.id, { onDelete: "cascade" }),
-  profileType: userRole("profile_type").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .default(sql`now()`),
-});
-
-
+// ── vehicles ──────────────────────────────────────────────────────────────────
 export const vehicles = pgTable("vehicles", {
   id: uuid("id").primaryKey().default(sql`uuid_generate_v4()`),
-  ownerId: uuid("owner_id").references(() => profiles.id, { onDelete: "cascade" }),
+  ownerId: uuid("owner_id").references(() => profiles.id, {
+    onDelete: "cascade",
+  }),
   plateNumber: text("plate_number").notNull(),
   registrationCountry: text("registration_country").notNull().default("GA"),
   isForeign: boolean("is_foreign").notNull().default(false),
@@ -150,6 +143,7 @@ export const vehicles = pgTable("vehicles", {
     .default(sql`now()`),
 });
 
+// ── document_groups ───────────────────────────────────────────────────────────
 export const documentGroups = pgTable("document_groups", {
   id: uuid("id").primaryKey().default(sql`uuid_generate_v4()`),
   ownerId: uuid("owner_id")
@@ -172,6 +166,7 @@ export const documentGroups = pgTable("document_groups", {
     .default(sql`now()`),
 });
 
+// ── documents ─────────────────────────────────────────────────────────────────
 export const documents = pgTable("documents", {
   id: uuid("id").primaryKey().default(sql`uuid_generate_v4()`),
   ownerId: uuid("owner_id")
@@ -197,6 +192,7 @@ export const documents = pgTable("documents", {
     .default(sql`now()`),
 });
 
+// ── infractions ───────────────────────────────────────────────────────────────
 export const infractions = pgTable("infractions", {
   id: uuid("id").primaryKey().default(sql`uuid_generate_v4()`),
   plateNumber: text("plate_number").notNull(),
@@ -225,6 +221,7 @@ export const infractions = pgTable("infractions", {
     .default(sql`now()`),
 });
 
+// ── transactions ──────────────────────────────────────────────────────────────
 export const transactions = pgTable("transactions", {
   id: uuid("id").primaryKey().default(sql`uuid_generate_v4()`),
   infractionId: uuid("infraction_id")
@@ -240,6 +237,7 @@ export const transactions = pgTable("transactions", {
     .default(sql`now()`),
 });
 
+// ── infraction_templates ──────────────────────────────────────────────────────
 export const infractionTemplates = pgTable("infraction_templates", {
   id: uuid("id").primaryKey().default(sql`uuid_generate_v4()`),
   code: text("code").notNull().unique(),
@@ -256,6 +254,7 @@ export const infractionTemplates = pgTable("infraction_templates", {
     .default(sql`now()`),
 });
 
+// ── driver_messages ───────────────────────────────────────────────────────────
 export const driverMessages = pgTable("driver_messages", {
   id: uuid("id").primaryKey().default(sql`uuid_generate_v4()`),
   driverId: uuid("driver_id")
@@ -270,6 +269,7 @@ export const driverMessages = pgTable("driver_messages", {
     .default(sql`now()`),
 });
 
+// ── vehicle_tracking_events ───────────────────────────────────────────────────
 export const vehicleTrackingEvents = pgTable("vehicle_tracking_events", {
   id: uuid("id").primaryKey().default(sql`uuid_generate_v4()`),
   vehicleId: uuid("vehicle_id").references(() => vehicles.id, {
@@ -293,8 +293,11 @@ export const vehicleTrackingEvents = pgTable("vehicle_tracking_events", {
     .default(sql`now()`),
 });
 
+// ── Drizzle inferred types ────────────────────────────────────────────────────
 export type Profile = typeof profiles.$inferSelect;
 export type NewProfile = typeof profiles.$inferInsert;
+export type DriverProfile = typeof driverProfiles.$inferSelect;
+export type StaffProfile = typeof staffProfiles.$inferSelect;
 export type Vehicle = typeof vehicles.$inferSelect;
 export type NewVehicle = typeof vehicles.$inferInsert;
 export type Document = typeof documents.$inferSelect;

@@ -1,0 +1,61 @@
+---
+description: NJ Safety Driver — coding standards and review checklist
+alwaysApply: true
+---
+
+# Best practices
+
+## Components
+
+- **Server Components by default** — dashboards, tables, initial page data.
+- **Client Components only for** forms, uploads, modals, charts, local UI state.
+- Reuse primitives: `Button`, `Input`, `Card`, `Alert`, `EmptyState`, `StatusBadge`, `FormDialog`.
+- Match existing Tailwind + `globals.css` patterns; no inline styles.
+
+## TypeScript
+
+- Import types from `@/types` (single entry point).
+- Strict mode; avoid `any`.
+- Table rows: `Profile`, `Vehicle`, `Infraction`, etc. from `@/types`.
+- Schema changes: update `src/db/schema.ts` → migration → `src/lib/types/database.ts` → `@/types`.
+
+## Supabase
+
+- Browser: `@/lib/supabase/client` inside `lib/api/*` fetchers only.
+- Server: `@/lib/supabase/server` in RSC and actions.
+- Do not duplicate profile/auth queries — use `requireRole` / cached helpers.
+
+## React Query (client reads)
+
+```
+lib/api/<domain>.ts     → pure async fetcher
+hooks/queries/use-*.ts  → useQuery / useMutation wrapper
+lib/query-keys.ts       → query key factory
+```
+
+- **Never** call `createClient()` directly in a component.
+- **Never** use `useEffect` + `setState` for Supabase reads — use a hook.
+- After mutations (server actions), invalidate related keys.
+
+## Database
+
+- Drizzle generates schema; apply with `npm run db:push`.
+- RLS lives in `supabase/post-migrations/`.
+- snake_case columns; PascalCase components; camelCase functions.
+
+## Scope discipline
+
+- Minimal diff; no unrelated refactors.
+- No MVP-out-of-scope features: OCR, payment gateways, native apps, radar APIs.
+- CI must pass: `npm run lint`, `npm run type-check`, `npm run build`.
+
+## Change checklist
+
+- [ ] Follows layer boundaries in architecture rule
+- [ ] Types from `@/types`
+- [ ] Client Supabase reads go through React Query hooks
+- [ ] Server reads use `lib/queries/` or inline RSC with `Promise.all`
+- [ ] Auth guarded with `requireRole` where needed
+- [ ] Reuses existing UI primitives
+
+Full reference: `docs/BEST_PRACTICES.md`

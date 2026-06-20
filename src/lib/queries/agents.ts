@@ -10,7 +10,8 @@ import type { Database } from "@/lib/types/database";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
-export async function loadAgentsPaginated(
+/** Returns staff profiles (role='staff') paginated for the agents table. */
+export async function loadStaffPaginated(
   supabase: SupabaseClient<Database>,
   tableQuery: TableQuery
 ): Promise<PaginatedResult<Profile>> {
@@ -19,7 +20,7 @@ export async function loadAgentsPaginated(
   let query = supabase
     .from("profiles")
     .select("*", { count: "exact" })
-    .in("role", ["agent", "admin"])
+    .eq("role", "staff")
     .order("created_at", { ascending: false });
 
   query = applyTableQueryFilters(query, tableQuery, {
@@ -32,3 +33,6 @@ export async function loadAgentsPaginated(
 
   return paginatedResult((data ?? []) as Profile[], count ?? 0, tableQuery);
 }
+
+/** @deprecated Use loadStaffPaginated instead. */
+export const loadAgentsPaginated = loadStaffPaginated;

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { requireRole } from "@/lib/auth";
+import { requireDriverProfile } from "@/lib/auth";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Card, CardBody } from "@/components/ui/Card";
 import { VehicleDetailContent } from "@/components/vehicles/VehicleDetailContent";
@@ -14,7 +14,7 @@ export default async function DriverVehicleDetailPage({
 }: {
   params: { id: string };
 }) {
-  const profile = await requireRole(["driver", "admin"]);
+  const { profile } = await requireDriverProfile();
   const supabase = createClient();
 
   const { data: vehicle } = await supabase

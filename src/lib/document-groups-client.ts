@@ -55,14 +55,17 @@ export async function saveDocumentAttachment(
     ? groupQuery.eq("vehicle_id", input.vehicleId)
     : groupQuery.is("vehicle_id", null);
 
-  const { data: existingGroup } = await groupQuery.maybeSingle();
+  const { data: existingGroupRaw } = await groupQuery.maybeSingle();
+  const existingGroup = existingGroupRaw as { id: string } | null;
 
   let groupId = existingGroup?.id;
   const normalizedIssued = normalizeIssuedForDocument(input.issuedAt, input.docType);
   const normalizedExpiry = normalizeExpiryForDocument(input.expiresAt, input.docType);
 
+  const sb = input.supabase as any;
+
   if (!groupId) {
-    const { data: createdGroup, error: groupError } = await input.supabase
+    const { data: createdGroupRaw, error: groupError } = await sb
       .from("document_groups")
       .insert({
         owner_id: input.ownerId,
@@ -75,21 +78,19 @@ export async function saveDocumentAttachment(
       .select("id")
       .single();
 
+    const createdGroup = createdGroupRaw as { id: string } | null;
     if (groupError || !createdGroup) {
       return { ok: false, error: groupError?.message ?? "Could not create document record." };
     }
     groupId = createdGroup.id;
   } else if (normalizedIssued || normalizedExpiry) {
-    await input.supabase
+    await sb
       .from("document_groups")
-      .update({
-        issued_at: normalizedIssued,
-        expires_at: normalizedExpiry,
-      })
+      .update({ issued_at: normalizedIssued, expires_at: normalizedExpiry })
       .eq("id", groupId);
   }
 
-  const { error: attachmentError } = await input.supabase.from("documents").insert({
+  const { error: attachmentError } = await sb.from("documents").insert({
     owner_id: input.ownerId,
     vehicle_id: input.vehicleId,
     group_id: groupId,

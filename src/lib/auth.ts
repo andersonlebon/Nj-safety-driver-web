@@ -2,122 +2,242 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
-  getActiveRoleFromCookie,
-  getProfileForUser,
-  setActiveRoleCookie,
-  clearActiveRoleCookie,
+  getActiveProfileId,
+  getProfilesForUser,
+  getProfileWithDriver,
+  getProfileWithStaff,
+  setActiveProfileCookie,
 } from "@/lib/auth/profiles";
-import { availableRoles } from "@/lib/auth/profile-session";
-import type { Database, UserRole } from "@/lib/types/database";
+import type { ProfileRole, StaffRole } from "@/lib/types/database";
+import type {
+  Profile,
+  ProfileWithDriver,
+  ProfileWithStaff,
+  StaffProfile,
+} from "@/types";
 
-type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+// ── Session ───────────────────────────────────────────────────────────────────
 
 export const getSessionUser = cache(async () => {
   const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   return user ?? null;
 });
 
-/**
- * Returns the single profile for the current session user.
- * Creates one if it doesn't exist yet (new sign-ups).
- */
-export const getProfile = cache(async (): Promise<Profile | null> => {
+// ── Profile list ──────────────────────────────────────────────────────────────
+
+/** All profile rows for the current session user. */
+export const getProfiles = cache(async (): Promise<Profile[]> => {
   const user = await getSessionUser();
-  if (!user) return null;
-
-  const existing = await getProfileForUser(user.id);
-  if (existing) return existing;
-
-  // Auto-create a blank profile for brand-new sign-ups
-  const supabase = createClient();
-  const meta = (user.user_metadata ?? {}) as { full_name?: string };
-  const { data: created } = await supabase
-    .from("profiles")
-    .insert({
-      id: user.id,
-      user_id: user.id,
-      email: user.email ?? null,
-      full_name: meta.full_name ?? null,
-      profile_types: [],
-    })
-    .select("*")
-    .single<Profile>();
-
-  return created ?? null;
+  if (!user) return [];
+  return getProfilesForUser(user.id);
 });
 
-export async function getActiveRole(): Promise<UserRole | null> {
-  return getActiveRoleFromCookie();
-}
+// ── Active profile ────────────────────────────────────────────────────────────
 
 /**
- * Ensures session + profile exist. Redirects to /login if not.
+ * Returns the enriched active profile (driver or staff) based on the cookie.
+ * Falls back to the first available profile if only one exists.
  */
-export async function requireAuth(): Promise<{ user: Awaited<ReturnType<typeof getSessionUser>>; profile: Profile }> {
+export const getActiveDriverProfile = cache(
+  async (): Promise<ProfileWithDriver | null> => {
+    const user = await getSessionUser();
+    if (!user) return null;
+    const activeId = await getActiveProfileId();
+    if (activeId) {
+      const p = await getProfileWithDriver(activeId);
+      if (p?.user_id === user.id) return p;
+    }
+    // Auto-select if only one driver profile
+    const all = await getProfilesForUser(user.id);
+    const driverProfiles = all.filter((p) => p.role === "driver");
+    if (driverProfiles.length === 1) {
+      const p = await getProfileWithDriver(driverProfiles[0].id);
+      if (p) {
+        await setActiveProfileCookie(p.id);
+        return p;
+      }
+    }
+    return null;
+  }
+);
+
+export const getActiveStaffProfile = cache(
+  async (): Promise<ProfileWithStaff | null> => {
+    const user = await getSessionUser();
+    if (!user) return null;
+    const activeId = await getActiveProfileId();
+    if (activeId) {
+      const p = await getProfileWithStaff(activeId);
+      if (p?.user_id === user.id) return p;
+    }
+    // Auto-select if only one staff profile
+    const all = await getProfilesForUser(user.id);
+    const staffProfiles = all.filter((p) => p.role === "staff");
+    if (staffProfiles.length === 1) {
+      const p = await getProfileWithStaff(staffProfiles[0].id);
+      if (p) {
+        await setActiveProfileCookie(p.id);
+        return p;
+      }
+    }
+    return null;
+  }
+);
+
+// ── Guards ────────────────────────────────────────────────────────────────────
+
+/** Ensures authenticated session. Redirects to /login if not. */
+export async function requireAuth(): Promise<{
+  user: NonNullable<Awaited<ReturnType<typeof getSessionUser>>>;
+}> {
   const user = await getSessionUser();
   if (!user) redirect("/login");
-  const profile = await getProfile();
-  if (!profile) redirect("/login");
-  return { user: user!, profile };
+  return { user };
 }
 
 /**
- * Requires that the current user has one of the given roles in their profile_types
- * AND that their active_role cookie matches an allowed role.
- * Redirects to /profile if not.
+ * Requires an active driver profile.
+ * Redirects to /profile to pick one if missing.
  */
-export async function requireRole(allowed: UserRole[]): Promise<{ profile: Profile; role: UserRole }> {
-  const { profile } = await requireAuth();
-  const activeRole = await getActiveRoleFromCookie();
-  const roles = availableRoles({
-    id: profile.id,
-    profile_types: (profile.profile_types as UserRole[]) ?? [],
-    full_name: profile.full_name,
-    email: profile.email,
-    onboarded_at: profile.onboarded_at,
-    agent_application_status: profile.agent_application_status,
-  });
-
-  // Accept active cookie role if valid, else try any allowed role they have
-  const role = activeRole && roles.includes(activeRole) && allowed.includes(activeRole)
-    ? activeRole
-    : roles.find((r) => allowed.includes(r));
-
-  if (!role) redirect("/profile");
-
-  // Sync the cookie if it's stale
-  if (role !== activeRole) {
-    await setActiveRoleCookie(role);
-  }
-
-  return { profile, role };
+export async function requireDriverProfile(): Promise<{
+  profile: ProfileWithDriver;
+}> {
+  await requireAuth();
+  const profile = await getActiveDriverProfile();
+  if (!profile) redirect("/profile");
+  return { profile };
 }
 
 /**
- * Same as requireRole but returns an error object instead of redirecting.
- * Use in server actions.
+ * Requires an active staff profile.
+ * Redirects to /profile to pick one if missing.
  */
-export async function requireRoleForAction(
-  allowed: UserRole[]
-): Promise<{ profile: Profile; role: UserRole } | { ok: false; error: string }> {
+export async function requireStaffProfile(): Promise<{
+  profile: ProfileWithStaff;
+  staffProfile: StaffProfile;
+}> {
+  await requireAuth();
+  const profile = await getActiveStaffProfile();
+  if (!profile) redirect("/profile");
+  if (!profile.staffProfile) redirect("/profile");
+  return { profile, staffProfile: profile.staffProfile };
+}
+
+/**
+ * Requires an active staff profile with admin sub-role.
+ * Redirects to /staff if the staff member is only an agent.
+ */
+export async function requireAdminProfile(): Promise<{
+  profile: ProfileWithStaff;
+  staffProfile: StaffProfile;
+}> {
+  const { profile, staffProfile } = await requireStaffProfile();
+  if (staffProfile.staff_role !== "admin") redirect("/staff");
+  return { profile, staffProfile };
+}
+
+// ── Action guards (return errors instead of redirecting) ──────────────────────
+
+export async function requireDriverProfileForAction(): Promise<
+  { profile: ProfileWithDriver } | { ok: false; error: string }
+> {
   try {
     const user = await getSessionUser();
-    if (!user) return { ok: false, error: "Your session expired. Please sign in again." };
-
-    const profile = await getProfile();
-    if (!profile) return { ok: false, error: "Profile not found. Please sign in again." };
-
-    const types = (profile.profile_types as UserRole[]) ?? [];
-    const role = types.find((r) => allowed.includes(r));
-    if (!role) return { ok: false, error: "You do not have permission to perform this action." };
-
-    return { profile, role };
+    if (!user) return { ok: false, error: "Session expired. Please sign in again." };
+    const profile = await getActiveDriverProfile();
+    if (!profile) return { ok: false, error: "No driver profile found." };
+    return { profile };
   } catch {
-    return { ok: false, error: "Network problem. Please check your connection and try again." };
+    return { ok: false, error: "Network error. Please try again." };
   }
 }
 
-export { registerRole, promoteToAdmin, clearActiveRoleCookie, setActiveRoleCookie } from "@/lib/auth/profiles";
-export type { ProfileSummary } from "@/lib/auth/profile-session";
-export { availableRoles, destinationForRole } from "@/lib/auth/profile-session";
+export async function requireStaffProfileForAction(): Promise<
+  { profile: ProfileWithStaff; staffProfile: StaffProfile } | { ok: false; error: string }
+> {
+  try {
+    const user = await getSessionUser();
+    if (!user) return { ok: false, error: "Session expired. Please sign in again." };
+    const profile = await getActiveStaffProfile();
+    if (!profile) return { ok: false, error: "No staff profile found." };
+    if (!profile.staffProfile)
+      return { ok: false, error: "Staff profile incomplete." };
+    return { profile, staffProfile: profile.staffProfile };
+  } catch {
+    return { ok: false, error: "Network error. Please try again." };
+  }
+}
+
+export async function requireAdminProfileForAction(): Promise<
+  { profile: ProfileWithStaff; staffProfile: StaffProfile } | { ok: false; error: string }
+> {
+  const result = await requireStaffProfileForAction();
+  if ("ok" in result) return result;
+  if (result.staffProfile.staff_role !== "admin")
+    return { ok: false, error: "This action requires administrator access." };
+  return result;
+}
+
+// ── Backwards-compat shims ────────────────────────────────────────────────────
+// These let old callers compile while we migrate pages one-by-one.
+
+/**
+ * @deprecated Use requireDriverProfile() or requireStaffProfile() instead.
+ * Kept temporarily so pages that haven't been migrated yet don't break.
+ */
+export async function requireRole(
+  allowed: ProfileRole[]
+): Promise<{ profile: ProfileWithDriver | ProfileWithStaff; role: ProfileRole }> {
+  if (allowed.includes("driver")) {
+    const { profile } = await requireDriverProfile();
+    return { profile, role: "driver" };
+  }
+  const { profile } = await requireStaffProfile();
+  return { profile, role: "staff" };
+}
+
+/**
+ * @deprecated Use requireDriverProfileForAction() or requireStaffProfileForAction().
+ */
+export async function requireRoleForAction(
+  allowed: ProfileRole[]
+): Promise<
+  | { profile: ProfileWithDriver | ProfileWithStaff; role: ProfileRole }
+  | { ok: false; error: string }
+> {
+  if (allowed.includes("driver")) {
+    const result = await requireDriverProfileForAction();
+    if ("ok" in result) return result;
+    return { profile: result.profile, role: "driver" };
+  }
+  const result = await requireStaffProfileForAction();
+  if ("ok" in result) return result;
+  return { profile: result.profile, role: "staff" };
+}
+
+// ── Re-exports ────────────────────────────────────────────────────────────────
+
+export {
+  registerDriverProfile,
+  registerStaffProfile,
+  promoteStaffToAdmin,
+  setActiveProfileCookie,
+  clearActiveProfileCookie,
+  getActiveProfileId,
+} from "@/lib/auth/profiles";
+
+export {
+  destinationForProfile,
+  staffRoleLabel,
+  isStaffActive,
+  ACTIVE_PROFILE_COOKIE,
+} from "@/lib/auth/profile-session";
+
+export {
+  completeLoginAfterSignIn,
+  selectActiveProfile,
+  selectActiveProfileAndRedirect,
+} from "@/lib/auth/actions";

@@ -1,33 +1,42 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { ACTIVE_PROFILE_COOKIE } from "@/lib/auth/profile-session";
-import { destinationForProfile } from "@/lib/auth/profile-session";
-import { resolveRouteProfile, type RouteProfile } from "@/lib/auth/route-access";
+import { resolveRouteProfile, isStaffProfileActive } from "@/lib/auth/route-access";
+import type { ProfileRole } from "@/lib/types/database";
 
-async function listRouteProfiles(
+async function getRouteProfiles(
   supabase: ReturnType<typeof createServerClient>,
   userId: string
-): Promise<RouteProfile[]> {
-  const { data: profiles } = await supabase
+) {
+  const { data } = await supabase
     .from("profiles")
-    .select("id, role, onboarded_at, agent_application_status")
+    .select("id, user_id, role, onboarded_at")
     .eq("user_id", userId);
-
-  const rows = profiles ?? [];
-  if (rows.length > 0) {
-    return rows;
-  }
-
-  const { data: legacy } = await supabase
-    .from("profiles")
-    .select("id, role, onboarded_at, agent_application_status")
-    .eq("id", userId)
-    .maybeSingle();
-
-  return legacy ? [legacy] : [];
+  return (data ?? []) as Array<{
+    id: string;
+    user_id: string;
+    role: ProfileRole;
+    onboarded_at: string | null;
+  }>;
 }
 
-function setActiveProfileCookie(response: NextResponse, profileId: string) {
+async function getRouteStaffProfile(
+  supabase: ReturnType<typeof createServerClient>,
+  profileId: string
+) {
+  const { data } = await supabase
+    .from("staff_profiles")
+    .select("profile_id, staff_role, application_status")
+    .eq("profile_id", profileId)
+    .maybeSingle();
+  return data as {
+    profile_id: string;
+    staff_role: "agent" | "admin";
+    application_status: string | null;
+  } | null;
+}
+
+function setProfileCookie(response: NextResponse, profileId: string) {
   response.cookies.set(ACTIVE_PROFILE_COOKIE, profileId, {
     httpOnly: true,
     sameSite: "lax",
@@ -38,9 +47,7 @@ function setActiveProfileCookie(response: NextResponse, profileId: string) {
 }
 
 export async function updateSession(request: NextRequest) {
-  let response = NextResponse.next({
-    request: { headers: request.headers },
-  });
+  let response = NextResponse.next({ request: { headers: request.headers } });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -67,122 +74,90 @@ export async function updateSession(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
   const { pathname } = request.nextUrl;
 
-  const isPublicRoute =
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/register") ||
-    pathname.startsWith("/setup") ||
-    pathname.startsWith("/auth/select-profile");
+  const isDriverRoute = pathname.startsWith("/driver") || pathname.startsWith("/onboarding");
+  const isStaffRoute = pathname.startsWith("/staff");
+  const isProfileRoute = pathname === "/profile";
+  const isProtectedRoute = isDriverRoute || isStaffRoute || isProfileRoute;
+  const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/register");
+  const isSetupRoute = pathname.startsWith("/setup");
 
-  const isAuthRoute =
-    pathname.startsWith("/login") || pathname.startsWith("/register");
-
-  const isProtectedRoute =
-    pathname.startsWith("/driver") ||
-    pathname.startsWith("/agent") ||
-    pathname.startsWith("/admin") ||
-    pathname.startsWith("/onboarding");
-  const isPendingAgentRoute = pathname.startsWith("/register/agent/pending");
-
-  if (!user && isProtectedRoute && !isPublicRoute) {
+  // Unauthenticated → redirect to login for protected routes
+  if (!user && isProtectedRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
   }
 
-  const shouldResolveProfile = user && (isProtectedRoute || isAuthRoute || isPendingAgentRoute);
-  let activeProfile: RouteProfile | null = null;
+  if (!user) return response;
 
-  if (shouldResolveProfile && user) {
-    const activeProfileId = request.cookies.get(ACTIVE_PROFILE_COOKIE)?.value;
-    const profiles = await listRouteProfiles(supabase, user.id);
-    const resolved = resolveRouteProfile(profiles, activeProfileId);
+  // ── Authenticated user ──────────────────────────────────────────────────────
 
-    if (resolved.kind === "select") {
-      const url = request.nextUrl.clone();
-      url.pathname = "/auth/select-profile";
-      url.searchParams.set("redirect", pathname);
-      return NextResponse.redirect(url);
-    }
+  const activeProfileId = request.cookies.get(ACTIVE_PROFILE_COOKIE)?.value ?? null;
 
-    if (resolved.kind === "active") {
-      activeProfile = resolved.profile;
-      if (resolved.shouldSetCookie) {
-        setActiveProfileCookie(response, resolved.profile.id);
-      }
-    }
-  }
-
-  if (user && isPendingAgentRoute) {
-    if (!activeProfile) {
-      return response;
-    }
-
-    if (activeProfile.role !== "driver") {
-      const url = request.nextUrl.clone();
-      url.pathname = destinationForProfile(activeProfile);
-      return NextResponse.redirect(url);
-    }
-
-    if (activeProfile.agent_application_status === "pending") {
-      return response;
-    }
-
-    if (activeProfile.agent_application_status === "rejected") {
-      return response;
-    }
-
+  // Redirect authenticated users away from login/register
+  if (isAuthRoute) {
     const url = request.nextUrl.clone();
-    url.pathname = "/register/agent";
+    url.pathname = "/profile";
     return NextResponse.redirect(url);
   }
 
-  if (user && isProtectedRoute && activeProfile) {
-    const expectedPrefix = `/${activeProfile.role}`;
-    if (
-      !pathname.startsWith(expectedPrefix) &&
-      !(
-        activeProfile.role === "admin" &&
-        (pathname.startsWith("/driver") || pathname.startsWith("/agent"))
-      ) &&
-      !(
-        activeProfile.role === "driver" &&
-        !activeProfile.onboarded_at &&
-        pathname.startsWith("/onboarding")
-      )
-    ) {
+  // /profile is always accessible to authenticated users
+  if (isProfileRoute) return response;
+
+  // Setup route accessible to all authenticated
+  if (isSetupRoute) return response;
+
+  // ── Protected workspace routes ──────────────────────────────────────────────
+  if (isDriverRoute || isStaffRoute) {
+    const profiles = await getRouteProfiles(supabase, user.id);
+    const requiredRole: ProfileRole = isDriverRoute ? "driver" : "staff";
+
+    const resolution = resolveRouteProfile(profiles, activeProfileId, requiredRole);
+
+    if (resolution.kind === "none") {
       const url = request.nextUrl.clone();
-      url.pathname = destinationForProfile(activeProfile);
+      url.pathname = "/profile";
       return NextResponse.redirect(url);
     }
 
-    if (
-      activeProfile.role === "driver" &&
-      activeProfile.agent_application_status === "pending" &&
-      !pathname.startsWith("/register/agent/pending")
-    ) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/register/agent/pending";
-      return NextResponse.redirect(url);
-    }
-  }
+    const { profileId, shouldSetCookie } = resolution;
+    if (shouldSetCookie) setProfileCookie(response, profileId);
 
-  if (user && isAuthRoute && activeProfile) {
+    // For staff routes, check application_status
+    if (isStaffRoute) {
+      const staffProfile = await getRouteStaffProfile(supabase, profileId);
+      if (!staffProfile || !isStaffProfileActive(staffProfile)) {
+        // Pending agent → show pending page
+        if (staffProfile?.application_status === "pending") {
+          if (!pathname.startsWith("/register/agent/pending")) {
+            const url = request.nextUrl.clone();
+            url.pathname = "/register/agent/pending";
+            return NextResponse.redirect(url);
+          }
+        } else {
+          const url = request.nextUrl.clone();
+          url.pathname = "/profile";
+          return NextResponse.redirect(url);
+        }
+      }
+    }
+
+    // For driver routes, check onboarding
+    if (isDriverRoute) {
+      const driverProfile = profiles.find((p) => p.id === profileId);
       if (
-        activeProfile.role === "driver" &&
-        activeProfile.agent_application_status === "pending"
+        driverProfile &&
+        !driverProfile.onboarded_at &&
+        pathname.startsWith("/driver")
       ) {
         const url = request.nextUrl.clone();
-        url.pathname = "/register/agent/pending";
+        url.pathname = "/onboarding";
         return NextResponse.redirect(url);
       }
-
-      const url = request.nextUrl.clone();
-      url.pathname = destinationForProfile(activeProfile);
-      return NextResponse.redirect(url);
+    }
   }
 
   return response;

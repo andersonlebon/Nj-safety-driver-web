@@ -48,33 +48,43 @@ before update on public.infractions
 for each row execute function public.set_updated_at();
 
 -- ---------------------------------------------------------------------
--- 3. handle_new_user() — seeds a profiles row when a new auth user signs up
+-- 3. handle_new_user() — profiles are created during registration on the
+--    staff profile model; legacy DBs still auto-seed a driver row on signup.
 -- ---------------------------------------------------------------------
--- SECURITY: this trigger intentionally IGNORES any `role` value sitting in
--- `raw_user_meta_data`. Previously it honoured that value, which meant any
--- caller of `supabase.auth.signUp({ options: { data: { role: 'admin' } } })`
--- could self-promote on first sign-in. New rows are now always inserted as
--- 'driver'. Staff roles ('agent', 'admin') are only ever granted by:
---   1. the one-time `/setup` bootstrap (uses the Admin API + service role), or
---   2. an existing admin via the admin role-promotion UI.
-create or replace function public.handle_new_user()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
+do $$
 begin
-  insert into public.profiles (id, email, full_name, role)
-  values (
-    new.id,
-    new.email,
-    coalesce(new.raw_user_meta_data->>'full_name', ''),
-    'driver'
-  )
-  on conflict (id) do nothing;
-  return new;
-end;
-$$;
+  if to_regclass('public.staff_profiles') is not null then
+    create or replace function public.handle_new_user()
+    returns trigger
+    language plpgsql
+    security definer
+    set search_path = public
+    as $fn$
+    begin
+      return new;
+    end;
+    $fn$;
+  else
+    create or replace function public.handle_new_user()
+    returns trigger
+    language plpgsql
+    security definer
+    set search_path = public
+    as $fn$
+    begin
+      insert into public.profiles (id, email, full_name, role)
+      values (
+        new.id,
+        new.email,
+        coalesce(new.raw_user_meta_data->>'full_name', ''),
+        'driver'
+      )
+      on conflict (id) do nothing;
+      return new;
+    end;
+    $fn$;
+  end if;
+end $$;
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
@@ -85,13 +95,37 @@ for each row execute function public.handle_new_user();
 -- 4. current_role() helper — security-definer to avoid recursive RLS
 -- ---------------------------------------------------------------------
 create or replace function public.current_role()
-returns user_role
+returns text
 language sql
 stable
 security definer
 set search_path = public
 as $$
-  select role from public.profiles where id = auth.uid();
+  select coalesce(
+    (
+      select case sp.staff_role
+        when 'admin'::public.staff_role then 'admin'
+        else 'agent'
+      end
+      from public.profiles p
+      join public.staff_profiles sp on sp.profile_id = p.id
+      where p.user_id = auth.uid()
+        and (
+          sp.staff_role = 'admin'::public.staff_role
+          or sp.application_status = 'approved'::public.agent_application_status
+        )
+      order by case when sp.staff_role = 'admin'::public.staff_role then 0 else 1 end
+      limit 1
+    ),
+    (
+      select 'driver'
+      from public.profiles p
+      where p.user_id = auth.uid()
+        and p.role = 'driver'::public.profile_role
+      limit 1
+    ),
+    'driver'
+  );
 $$;
 
 -- ---------------------------------------------------------------------

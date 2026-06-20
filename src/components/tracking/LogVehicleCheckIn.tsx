@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Alert } from "@/components/ui/Alert";
 import { Modal } from "@/components/ui/Modal";
-import { logVehicleCheckIn } from "@/app/agent/actions";
+import { logVehicleCheckIn } from "@/app/staff/actions";
 
 export function LogVehicleCheckIn({
   plate,

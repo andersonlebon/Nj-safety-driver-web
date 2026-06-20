@@ -51,7 +51,7 @@ if (process.env.NODE_ENV === "production" && !force) {
 }
 
 const targets = [
-  "public app data (profiles, vehicles, documents, document_groups, infractions, transactions, tracking, messages, templates)",
+  "public app data (profiles, staff_profiles, driver_profiles, vehicles, documents, document_groups, infractions, transactions, tracking, messages, templates)",
 ];
 if (withStorage) targets.push("storage objects in `documents` + `evidence` buckets");
 if (withAuth) targets.push("ALL rows in `auth.users`");
@@ -82,24 +82,39 @@ const sql = postgres(url, {
 
 try {
   console.log("\n▶ Truncating public data tables …");
-  await sql.unsafe(
-    `truncate table
-       public.transactions,
-       public.documents,
-       public.document_groups,
-       public.driver_messages,
-       public.infractions,
-       public.vehicle_tracking_events,
-       public.vehicles,
-       public.user_profile_links,
-       public.driver_profiles,
-       public.agent_profiles,
-       public.admin_profiles,
-       public.infraction_templates,
-       public.profiles
-     restart identity cascade;`
-  );
-  console.log("  ✔ public tables emptied");
+
+  // Tables in FK-safe order; only existing tables are truncated.
+  const publicTables = [
+    "transactions",
+    "documents",
+    "document_groups",
+    "driver_messages",
+    "infractions",
+    "vehicle_tracking_events",
+    "vehicles",
+    "driver_profiles",
+    "staff_profiles",
+    "infraction_templates",
+    "user_profile_links",
+    "profiles",
+  ];
+
+  const existing = await sql`
+    select table_name
+    from information_schema.tables
+    where table_schema = 'public'
+      and table_name = any(${publicTables})
+  `;
+
+  const tableNames = existing.map((row) => `public.${row.table_name}`);
+  if (tableNames.length === 0) {
+    console.log("  • no public data tables found — skipping");
+  } else {
+    await sql.unsafe(
+      `truncate table ${tableNames.join(", ")} restart identity cascade;`
+    );
+    console.log(`  ✔ public tables emptied (${tableNames.length})`);
+  }
 
 
   if (withAuth) {

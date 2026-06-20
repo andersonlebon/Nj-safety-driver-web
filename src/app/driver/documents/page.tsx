@@ -1,6 +1,6 @@
 import { FileText } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { requireRole } from "@/lib/auth";
+import { requireDriverProfile } from "@/lib/auth";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Card, CardBody } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -9,7 +9,7 @@ import { DocumentList } from "./DocumentList";
 import { SubmitForReviewButton } from "./SubmitForReviewButton";
 
 export default async function DriverDocumentsPage() {
-  const profile = await requireRole(["driver", "admin"]);
+  const { profile } = await requireDriverProfile();
   const supabase = createClient();
 
   const [{ data: documents }, { data: vehicles }] = await Promise.all([

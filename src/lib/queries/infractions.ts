@@ -40,7 +40,9 @@ export async function loadInfractionsPaginated(
       .from("transactions")
       .select("infraction_id")
       .eq("status", tableQuery.status);
-    const ids = (pendingRows ?? []).map((row) => row.infraction_id);
+    const ids = ((pendingRows ?? []) as Array<{ infraction_id: string }>).map(
+      (row) => row.infraction_id
+    );
     if (ids.length === 0) {
       return {
         ...paginatedResult([], 0, tableQuery),
@@ -77,10 +79,9 @@ export async function loadInfractionsPaginated(
       : { data: [] };
 
   const transactionStatusByInfraction = Object.fromEntries(
-    (transactions ?? []).map((transaction) => [
-      transaction.infraction_id,
-      transaction.status as TransactionStatus,
-    ])
+    ((transactions ?? []) as Array<{ infraction_id: string; status: string }>).map(
+      (transaction) => [transaction.infraction_id, transaction.status as TransactionStatus]
+    )
   );
 
   return {
@@ -101,10 +102,9 @@ export async function loadTransactionsForInfractionIds(
     .in("infraction_id", infractionIds);
 
   return Object.fromEntries(
-    (transactions ?? []).map((transaction) => [
-      transaction.infraction_id,
-      transaction.status as TransactionStatus,
-    ])
+    ((transactions ?? []) as Array<{ infraction_id: string; status: string }>).map(
+      (transaction) => [transaction.infraction_id, transaction.status as TransactionStatus]
+    )
   );
 }
 

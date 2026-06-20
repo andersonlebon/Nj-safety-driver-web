@@ -39,7 +39,7 @@ export function Topbar({
           </div>
           <LanguageSwitcher compact />
           <ThemeToggle />
-          <form action="/auth/signout" method="POST">
+          <form action="/signout" method="POST">
             <button
               type="submit"
               className="btn-secondary"

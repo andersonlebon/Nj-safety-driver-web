@@ -9,7 +9,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { requireRole } from "@/lib/auth";
+import { requireDriverProfile } from "@/lib/auth";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { ScoreGauge } from "@/components/dashboard/ScoreGauge";
@@ -46,7 +46,7 @@ type VehicleRow = {
 };
 
 export default async function DriverOverviewPage() {
-  const profile = await requireRole(["driver", "admin"]);
+  const { profile } = await requireDriverProfile();
   const supabase = createClient();
 
   const [

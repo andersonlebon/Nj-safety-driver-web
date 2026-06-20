@@ -1,68 +1,120 @@
-# NJ Safety Driver — MVP Architecture
-
-## Goals
-- Deliver a lean, role-based web MVP (Driver / Agent / Admin)
-- Keep costs low (Supabase + Vercel)
-- Enforce security at the database layer (RLS)
-- Keep the codebase maintainable with strict TypeScript + shared UI primitives
+# NJ Safety Driver — Architecture
 
 ## Stack
-- Next.js 14 (App Router) + TypeScript (strict)
-- Tailwind CSS (brand palette + shared classes)
-- Supabase: Auth, Postgres, Storage
-- `@supabase/ssr` for cookie-based sessions
-- Deployed on Vercel
 
-## High-level architecture
-Browser → Next.js App (Vercel) → Supabase (Auth / Postgres / Storage)
+| Layer | Technology |
+|-------|------------|
+| Framework | Next.js 14 App Router, React 18, TypeScript strict |
+| Styling | Tailwind CSS, Lucide, next-themes |
+| Backend | Supabase Auth, Postgres, Storage |
+| ORM | Drizzle (`src/db/schema.ts`) — schema generation only |
+| Client cache | TanStack React Query v5 |
+| Deploy | Vercel |
 
-### Key principles
-- Prefer Server Components for data fetching.
-- Use Client Components only for forms / uploads / interactions.
-- Never bypass RLS. No service role key in client code.
+## Request flow
 
-## App structure (expected)
+```
+Browser
+  → middleware.ts              session refresh, auth redirect, role route guard
+  → app/ (Server Components)   layouts + pages
+  → components/                UI (client when interactive)
+  → hooks/queries/             React Query (client reads)
+  → lib/api/                   client fetchers
+  → lib/queries/               server loaders (RSC)
+  → lib/auth.ts                cached session + profile helpers
+  → lib/supabase/              client | server | middleware | admin
+  → types/                     centralized TypeScript
+```
+
+## Directory layout
+
 ```
 src/
   app/
-    (auth)/login
-    (auth)/register
-    driver/*
-    agent/*
-    admin/*
+    (auth)/          login, register
+    driver/          driver workspace
+    agent/           agent workspace
+    admin/           admin workspace
+    onboarding/
   components/
-    ui/*
-    dashboard/*
+    ui/              shared primitives
+    dashboard/       shell, KPIs, charts (lazy)
+    providers/       AppProviders, QueryProvider
+  hooks/
+    queries/         useXxx React Query hooks
   lib/
-    auth.ts
-    supabase/{client,server,middleware}.ts
-    types/database.ts
+    api/             client-side fetchers (browser Supabase)
+    queries/         server-side paginated loaders
+    auth/            profiles, route-access, profile-session
+    supabase/        SSR clients
+    query-keys.ts    React Query key factory
+    types/database.ts  Supabase Database type (source)
+  types/
+    index.ts         public type exports — import @/types
+  db/schema.ts       Drizzle schema
 supabase/
-  migrations/
-  schema.sql (minimal / notes only)
+  migrations/        SQL DDL (applied by npm run db:push)
+  post-migrations/   RLS, triggers, storage policies
+.cursor/rules/       Cursor agent rules
+.claude/             Claude Code instructions + skills
 ```
 
-## Data model
-- `profiles` (role: driver | agent | admin)
-- `vehicles`
-- `documents`
-- `infractions`
-- `payments` (manual status tracking in MVP)
+## Roles
 
-## Auth & authorization
-- Supabase Auth for sessions
-- Route protection via `src/middleware.ts`
-- Server-side checks via `requireRole([...])`
+| Role | Prefix | Layout guard |
+|------|--------|--------------|
+| driver | `/driver/*` | `requireRole(["driver","admin"])` |
+| agent | `/agent/*` | `requireRole(["agent","admin"])` |
+| admin | `/admin/*` | `requireRole(["admin"])` |
 
-## Storage
-- Bucket: `documents` (owner write; staff read)
-- Bucket: `evidence` (agent/admin write; all roles read)
+Middleware enforces session + cross-role redirects before RSC runs.
 
-## Database migrations
-- Drizzle ORM is used for schema generation only.
-- RLS policies and storage policies remain SQL migrations.
+## Data fetching
 
-## Environments
-- `nj-safety-driver-dev` Supabase project for development
-- Vercel Preview for `dev` branch
-- Vercel Production for `main` branch
+### Server (default)
+
+- Initial page data, dashboards, tables: **Server Components**
+- Loaders in `lib/queries/` or inline `createClient()` + `Promise.all`
+- Auth: `requireRole`, `getCurrentProfile` (React `cache()`)
+
+### Client reads (React Query)
+
+All browser Supabase **reads** go through:
+
+1. `lib/query-keys.ts` — cache key
+2. `lib/api/<domain>.ts` — async fetcher (`createClient()`)
+3. `hooks/queries/use-<name>.ts` — `useQuery` wrapper
+4. Component consumes hook — **no** `useEffect` + `setState` fetches
+
+Example: `useStaffDocuments` → `fetchStaffDocumentsBundle`
+
+### Client writes
+
+- **Server Actions** in `app/*/actions.ts`
+- `revalidatePath` for RSC cache; `queryClient.invalidateQueries` for client cache
+
+## Types
+
+- **Single entry:** `@/types` (`src/types/index.ts`)
+- Schema: `src/lib/types/database.ts` → row aliases in `src/types/index.ts`
+- Workflow: Drizzle change → migration → update `database.ts` → add alias
+
+## Security
+
+- RLS on all tables; never bypass from client
+- `SUPABASE_SERVICE_ROLE_KEY` only in `/setup` and admin promotion server code
+- Privileged roles never from signup metadata
+
+## Database
+
+```bash
+npm run db:push    # migrations + post-migrations (idempotent)
+npm run db:generate
+```
+
+## Agent rules
+
+Cursor: `.cursor/rules/*.mdc`  
+Claude: `.claude/CLAUDE.md` + `.claude/skills/nj-safety-driver/SKILL.md`
+
+Every change must follow `docs/BEST_PRACTICES.md`.

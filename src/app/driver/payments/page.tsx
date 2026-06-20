@@ -1,6 +1,6 @@
 import { Wallet } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { requireRole } from "@/lib/auth";
+import { requireDriverProfile } from "@/lib/auth";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Card, CardBody } from "@/components/ui/Card";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -11,7 +11,14 @@ import { formatCurrency } from "@/lib/utils";
 import type { TransactionStatus } from "@/lib/types/database";
 import { DriverPaymentsTable } from "./DriverPaymentsTable";
 
-async function loadDriverPaymentStats(
+type LedgerTransaction = { amount: number | string; status: TransactionStatus };
+
+/**
+ * Loads every infraction + matching transaction for a driver exactly once.
+ * Returns both the aggregate stats and the full transaction map so the page can
+ * build the ledger rows without re-querying transactions.
+ */
+async function loadDriverPaymentLedger(
   supabase: ReturnType<typeof createClient>,
   driverId: string
 ) {
@@ -30,8 +37,11 @@ async function loadDriverPaymentStats(
           .in("infraction_id", infractionIds)
       : { data: [] };
 
-  const transactionMap = new Map(
-    (transactions ?? []).map((transaction) => [transaction.infraction_id, transaction])
+  const transactionMap = new Map<string, LedgerTransaction>(
+    (transactions ?? []).map((transaction) => [
+      transaction.infraction_id,
+      { amount: transaction.amount, status: transaction.status as TransactionStatus },
+    ])
   );
 
   let unpaid = 0;
@@ -54,7 +64,7 @@ async function loadDriverPaymentStats(
     }
   }
 
-  return { unpaid, pending, paid, totalDue };
+  return { stats: { unpaid, pending, paid, totalDue }, transactionMap };
 }
 
 export default async function DriverPaymentsPage({
@@ -62,27 +72,16 @@ export default async function DriverPaymentsPage({
 }: {
   searchParams?: Record<string, string | string[] | undefined>;
 }) {
-  const profile = await requireRole(["driver", "admin"]);
+  const { profile } = await requireDriverProfile();
   const supabase = createClient();
   const tableQuery = parseTableQuery(searchParams);
 
-  const [pageData, stats] = await Promise.all([
+  const [pageData, ledger] = await Promise.all([
     loadInfractionsPaginated(supabase, tableQuery, { driverId: profile.id }),
-    loadDriverPaymentStats(supabase, profile.id),
+    loadDriverPaymentLedger(supabase, profile.id),
   ]);
 
-  const infractionIds = pageData.rows.map((row) => row.id);
-  const { data: transactions } =
-    infractionIds.length > 0
-      ? await supabase
-          .from("transactions")
-          .select("infraction_id, amount, status")
-          .in("infraction_id", infractionIds)
-      : { data: [] };
-
-  const transactionMap = new Map(
-    (transactions ?? []).map((transaction) => [transaction.infraction_id, transaction])
-  );
+  const { stats, transactionMap } = ledger;
 
   const ledgerRows = pageData.rows.map((infraction) => {
     const transaction = transactionMap.get(infraction.id);

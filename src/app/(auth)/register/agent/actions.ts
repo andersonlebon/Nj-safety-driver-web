@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getSessionUser, getProfile } from "@/lib/auth";
-import { registerRole } from "@/lib/auth/profiles";
+import { getSessionUser } from "@/lib/auth";
+import { registerStaffProfile } from "@/lib/auth/profiles";
 import { friendlyError } from "@/lib/errors";
 
 export type AgentRegisterResult =
@@ -28,19 +28,19 @@ export async function submitAgentApplication(input: {
     return { ok: false, error: "Full name and phone are required." };
   }
 
-  const result = await registerRole({
+  const result = await registerStaffProfile({
     userId: user.id,
-    role: "agent",
     email: user.email,
     fullName: full_name,
     phone,
+    staffRole: "agent",
     badgeId: agent_badge_id || null,
-    agentApplicationNote: note || null,
-    agentApplicationStatus: "pending",
+    applicationNote: note || null,
+    applicationStatus: "pending",
   });
 
   if (!result.ok) return { ok: false, error: result.error };
 
-  revalidatePath("/admin/agents");
+  revalidatePath("/staff/agents");
   redirect("/register/agent/pending");
 }

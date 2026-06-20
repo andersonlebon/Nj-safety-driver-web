@@ -1,0 +1,55 @@
+---
+description: React Query patterns for client-side Supabase data
+globs: src/hooks/**/*.ts,src/hooks/**/*.tsx,src/lib/api/**/*.ts,src/components/**/*.tsx
+alwaysApply: false
+---
+
+# React Query + Supabase (client)
+
+All **client-side** Supabase reads must flow through TanStack Query.
+
+## File layout
+
+| File | Responsibility |
+|------|----------------|
+| `src/lib/query-keys.ts` | Key factory — add new keys here first |
+| `src/lib/api/<domain>.ts` | Async fetcher using browser Supabase client |
+| `src/hooks/queries/use-<name>.ts` | `useQuery` / `useMutation` hook |
+
+## Hook template
+
+```ts
+"use client";
+import { useQuery } from "@tanstack/react-query";
+import { fetchThing } from "@/lib/api/things";
+import { queryKeys } from "@/lib/query-keys";
+
+export function useThing(id: string) {
+  return useQuery({
+    queryKey: queryKeys.things.detail(id),
+    queryFn: () => fetchThing(id),
+    enabled: Boolean(id),
+  });
+}
+```
+
+## Component usage
+
+```tsx
+// ✅ GOOD
+const { data, isLoading, isError } = useStaffDocuments({ ownerId, vehicleId });
+
+// ❌ BAD — direct Supabase in component
+useEffect(() => { createClient().from("documents")... }, []);
+```
+
+## Mutations
+
+- Prefer **Server Actions** for writes (existing pattern).
+- On success: `queryClient.invalidateQueries({ queryKey: queryKeys.documents.all })`.
+
+## Server Components
+
+- Do **not** use React Query in RSC — use `lib/queries/*` loaders instead.
+
+Reference implementation: `useStaffDocuments` + `fetchStaffDocumentsBundle`.

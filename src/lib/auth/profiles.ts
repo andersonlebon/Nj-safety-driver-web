@@ -2,25 +2,26 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import type { Database, UserRole } from "@/lib/types/database";
+import { ACTIVE_PROFILE_COOKIE } from "@/lib/auth/profile-session";
+import type { ProfileRole, StaffRole } from "@/lib/types/database";
+import type {
+  Profile,
+  ProfileWithDriver,
+  ProfileWithStaff,
+  DriverProfile,
+  StaffProfile,
+} from "@/types";
 
-export const ACTIVE_ROLE_COOKIE = "nj_active_role";
+// ── Cookie helpers ────────────────────────────────────────────────────────────
 
-type Profile = Database["public"]["Tables"]["profiles"]["Row"];
-
-// ─── Cookie helpers ───────────────────────────────────────────────────────────
-
-export async function getActiveRoleFromCookie(): Promise<UserRole | null> {
+export async function getActiveProfileId(): Promise<string | null> {
   const store = cookies();
-  const value = store.get(ACTIVE_ROLE_COOKIE)?.value;
-  if (!value) return null;
-  if (value === "driver" || value === "agent" || value === "admin") return value;
-  return null;
+  return store.get(ACTIVE_PROFILE_COOKIE)?.value ?? null;
 }
 
-export async function setActiveRoleCookie(role: UserRole): Promise<void> {
+export async function setActiveProfileCookie(profileId: string): Promise<void> {
   const store = cookies();
-  store.set(ACTIVE_ROLE_COOKIE, role, {
+  store.set(ACTIVE_PROFILE_COOKIE, profileId, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -29,90 +30,248 @@ export async function setActiveRoleCookie(role: UserRole): Promise<void> {
   });
 }
 
-export async function clearActiveRoleCookie(): Promise<void> {
+export async function clearActiveProfileCookie(): Promise<void> {
   const store = cookies();
-  store.delete(ACTIVE_ROLE_COOKIE);
+  store.delete(ACTIVE_PROFILE_COOKIE);
 }
 
-// ─── Profile fetch ────────────────────────────────────────────────────────────
+// ── Profile fetch helpers ─────────────────────────────────────────────────────
 
-export const getProfileForUser = cache(async (userId: string): Promise<Profile | null> => {
+/** Returns all profile rows for the given auth user ID. */
+export const getProfilesForUser = cache(
+  async (userId: string): Promise<Profile[]> => {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true });
+    return (data as Profile[]) ?? [];
+  }
+);
+
+/** Returns a single profile enriched with its driver sub-row. */
+export async function getProfileWithDriver(
+  profileId: string
+): Promise<ProfileWithDriver | null> {
   const supabase = createClient();
-  // First try id = userId (canonical), then user_id = userId
-  const { data: byId } = await supabase
+  const { data: profile } = await supabase
     .from("profiles")
     .select("*")
-    .eq("id", userId)
+    .eq("id", profileId)
     .maybeSingle<Profile>();
-  if (byId) return byId;
+  if (!profile || profile.role !== "driver") return null;
 
-  const { data: byUserId } = await supabase
+  const { data: driverProfile } = await supabase
+    .from("driver_profiles")
+    .select("*")
+    .eq("profile_id", profileId)
+    .maybeSingle<DriverProfile>();
+
+  return { ...profile, driverProfile: driverProfile ?? null };
+}
+
+/** Returns a single profile enriched with its staff sub-row. */
+export async function getProfileWithStaff(
+  profileId: string
+): Promise<ProfileWithStaff | null> {
+  const supabase = createClient();
+  const { data: profile } = await supabase
     .from("profiles")
     .select("*")
-    .eq("user_id", userId)
+    .eq("id", profileId)
     .maybeSingle<Profile>();
-  return byUserId ?? null;
-});
+  if (!profile || profile.role !== "staff") return null;
 
-// ─── Role management ──────────────────────────────────────────────────────────
+  const { data: staffProfile } = await supabase
+    .from("staff_profiles")
+    .select("*")
+    .eq("profile_id", profileId)
+    .maybeSingle<StaffProfile>();
 
-export async function addRoleToProfile(
-  profileId: string,
-  role: UserRole
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const admin = createAdminClient();
-  const { error } = await admin.rpc("append_profile_type", {
-    p_profile_id: profileId,
-    p_role: role,
-  });
-  if (error) {
-    // Fallback: fetch + update if RPC not available
-    const { data: existing } = await admin
-      .from("profiles")
-      .select("profile_types")
-      .eq("id", profileId)
-      .maybeSingle();
-    if (!existing) return { ok: false, error: "Profile not found." };
-    const current: UserRole[] = (existing.profile_types as UserRole[]) ?? [];
-    if (current.includes(role)) return { ok: true };
-    const { error: updateError } = await admin
-      .from("profiles")
-      .update({ profile_types: [...current, role] })
-      .eq("id", profileId);
-    if (updateError) return { ok: false, error: updateError.message };
-  }
-  return { ok: true };
+  return { ...profile, staffProfile: staffProfile ?? null };
 }
 
-export async function ensureTypedProfileRow(
-  profileId: string,
-  role: UserRole,
-  data?: { badgeId?: string | null }
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const admin = createAdminClient();
+// ── Registration ──────────────────────────────────────────────────────────────
 
-  if (role === "driver") {
-    const { error } = await admin
-      .from("driver_profiles")
-      .upsert({ profile_id: profileId }, { onConflict: "profile_id" });
-    if (error) return { ok: false, error: error.message };
-  } else if (role === "agent") {
-    const { error } = await admin
-      .from("agent_profiles")
-      .upsert({ profile_id: profileId, badge_id: data?.badgeId ?? null }, { onConflict: "profile_id" });
-    if (error) return { ok: false, error: error.message };
-  } else if (role === "admin") {
-    const { error } = await admin
-      .from("admin_profiles")
-      .upsert({ profile_id: profileId }, { onConflict: "profile_id" });
-    if (error) return { ok: false, error: error.message };
-  }
-  return { ok: true };
-}
-
-export type RegisterRoleInput = {
+export type RegisterDriverInput = {
   userId: string;
-  role: UserRole;
+  email?: string | null;
+  fullName?: string | null;
+  phone?: string | null;
+  nationalId?: string | null;
+  driverLicense?: string | null;
+  address?: string | null;
+  nationalityCountry?: string | null;
+};
+
+/** Creates a driver profile row + driver_profiles sub-row. Idempotent. */
+export async function registerDriverProfile(
+  input: RegisterDriverInput
+): Promise<{ ok: true; profileId: string } | { ok: false; error: string }> {
+  const admin = createAdminClient() as any;
+
+  // Check if this user already has a driver profile
+  const { data: existing } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("user_id", input.userId)
+    .eq("role", "driver")
+    .maybeSingle();
+
+  let profileId: string;
+
+  if (existing) {
+    profileId = existing.id;
+    // Update personal info
+    const patch: Record<string, unknown> = {};
+    if (input.fullName !== undefined) patch.full_name = input.fullName;
+    if (input.phone !== undefined) patch.phone = input.phone;
+    if (input.nationalId !== undefined) patch.national_id = input.nationalId;
+    if (input.driverLicense !== undefined)
+      patch.driver_license = input.driverLicense;
+    if (input.address !== undefined) patch.address = input.address;
+    if (input.nationalityCountry !== undefined)
+      patch.nationality_country = input.nationalityCountry;
+    if (Object.keys(patch).length > 0) {
+      await admin.from("profiles").update(patch).eq("id", profileId);
+    }
+  } else {
+    const { data: created, error } = await admin
+      .from("profiles")
+      .insert({
+        user_id: input.userId,
+        role: "driver",
+        email: input.email ?? null,
+        full_name: input.fullName ?? null,
+        phone: input.phone ?? null,
+        national_id: input.nationalId ?? null,
+        driver_license: input.driverLicense ?? null,
+        address: input.address ?? null,
+        nationality_country: input.nationalityCountry ?? "GA",
+        verification_status: "pending_documents",
+      })
+      .select("id")
+      .single();
+
+    if (error || !created)
+      return {
+        ok: false,
+        error: error?.message ?? "Failed to create driver profile.",
+      };
+    profileId = created.id;
+  }
+
+  // Ensure driver_profiles sub-row exists
+  const { error: subError } = await admin
+    .from("driver_profiles")
+    .upsert({ profile_id: profileId }, { onConflict: "profile_id" });
+  if (subError) return { ok: false, error: subError.message };
+
+  return { ok: true, profileId };
+}
+
+export type RegisterStaffInput = {
+  userId: string;
+  staffRole?: StaffRole;
+  email?: string | null;
+  fullName?: string | null;
+  phone?: string | null;
+  badgeId?: string | null;
+  applicationStatus?: "pending" | "approved" | "rejected";
+  applicationNote?: string | null;
+};
+
+/** Creates a staff profile row + staff_profiles sub-row. Idempotent. */
+export async function registerStaffProfile(
+  input: RegisterStaffInput
+): Promise<{ ok: true; profileId: string } | { ok: false; error: string }> {
+  const admin = createAdminClient() as any;
+  const staffRole: StaffRole = input.staffRole ?? "agent";
+
+  // Check if this user already has a staff profile
+  const { data: existing } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("user_id", input.userId)
+    .eq("role", "staff")
+    .maybeSingle();
+
+  let profileId: string;
+
+  if (existing) {
+    profileId = existing.id;
+    const patch: Record<string, unknown> = {};
+    if (input.fullName !== undefined) patch.full_name = input.fullName;
+    if (input.phone !== undefined) patch.phone = input.phone;
+    if (Object.keys(patch).length > 0) {
+      await admin.from("profiles").update(patch).eq("id", profileId);
+    }
+  } else {
+    const { data: created, error } = await admin
+      .from("profiles")
+      .insert({
+        user_id: input.userId,
+        role: "staff",
+        email: input.email ?? null,
+        full_name: input.fullName ?? null,
+        phone: input.phone ?? null,
+        verification_status: "pending_review",
+      })
+      .select("id")
+      .single();
+
+    if (error || !created)
+      return {
+        ok: false,
+        error: error?.message ?? "Failed to create staff profile.",
+      };
+    profileId = created.id;
+  }
+
+  // Ensure staff_profiles sub-row exists
+  const { error: subError } = await admin
+    .from("staff_profiles")
+    .upsert(
+      {
+        profile_id: profileId,
+        staff_role: staffRole,
+        badge_id: input.badgeId ?? null,
+        application_status: input.applicationStatus ?? "pending",
+        application_note: input.applicationNote ?? null,
+      },
+      { onConflict: "profile_id" }
+    );
+  if (subError) return { ok: false, error: subError.message };
+
+  return { ok: true, profileId };
+}
+
+// ── Promotion ─────────────────────────────────────────────────────────────────
+
+/** Promotes an existing agent staff profile to admin. */
+export async function promoteStaffToAdmin(
+  staffProfileId: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const admin = createAdminClient() as any;
+
+  const { error } = await admin
+    .from("staff_profiles")
+    .update({ staff_role: "admin" })
+    .eq("profile_id", staffProfileId);
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+// ── Backwards-compat alias ────────────────────────────────────────────────────
+// Used by the setup/bootstrap flow which registers the first admin.
+export { ACTIVE_PROFILE_COOKIE };
+
+/** @deprecated Use registerStaffProfile with staffRole:'admin' instead. */
+export async function registerRole(input: {
+  userId: string;
+  role: ProfileRole;
   email?: string | null;
   fullName?: string | null;
   phone?: string | null;
@@ -120,106 +279,23 @@ export type RegisterRoleInput = {
   agentApplicationStatus?: "pending" | "approved" | "rejected" | null;
   agentApplicationNote?: string | null;
   verificationStatus?: "pending_documents" | "pending_review" | "active" | "rejected";
-};
-
-/**
- * Ensures a profile exists for the user, then adds the given role to their
- * profile_types and creates the typed profile row. Idempotent.
- */
-export async function registerRole(
-  input: RegisterRoleInput
-): Promise<{ ok: true; profileId: string } | { ok: false; error: string }> {
-  const admin = createAdminClient();
-
-  // Ensure profile exists (create if missing)
-  const { data: existing } = await admin
-    .from("profiles")
-    .select("id, profile_types")
-    .eq("id", input.userId)
-    .maybeSingle();
-
-  let profileId: string;
-
-  if (!existing) {
-    const { data: created, error: createError } = await admin
-      .from("profiles")
-      .insert({
-        id: input.userId,
-        user_id: input.userId,
-        email: input.email ?? null,
-        full_name: input.fullName ?? null,
-        phone: input.phone ?? null,
-        profile_types: [input.role],
-        agent_application_status: input.agentApplicationStatus ?? null,
-        agent_application_note: input.agentApplicationNote ?? null,
-        verification_status: input.verificationStatus ?? "pending_documents",
-      })
-      .select("id")
-      .single();
-    if (createError || !created) {
-      return { ok: false, error: createError?.message ?? "Failed to create profile." };
-    }
-    profileId = created.id;
-  } else {
-    profileId = existing.id;
-    const current: UserRole[] = (existing.profile_types as UserRole[]) ?? [];
-    if (!current.includes(input.role)) {
-      const { error } = await admin
-        .from("profiles")
-        .update({ profile_types: [...current, input.role] })
-        .eq("id", profileId);
-      if (error) return { ok: false, error: error.message };
-    }
-    // Also update personal info if provided
-    const patch: Record<string, unknown> = {};
-    if (input.fullName) patch.full_name = input.fullName;
-    if (input.phone) patch.phone = input.phone;
-    if (input.agentApplicationStatus !== undefined)
-      patch.agent_application_status = input.agentApplicationStatus;
-    if (input.agentApplicationNote !== undefined)
-      patch.agent_application_note = input.agentApplicationNote;
-    if (Object.keys(patch).length > 0) {
-      await admin.from("profiles").update(patch).eq("id", profileId);
-    }
+}): Promise<{ ok: true; profileId: string } | { ok: false; error: string }> {
+  if (input.role === "driver") {
+    return registerDriverProfile({
+      userId: input.userId,
+      email: input.email,
+      fullName: input.fullName,
+      phone: input.phone,
+    });
   }
-
-  // Ensure typed row
-  const typed = await ensureTypedProfileRow(profileId, input.role, { badgeId: input.badgeId });
-  if (!typed.ok) return typed;
-
-  return { ok: true, profileId };
-}
-
-export async function promoteToAdmin(
-  actingAdminProfileId: string,
-  targetProfileId: string
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const admin = createAdminClient();
-
-  // Verify target profile exists and has 'agent' role
-  const { data: target } = await admin
-    .from("profiles")
-    .select("id, profile_types")
-    .eq("id", targetProfileId)
-    .maybeSingle();
-
-  if (!target) return { ok: false, error: "Profile not found." };
-
-  const types: UserRole[] = (target.profile_types as UserRole[]) ?? [];
-  if (types.includes("admin")) return { ok: true }; // Already admin
-
-  // Add admin to profile_types
-  const { error: updateError } = await admin
-    .from("profiles")
-    .update({ profile_types: [...types, "admin"] })
-    .eq("id", targetProfileId);
-  if (updateError) return { ok: false, error: updateError.message };
-
-  // Create admin_profiles row
-  const { error: adminRowError } = await admin
-    .from("admin_profiles")
-    .upsert({ profile_id: targetProfileId }, { onConflict: "profile_id" });
-  if (adminRowError) return { ok: false, error: adminRowError.message };
-
-  return { ok: true };
+  return registerStaffProfile({
+    userId: input.userId,
+    staffRole: "agent",
+    email: input.email,
+    fullName: input.fullName,
+    phone: input.phone,
+    badgeId: input.badgeId,
+    applicationStatus: input.agentApplicationStatus ?? "pending",
+    applicationNote: input.agentApplicationNote,
+  });
 }

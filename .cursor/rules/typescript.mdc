@@ -1,0 +1,35 @@
+---
+description: Centralized TypeScript types and schema conventions
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# TypeScript
+
+## Single import path
+
+```ts
+import type { Profile, Vehicle, UserRole, Infraction } from "@/types";
+```
+
+Do not re-export or duplicate enum literals (`"driver" | "agent"`) in feature files.
+
+## Schema workflow
+
+1. Edit `src/db/schema.ts` (Drizzle)
+2. `npm run db:generate` or hand-write `supabase/migrations/*.sql`
+3. Update `src/lib/types/database.ts` (`Database` + enums)
+4. Add row aliases to `src/types/index.ts` if new tables
+
+## Naming
+
+| Layer | Convention |
+|-------|--------------|
+| DB columns | snake_case |
+| React components | PascalCase |
+| Functions / hooks | camelCase (`useStaffDocuments`) |
+| Query keys | camelCase namespaces in `queryKeys` |
+
+## API return types
+
+Define fetcher return types next to the fetcher in `lib/api/` or export from `@/types` when shared across hooks and components.

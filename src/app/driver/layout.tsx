@@ -10,7 +10,7 @@ import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import type { NavItem } from "@/components/dashboard/Sidebar";
 import { DriverStatusBanner } from "@/components/dashboard/DriverStatusBanner";
-import { requireRole } from "@/lib/auth";
+import { requireDriverProfile } from "@/lib/auth";
 import { getTranslations } from "@/i18n/server";
 
 export default async function DriverLayout({
@@ -18,17 +18,10 @@ export default async function DriverLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const profile = await requireRole(["driver", "admin"]);
+  const { profile } = await requireDriverProfile();
   const { t } = await getTranslations();
 
-  if (
-    profile.role === "driver" &&
-    profile.agent_application_status === "pending"
-  ) {
-    redirect("/register/agent/pending");
-  }
-
-  if (profile.role === "driver" && !profile.onboarded_at) {
+  if (!profile.onboarded_at) {
     redirect("/onboarding");
   }
 
@@ -74,12 +67,10 @@ export default async function DriverLayout({
       userEmail={profile.email}
       roleLabel={t("roles.driver")}
       banner={
-        profile.role === "driver" ? (
-          <DriverStatusBanner
-            verificationStatus={profile.verification_status ?? "pending_documents"}
-            adminMessage={profile.admin_message}
-          />
-        ) : null
+        <DriverStatusBanner
+          verificationStatus={profile.verification_status ?? "pending_documents"}
+          adminMessage={profile.admin_message}
+        />
       }
     >
       {children}

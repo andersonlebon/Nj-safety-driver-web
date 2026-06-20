@@ -1,97 +1,125 @@
 # Engineering Best Practices
 
-## Core Principles
+## Core principles
+
 - Keep components small and composable.
-- Prefer Server Components.
-- Use strict TypeScript.
+- **Server Components by default**; Client Components only for interaction.
+- Strict TypeScript; import types from `@/types`.
 - Avoid `any` unless unavoidable.
 - Reuse existing UI primitives.
+- Minimal diffs; no unrelated refactors.
 
 ## Next.js App Router
-### Prefer Server Components
-Use Server Components for:
-- dashboards
-- tables
-- initial page data
-- protected routes
 
-Use Client Components only for:
-- forms
-- upload interactions
-- modals
-- local state
+### Server Components
+
+Use for: dashboards, tables, initial page data, protected routes.
+
+### Client Components
+
+Use for: forms, uploads, modals, charts, local state, React Query consumers.
+
+Mark with `"use client"` only when required.
+
+## Data fetching
+
+### Server
+
+```ts
+// Page / RSC
+const supabase = createClient(); // @/lib/supabase/server
+const [a, b] = await Promise.all([loadA(), loadB()]);
+```
+
+- Shared loaders: `src/lib/queries/`
+- Auth: `requireRole`, `getCurrentProfile` (already cached)
+
+### Client (React Query) — required for Supabase reads
+
+```
+lib/query-keys.ts       → queryKeys.documents.staffBundle(...)
+lib/api/documents.ts    → fetchStaffDocumentsBundle()
+hooks/queries/          → useStaffDocuments()
+```
+
+**Rules:**
+
+- Never call `createClient()` in a component.
+- Never use `useEffect` to load Supabase data — add a hook.
+- Add keys to `queryKeys` before writing hooks.
+- After server-action mutations, invalidate related query keys.
+
+### Writes
+
+- Prefer Server Actions with `requireRoleForAction`.
+- Use `revalidatePath` for server-rendered pages.
+
+## TypeScript
+
+- Import from `@/types`: `Profile`, `Vehicle`, `UserRole`, etc.
+- Do not duplicate enums or row types in feature files.
+- Schema change workflow: Drizzle → migration → `database.ts` → `types/index.ts`.
 
 ## Supabase
+
 ### Security
+
 - Never expose `SUPABASE_SERVICE_ROLE_KEY` client-side.
-- Never bypass RLS.
-- Keep all protected queries server-side when possible.
+- Never bypass RLS from the browser.
+- `@supabase/ssr` only; middleware refreshes sessions.
 
 ### Auth
-- Use `@supabase/ssr` helpers only.
-- Middleware refreshes sessions.
-- Server-side role checks via `requireRole`.
+
+- `requireRole([...])` in layouts and sensitive pages.
+- `requireRoleForAction` in actions for friendly errors.
 
 ## Database
-### Drizzle ORM
-- Drizzle is the schema source of truth.
-- Generate migrations using `drizzle-kit`.
-- Keep RLS policies in SQL migration files.
 
-### Naming
-- snake_case for database columns
-- PascalCase for React components
-- camelCase for variables/functions
+- Drizzle (`src/db/schema.ts`) is schema source of truth.
+- Apply: `npm run db:push`
+- RLS in `supabase/post-migrations/`
+- snake_case columns; PascalCase components; camelCase functions
 
 ## UI
+
 ### Shared primitives
-Always reuse:
-- Button
-- Input
-- Card
-- Alert
-- EmptyState
-- StatusBadge
+
+`Button`, `Input`, `Card`, `Alert`, `EmptyState`, `StatusBadge`, `FormDialog`, `StepWizard`
 
 ### Styling
-- Use Tailwind utility classes.
-- Use shared classes from `globals.css`.
-- Avoid inline styles.
 
-## Refactoring Measures
-### Avoid duplication
-Extract shared logic into:
-- `lib/`
-- `hooks/`
-- shared components
+- Tailwind utilities + `globals.css` shared classes
+- No inline styles
+- Lazy-load heavy charts (`dynamic` + `ChartSkeleton`)
 
-### Route organization
-Keep dashboards isolated:
-- `/driver/*`
-- `/agent/*`
-- `/admin/*`
+## Performance
 
-### Data access
-- Centralize auth helpers.
-- Centralize Supabase helpers.
-- Avoid duplicated queries.
+- `cache()` on auth helpers — preserve when touching auth
+- `loading.tsx` per role workspace
+- `Promise.all` for independent server queries
+- Dynamic import Recharts in chart wrappers
 
-### Performance
-- Avoid large Client Components.
-- Stream server-rendered pages when possible.
-- Lazy-load heavy interactive components.
+## CI
 
-## CI Expectations
-Every PR should pass:
-- lint
-- type-check
-- build
+Every PR: `npm run lint`, `npm run type-check`, `npm run build`
 
-## MVP Constraints
-Do NOT add:
-- OCR
-- AI plate recognition
-- native mobile apps
-- real payment gateway
+## MVP constraints — do NOT add
 
-These belong to future phases only.
+- OCR / AI plate recognition
+- Real payment gateways
+- Native mobile apps
+- Radar hardware APIs
+
+## Change checklist
+
+- [ ] Correct layer (server vs client hook vs action)
+- [ ] Types from `@/types`
+- [ ] Client reads use React Query
+- [ ] Auth guarded where needed
+- [ ] Reuses UI primitives
+- [ ] Matches `docs/ARCHITECTURE.md`
+
+## Agent configuration
+
+- **Cursor:** `.cursor/rules/`
+- **Claude:** `.claude/CLAUDE.md`, skill `nj-safety-driver`

@@ -1,0 +1,66 @@
+---
+description: NJ Safety Driver — system architecture and layer boundaries
+alwaysApply: true
+---
+
+# Architecture
+
+Stack: **Next.js 14 App Router**, **TypeScript strict**, **Supabase** (Auth/Postgres/Storage), **Drizzle** (schema only), **TanStack Query** (client reads), **Tailwind**.
+
+## Layer map
+
+```
+Browser
+  → middleware.ts          session refresh + route guard (no business data)
+  → app/                   routes (Server Components default)
+       layouts             requireRole + shell
+       pages               initial data (server) or pass props to client
+  → components/            UI (client only when interactive)
+  → hooks/queries/         React Query hooks (client Supabase reads)
+  → lib/api/               client fetchers (called by hooks only)
+  → lib/queries/           server-side query loaders (RSC / actions)
+  → lib/auth.ts            getSessionUser, requireRole (React cache)
+  → lib/supabase/          client | server | middleware | admin
+  → types/                 centralized TypeScript (import @/types)
+  → db/schema.ts           Drizzle schema source of truth
+```
+
+## Role workspaces
+
+| Prefix | Roles | Layout guard |
+|--------|-------|--------------|
+| `/driver/*` | driver, admin | `requireRole(["driver","admin"])` |
+| `/agent/*` | agent, admin | `requireRole(["agent","admin"])` |
+| `/admin/*` | admin | `requireRole(["admin"])` |
+
+## Data fetching rules
+
+| Context | Pattern |
+|---------|---------|
+| Server Component / layout / page | `createClient()` from `@/lib/supabase/server` + `lib/queries/*` |
+| Server Action | `requireRole` / `requireRoleForAction` then server client |
+| Client Component read | **React Query hook** in `hooks/queries/` → fetcher in `lib/api/` |
+| Client mutation | Server Action preferred; invalidate via `queryClient.invalidateQueries` |
+| Admin bootstrap only | `createAdminClient()` — never in client code |
+
+## Security
+
+- Never expose `SUPABASE_SERVICE_ROLE_KEY` to the browser.
+- Never bypass RLS except `/setup` and admin promotion flows.
+- Privileged roles are never assigned via signup metadata.
+
+## Performance defaults (already in codebase)
+
+- `cache()` on `getSessionUser`, `getCurrentProfile`, `listProfilesForUser`, `requireActiveProfileSelection`.
+- Lazy-load Recharts via `dynamic()` in chart wrappers.
+- `loading.tsx` per role workspace for streaming skeletons.
+- `Promise.all` for independent server queries.
+
+## Before every change, verify
+
+1. Does it belong in the correct layer (server vs client vs hook vs action)?
+2. Does it respect role boundaries and existing auth flow?
+3. Are types imported from `@/types`, not re-declared?
+4. Does a new client Supabase read use React Query (not raw `useEffect`)?
+
+Full reference: `docs/ARCHITECTURE.md`

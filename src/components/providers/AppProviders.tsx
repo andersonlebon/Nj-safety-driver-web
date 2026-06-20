@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { ChunkLoadRecovery } from "@/components/ChunkLoadRecovery";
+import { QueryProvider } from "@/components/providers/QueryProvider";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { GabonBackdrop } from "@/components/theme/GabonBackdrop";
 import { I18nProvider } from "@/i18n/context";
@@ -19,11 +20,13 @@ export function AppProviders({
   initialLocale: Locale;
 }) {
   return (
-    <ThemeProvider>
-      <I18nProvider initialLocale={initialLocale}>
-        <ChunkLoadRecovery />
-        <GabonBackdrop variant="prominent">{children}</GabonBackdrop>
-      </I18nProvider>
-    </ThemeProvider>
+    <QueryProvider>
+      <ThemeProvider>
+        <I18nProvider initialLocale={initialLocale}>
+          <ChunkLoadRecovery />
+          <GabonBackdrop variant="prominent">{children}</GabonBackdrop>
+        </I18nProvider>
+      </ThemeProvider>
+    </QueryProvider>
   );
 }
