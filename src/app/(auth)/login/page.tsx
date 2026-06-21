@@ -76,15 +76,6 @@ export default async function LoginPage() {
           {t("auth.createAccount")}
         </Link>
       </p>
-      <p className="mt-3 text-sm text-stone-600 dark:text-slate-400">
-        {t("auth.fieldAgent")}{" "}
-        <Link
-          href="/register/agent"
-          className="text-brand-700 dark:text-brand-300 font-medium hover:underline"
-        >
-          {t("auth.applyAsAgent")}
-        </Link>
-      </p>
     </AuthDialogCard>
   );
 }
