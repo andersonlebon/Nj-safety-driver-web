@@ -10,10 +10,9 @@ export const landingEn = {
     title: "Road safety,",
     titleHighlight: "built for drivers and agents",
     description:
-      "NJ Safety Driver connects motorists and field agents on one platform. Register your vehicle, upload documents, pay fines online, and let agents verify compliance in the field.",
-    ctaDriver: "Start as a driver",
-    ctaAgent: "Apply as an agent",
-    ctaLogin: "Already have an account? Sign in",
+      "NJ Safety Driver connects motorists and field agents on one platform. Create an account to manage vehicles, upload documents, pay fines, or access your agent workspace after sign-in.",
+    ctaRegister: "Create an account",
+    ctaLogin: "Sign in",
     trustSsl: "256-bit SSL encryption",
     trustOtp: "Secure sign-in",
     trustAudit: "Timestamped audit trail",
@@ -28,7 +27,7 @@ export const landingEn = {
     eyebrow: "Two workspaces, one platform",
     title: "Everything drivers and agents need",
     description:
-      "Whether you manage your own compliance or enforce it on the road, NJ Safety Driver gives you a dedicated workspace with the tools that matter.",
+      "Create your account first, then choose the workspace that fits your role. Driver and agent tools live in the same platform.",
     driver: {
       tag: "Driver workspace",
       title: "For motorists",
@@ -40,20 +39,20 @@ export const landingEn = {
         "Track infractions with proof and status",
         "Pay fines online and download receipts",
       ],
-      cta: "Create driver account",
+      cta: "Create an account",
     },
     agent: {
       tag: "Agent workspace",
       title: "For field agents",
       description:
-        "Verify drivers on the spot, search plates, issue infractions, and attach geolocated evidence.",
+        "After sign-in, apply for agent access from your account. Then verify drivers, search plates, and issue infractions in the field.",
       features: [
-        "Secure sign-in after admin approval",
+        "Sign in with your account, then request agent access",
         "Plate search and driver lookup",
         "Issue infractions with official fee schedule",
         "Upload photo evidence from the field",
       ],
-      cta: "Apply as an agent",
+      cta: "Sign in to continue",
     },
   },
   features: {
@@ -136,40 +135,21 @@ export const landingEn = {
       detail: "3D Secure",
     },
   },
-  portals: {
-    eyebrow: "Choose your path",
-    title: "Pick the workspace that fits your role",
-    driver: {
-      role: "Driver",
-      subtitle: "Driver portal",
-      items: [
-        "Profile and vehicle registration",
-        "Document uploads and verification status",
-        "Infraction history and payment",
-        "Digital receipts in your account",
-      ],
-      cta: "Register as a driver",
-    },
-    agent: {
-      role: "Field agent",
-      subtitle: "Agent workspace",
-      items: [
-        "Online application with admin review",
-        "Plate search and driver lookup",
-        "Issue infractions in the field",
-        "Photo evidence and session audit trail",
-      ],
-      cta: "Apply as an agent",
-    },
+  getStarted: {
+    eyebrow: "Get started",
+    title: "Sign in or create an account",
+    description:
+      "Register to open your driver profile or sign in to continue. Agent applications and workspace selection happen after you are logged in.",
+    registerCta: "Create an account",
+    loginCta: "Sign in",
     loginHint: "Already have an account?",
   },
   cta: {
     badge: "Official platform — Gabonese Republic",
     title: "Ready to get started?",
     description:
-      "Drivers register in minutes. Agents apply online and access the field workspace after approval. Sign in anytime if you already have an account.",
-    driverButton: "Create driver account",
-    agentButton: "Apply as an agent",
+      "Create an account or sign in to access your workspace. Choose driver or agent tools once you are logged in.",
+    registerButton: "Create an account",
     loginButton: "Sign in",
     contact: "Institutional inquiries:",
   },

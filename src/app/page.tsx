@@ -126,21 +126,13 @@ export default async function LandingPage() {
 
                 <div className="mt-8 flex flex-wrap items-center gap-3">
                   <Link href="/register" className="btn-primary px-6 text-base shadow-md shadow-brand-700/15">
-                    {t("landing.hero.ctaDriver")}
+                    {t("landing.hero.ctaRegister")}
                     <ArrowRight className="h-4 w-4" />
                   </Link>
-                  <Link href="/register/agent" className="btn-secondary px-6 text-base">
-                    {t("landing.hero.ctaAgent")}
+                  <Link href="/login" className="btn-secondary px-6 text-base">
+                    {t("landing.hero.ctaLogin")}
                   </Link>
                 </div>
-
-                <Link
-                  href="/login"
-                  className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:text-brand-800 dark:text-brand-400 dark:hover:text-brand-300 transition-colors"
-                >
-                  {t("landing.hero.ctaLogin")}
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
 
                 <div className="mt-10 flex flex-wrap items-center gap-6 text-xs text-stone-500 dark:text-slate-500">
                   <TrustItem label={t("landing.hero.trustSsl")} />
@@ -160,7 +152,7 @@ export default async function LandingPage() {
                   variant="brand"
                 />
                 <ProductPreviewCard
-                  href="/register/agent"
+                  href="/login"
                   icon={<UserCheck className="h-6 w-6" />}
                   tag={t("landing.products.agent.tag")}
                   title={t("landing.products.agent.title")}
@@ -211,7 +203,7 @@ export default async function LandingPage() {
                 variant="brand"
               />
               <ProductDetailCard
-                href="/register/agent"
+                href="/login"
                 icon={<ShieldCheck className="h-6 w-6" />}
                 tag={t("landing.products.agent.tag")}
                 title={t("landing.products.agent.title")}
@@ -306,54 +298,24 @@ export default async function LandingPage() {
           </div>
         </section>
 
-        {/* Portals */}
+        {/* Get started */}
         <section className="landing-surface-alt border-b border-stone-200/70 dark:border-slate-800/70">
           <div className="mx-auto max-w-7xl px-6 py-16 lg:py-20">
             <SectionHeader
-              eyebrow={t("landing.portals.eyebrow")}
-              title={t("landing.portals.title")}
+              eyebrow={t("landing.getStarted.eyebrow")}
+              title={t("landing.getStarted.title")}
+              description={t("landing.getStarted.description")}
             />
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Portal
-                href="/register"
-                icon={<Car className="h-6 w-6" />}
-                role={t("landing.portals.driver.role")}
-                subtitle={t("landing.portals.driver.subtitle")}
-                items={[
-                  t("landing.portals.driver.items.0"),
-                  t("landing.portals.driver.items.1"),
-                  t("landing.portals.driver.items.2"),
-                  t("landing.portals.driver.items.3"),
-                ]}
-                cta={t("landing.portals.driver.cta")}
-                variant="brand"
-              />
-              <Portal
-                href="/register/agent"
-                icon={<ShieldCheck className="h-6 w-6" />}
-                role={t("landing.portals.agent.role")}
-                subtitle={t("landing.portals.agent.subtitle")}
-                items={[
-                  t("landing.portals.agent.items.0"),
-                  t("landing.portals.agent.items.1"),
-                  t("landing.portals.agent.items.2"),
-                  t("landing.portals.agent.items.3"),
-                ]}
-                cta={t("landing.portals.agent.cta")}
-                variant="navy"
-              />
-            </div>
-
-            <p className="mt-8 text-center text-sm text-stone-500 dark:text-slate-400">
-              {t("landing.portals.loginHint")}{" "}
-              <Link
-                href="/login"
-                className="font-semibold text-brand-700 hover:text-brand-800 dark:text-brand-400 dark:hover:text-brand-300"
-              >
-                {t("landing.header.login")}
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <Link href="/register" className="btn-primary px-6 text-base">
+                {t("landing.getStarted.registerCta")}
+                <ArrowRight className="h-4 w-4" />
               </Link>
-            </p>
+              <Link href="/login" className="btn-secondary px-6 text-base">
+                {t("landing.getStarted.loginCta")}
+              </Link>
+            </div>
           </div>
         </section>
 
@@ -379,18 +341,12 @@ export default async function LandingPage() {
                 href="/register"
                 className="inline-flex items-center gap-2 rounded-lg bg-white px-6 py-2.5 text-sm font-semibold text-brand-800 hover:bg-brand-50 transition-colors shadow-sm"
               >
-                {t("landing.cta.driverButton")}
+                {t("landing.cta.registerButton")}
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
-                href="/register/agent"
-                className="inline-flex items-center gap-2 rounded-lg border border-white/30 px-6 py-2.5 text-sm font-semibold text-white hover:bg-white/10 transition-colors"
-              >
-                {t("landing.cta.agentButton")}
-              </Link>
-              <Link
                 href="/login"
-                className="inline-flex items-center gap-2 rounded-lg border border-white/20 px-6 py-2.5 text-sm font-semibold text-white/90 hover:bg-white/5 transition-colors"
+                className="inline-flex items-center gap-2 rounded-lg border border-white/30 px-6 py-2.5 text-sm font-semibold text-white hover:bg-white/10 transition-colors"
               >
                 {t("landing.cta.loginButton")}
               </Link>
@@ -697,61 +653,6 @@ function PaymentMethod({
       <span className="mt-auto inline-flex items-center rounded-md bg-stone-100 dark:bg-slate-800 px-2 py-0.5 text-xs font-medium text-stone-500 dark:text-slate-400 self-start">
         {detail}
       </span>
-    </div>
-  );
-}
-
-function Portal({
-  href,
-  icon,
-  role,
-  subtitle,
-  items,
-  cta,
-  variant,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  role: string;
-  subtitle: string;
-  items: string[];
-  cta: string;
-  variant: "brand" | "navy";
-}) {
-  const headerCls = variant === "brand" ? "bg-brand-700" : "bg-navy-800";
-  const ctaCls =
-    variant === "brand"
-      ? "bg-brand-700 text-white hover:bg-brand-600 dark:hover:bg-brand-500"
-      : "bg-navy-800 text-white hover:bg-navy-700";
-
-  return (
-    <div className="card overflow-hidden flex flex-col hover:shadow-card-hover transition-shadow duration-200">
-      <div className={`${headerCls} px-6 py-6`}>
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 text-white mb-4">
-          {icon}
-        </div>
-        <h3 className="text-lg font-bold text-white leading-tight">{role}</h3>
-        <p className="text-xs text-white/60 mt-0.5 font-mono">{subtitle}</p>
-      </div>
-      <div className="p-6 flex-1 flex flex-col">
-        <ul className="space-y-3 flex-1">
-          {items.map((item) => (
-            <li key={item} className="flex items-start gap-2.5 text-sm">
-              <CheckCircle2 className="h-4 w-4 text-brand-600 dark:text-brand-400 shrink-0 mt-0.5" />
-              <span className="text-stone-700 dark:text-slate-300 leading-snug">
-                {item}
-              </span>
-            </li>
-          ))}
-        </ul>
-        <Link
-          href={href}
-          className={`mt-6 inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold tracking-wide transition-all duration-200 ${ctaCls}`}
-        >
-          {cta}
-          <ArrowRight className="h-4 w-4" />
-        </Link>
-      </div>
     </div>
   );
 }

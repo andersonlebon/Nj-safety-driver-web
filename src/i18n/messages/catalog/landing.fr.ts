@@ -10,10 +10,9 @@ export const landingFr = {
     title: "La sécurité routière,",
     titleHighlight: "pensée pour conducteurs et agents",
     description:
-      "NJ Safety Driver réunit automobilistes et agents de terrain sur une seule plateforme. Enregistrez votre véhicule, téléversez vos documents, payez vos amendes en ligne et laissez les agents vérifier la conformité sur le terrain.",
-    ctaDriver: "Commencer comme conducteur",
-    ctaAgent: "Postuler comme agent",
-    ctaLogin: "Déjà un compte ? Se connecter",
+      "NJ Safety Driver réunit automobilistes et agents de terrain sur une seule plateforme. Créez un compte pour gérer vos véhicules, téléverser vos documents, payer vos amendes ou accéder à l'espace agent après connexion.",
+    ctaRegister: "Créer un compte",
+    ctaLogin: "Se connecter",
     trustSsl: "Chiffrement SSL 256-bit",
     trustOtp: "Connexion sécurisée",
     trustAudit: "Journal d'audit horodaté",
@@ -28,7 +27,7 @@ export const landingFr = {
     eyebrow: "Deux espaces, une plateforme",
     title: "Tout ce dont conducteurs et agents ont besoin",
     description:
-      "Que vous gériez votre propre conformité ou que vous la contrôliez sur la route, NJ Safety Driver vous offre un espace dédié avec les outils essentiels.",
+      "Créez d'abord votre compte, puis choisissez l'espace adapté à votre rôle. Les outils conducteur et agent vivent sur la même plateforme.",
     driver: {
       tag: "Espace conducteur",
       title: "Pour les automobilistes",
@@ -40,20 +39,20 @@ export const landingFr = {
         "Suivez vos infractions avec preuves et statut",
         "Payez vos amendes en ligne et téléchargez vos quittances",
       ],
-      cta: "Créer un compte conducteur",
+      cta: "Créer un compte",
     },
     agent: {
       tag: "Espace agent",
       title: "Pour les agents de terrain",
       description:
-        "Vérifiez les conducteurs sur place, recherchez une plaque, émettez des infractions et joignez des preuves géolocalisées.",
+        "Après connexion, demandez l'accès agent depuis votre compte. Puis vérifiez les conducteurs, recherchez une plaque et émettez des infractions sur le terrain.",
       features: [
-        "Connexion sécurisée après validation administrateur",
+        "Connectez-vous, puis demandez l'accès agent",
         "Recherche de plaque et consultation du profil conducteur",
         "Émission d'infractions selon le barème officiel",
         "Téléversement de preuves photo depuis le terrain",
       ],
-      cta: "Postuler comme agent",
+      cta: "Se connecter pour continuer",
     },
   },
   features: {
@@ -136,40 +135,21 @@ export const landingFr = {
       detail: "3D Secure",
     },
   },
-  portals: {
-    eyebrow: "Choisissez votre parcours",
-    title: "L'espace adapté à votre rôle",
-    driver: {
-      role: "Conducteur",
-      subtitle: "Portail conducteur",
-      items: [
-        "Profil et enregistrement des véhicules",
-        "Téléversement et statut des documents",
-        "Historique des infractions et paiements",
-        "Quittances numériques dans votre compte",
-      ],
-      cta: "S'inscrire comme conducteur",
-    },
-    agent: {
-      role: "Agent de terrain",
-      subtitle: "Espace agent",
-      items: [
-        "Candidature en ligne avec validation administrateur",
-        "Recherche de plaque et consultation conducteur",
-        "Émission d'infractions sur le terrain",
-        "Preuves photo et traçabilité des sessions",
-      ],
-      cta: "Postuler comme agent",
-    },
+  getStarted: {
+    eyebrow: "Commencer",
+    title: "Connectez-vous ou créez un compte",
+    description:
+      "Inscrivez-vous pour ouvrir votre profil conducteur ou connectez-vous pour continuer. Les candidatures agent et le choix d'espace se font après connexion.",
+    registerCta: "Créer un compte",
+    loginCta: "Se connecter",
     loginHint: "Déjà un compte ?",
   },
   cta: {
     badge: "Plateforme officielle — République Gabonaise",
     title: "Prêt à commencer ?",
     description:
-      "Les conducteurs s'inscrivent en quelques minutes. Les agents postulent en ligne et accèdent à l'espace terrain après validation. Connectez-vous si vous avez déjà un compte.",
-    driverButton: "Créer un compte conducteur",
-    agentButton: "Postuler comme agent",
+      "Créez un compte ou connectez-vous pour accéder à votre espace. Choisissez les outils conducteur ou agent une fois connecté.",
+    registerButton: "Créer un compte",
     loginButton: "Se connecter",
     contact: "Informations institutionnelles :",
   },
