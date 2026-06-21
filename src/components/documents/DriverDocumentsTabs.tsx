@@ -23,7 +23,7 @@ export function DriverDocumentsTabs({
   const activeVehicle = vehicles.find((vehicle) => vehicle.id === activeTab);
 
   return (
-    <div id="driver-detail-documents" className="scroll-mt-3 space-y-4">
+    <div className="space-y-4">
       <div className="flex flex-wrap gap-2 border-b border-stone-200 dark:border-slate-800 pb-2">
         <button
           type="button"

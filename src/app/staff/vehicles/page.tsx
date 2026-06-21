@@ -19,6 +19,10 @@ export default async function AgentVehiclesPage({
   const supabase = createClient();
   const tableQuery = parseTableQuery(searchParams);
   const pageData = await loadVehicleDirectoryPaginated(supabase, tableQuery);
+  const openVehicleRaw = searchParams?.openVehicle;
+  const openVehicleId = Array.isArray(openVehicleRaw)
+    ? openVehicleRaw[0]
+    : openVehicleRaw;
 
   return (
     <div>
@@ -41,6 +45,7 @@ export default async function AgentVehiclesPage({
             ownerMap={pageData.ownerMap}
             photoUrls={pageData.photoUrls}
             canManageVehicles={false}
+            initialOpenVehicleId={openVehicleId || undefined}
           />
         </CardBody>
       </Card>

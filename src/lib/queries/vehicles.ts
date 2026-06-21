@@ -8,6 +8,10 @@ import {
 } from "@/lib/pagination";
 import { applyTableQueryFilters } from "@/lib/queries/table-filters";
 import type { Database } from "@/lib/types/database";
+import {
+  VEHICLE_OWNER_PROFILE_SELECT,
+  type VehicleOwnerProfile,
+} from "@/lib/vehicle-owner-profile";
 
 type VehicleRow = Database["public"]["Tables"]["vehicles"]["Row"];
 
@@ -17,7 +21,7 @@ export type VehicleDirectoryFilters = {
 };
 
 export type VehicleDirectoryPageData = PaginatedResult<VehicleRow> & {
-  ownerMap: Record<string, { full_name: string | null; email: string | null }>;
+  ownerMap: Record<string, VehicleOwnerProfile>;
   photoUrls: Record<string, string>;
   error: { message: string } | null;
 };
@@ -72,11 +76,9 @@ export async function loadVehicleDirectoryPaginated(
     ownerIds.length > 0
       ? supabase
           .from("profiles")
-          .select("id, full_name, email")
+          .select(VEHICLE_OWNER_PROFILE_SELECT)
           .in("id", ownerIds)
-      : Promise.resolve({
-          data: [] as { id: string; full_name: string | null; email: string | null }[],
-        }),
+      : Promise.resolve({ data: [] as VehicleOwnerProfile[] }),
     vehicles.length > 0
       ? supabase
           .from("documents")

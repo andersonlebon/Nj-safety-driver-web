@@ -1,16 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { Car, Eye } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { PaginatedTableFrame } from "@/components/table";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { Modal } from "@/components/ui/Modal";
 import { CountryBadge } from "@/components/vehicles/CountryBadge";
-import { StaffDocumentsLoader } from "@/components/documents/StaffDocumentsLoader";
-import { VehicleDetailContent } from "@/components/vehicles/VehicleDetailContent";
-import { VehicleVerificationActions } from "./VehicleVerificationActions";
+import { VehicleDetailModal } from "./VehicleDetailModal";
 import { formatDate } from "@/lib/utils";
 import type { TableQuery } from "@/lib/pagination";
 import { VERIFICATION_LABELS } from "@/lib/verification";
@@ -22,8 +19,8 @@ import {
   TRANSIT_ID_LABEL_BACK,
   TRANSIT_ID_LABEL_FRONT,
 } from "@/lib/transit-id-documents";
+import type { VehicleOwnerProfile } from "@/lib/vehicle-owner-profile";
 import type { Database, TransactionStatus, VerificationStatus } from "@/lib/types/database";
-import { vehicleDetailSectionLinks } from "@/lib/vehicle-detail-sections";
 
 type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
 type Infraction = Database["public"]["Tables"]["infractions"]["Row"];
@@ -44,6 +41,7 @@ export function AdminVehiclesTable({
   ownerMap,
   photoUrls,
   canManageVehicles = true,
+  initialOpenVehicleId,
 }: {
   pathname: string;
   query: TableQuery;
@@ -51,14 +49,13 @@ export function AdminVehiclesTable({
   preserveParams?: Record<string, string>;
   showStatusFilter?: boolean;
   vehicles: Vehicle[];
-  ownerMap: Record<
-    string,
-    { full_name: string | null; email: string | null }
-  >;
+  ownerMap: Record<string, VehicleOwnerProfile>;
   photoUrls: Record<string, string>;
   canManageVehicles?: boolean;
+  initialOpenVehicleId?: string;
 }) {
   const [selected, setSelected] = useState<Vehicle | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
   const [infractions, setInfractions] = useState<Infraction[]>([]);
   const [transactionStatusByInfraction, setTransactionStatusByInfraction] =
     useState<Record<string, TransactionStatus>>({});
@@ -69,9 +66,11 @@ export function AdminVehiclesTable({
     back: null,
   });
   const [, startTransition] = useTransition();
+  const openedFromUrl = useRef(false);
 
   const open = (vehicle: Vehicle) => {
     setSelected(vehicle);
+    setDetailsLoading(true);
     setInfractions([]);
     setTransactionStatusByInfraction({});
     setTrackingEvents([]);
@@ -144,8 +143,18 @@ export function AdminVehiclesTable({
           created_at: e.created_at,
         }))
       );
+      setDetailsLoading(false);
     });
   };
+
+  useEffect(() => {
+    if (!initialOpenVehicleId || openedFromUrl.current) return;
+    const match = vehicles.find((vehicle) => vehicle.id === initialOpenVehicleId);
+    if (match) {
+      openedFromUrl.current = true;
+      open(match);
+    }
+  }, [initialOpenVehicleId, vehicles]);
 
   const close = () => setSelected(null);
 
@@ -287,98 +296,31 @@ export function AdminVehiclesTable({
       </PaginatedTableFrame>
 
       {selected && (
-        <Modal
-          open
+        <VehicleDetailModal
+          vehicle={selected}
+          open={Boolean(selected)}
           onClose={close}
-          title={`Vehicle ${selected.plate_number}`}
-          description="Jump to any section below — verification actions stay pinned at the bottom."
-          className="max-w-4xl"
-          sectionNav={vehicleDetailSectionLinks({
-            showId:
-              selected.is_border_transit ||
-              Boolean(selected.transit_passport_id) ||
-              transitIdDocuments.length > 0,
-            showOwner: Boolean(
-              selectedOwner ||
-                selected.transit_driver_name ||
-                selected.transit_driver_phone
-            ),
-            hasInfractions: infractions.length > 0,
-            hasTracking: trackingEvents.length > 0,
-          }).concat(
-            selected.owner_id || transitIdDocuments.length > 0
-              ? [{ id: "vehicle-detail-documents", label: "Documents" }]
-              : []
-          )}
-          footer={
-            <div className="flex flex-col-reverse sm:flex-row sm:items-center gap-3 sm:justify-between">
-              <Button type="button" variant="secondary" onClick={close} className="w-full sm:w-auto">
-                Close
-              </Button>
-              <div className="flex-1 min-w-0 w-full">
-                {canManageVehicles && (
-                  <>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-slate-400 mb-2">
-                      Verification
-                    </p>
-                    <VehicleVerificationActions
-                      vehicleId={selected.id}
-                      status={
-                        (selected.verification_status ??
-                          "pending_review") as VerificationStatus
-                      }
-                    />
-                  </>
-                )}
-              </div>
-            </div>
+          photoUrl={photoUrls[selected.id]}
+          owner={selectedOwner}
+          infractions={infractions}
+          transactionStatusByInfraction={transactionStatusByInfraction}
+          trackingEvents={trackingEvents}
+          transitIdDocuments={transitIdDocuments}
+          transitIdUrls={transitIdUrls}
+          detailsLoading={detailsLoading}
+          canManageVehicles={canManageVehicles}
+          borderTransitHint={
+            selected.is_border_transit &&
+            !selected.owner_id &&
+            transitIdDocuments.length === 0 ? (
+              <Alert variant="info">
+                No linked driver account — ask the visitor to register at{" "}
+                <strong>/register</strong> with nationality and vehicle country,
+                then re-search this plate.
+              </Alert>
+            ) : undefined
           }
-        >
-          <div className="space-y-4">
-            <VehicleDetailContent
-              vehicle={selected}
-              photoUrl={photoUrls[selected.id]}
-              owner={
-                selectedOwner
-                  ? {
-                      full_name: selectedOwner.full_name,
-                      email: selectedOwner.email,
-                      phone: null,
-                    }
-                  : selected.transit_driver_name
-                    ? {
-                        full_name: selected.transit_driver_name,
-                        email: null,
-                        phone: selected.transit_driver_phone,
-                      }
-                    : null
-              }
-              infractions={infractions}
-              transactionStatusByInfraction={transactionStatusByInfraction}
-              trackingEvents={trackingEvents}
-              showOwner
-              transitIdDocuments={transitIdDocuments}
-              transitIdUrls={transitIdUrls}
-              showIdAuthenticityCheck
-            />
-            <StaffDocumentsLoader
-              ownerId={undefined}
-              vehicleId={selected.id}
-              title="Vehicle documents"
-              sectionId="vehicle-detail-documents"
-              scope="vehicle"
-            />
-            {selected.is_border_transit &&
-              !selected.owner_id &&
-              transitIdDocuments.length === 0 && (
-                <Alert variant="info">
-                  No linked driver account — ask the visitor to register at{" "}
-                  <strong>/register</strong> with nationality and vehicle country,
-                  then re-search this plate.
-                </Alert>
-              )}
-          </div>
-        </Modal>
+        />
       )}
     </>
   );

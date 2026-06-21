@@ -19,6 +19,15 @@ import type {
   VerificationStatus,
 } from "@/lib/types/database";
 
+export type VehicleDetailSection =
+  | "summary"
+  | "registration"
+  | "id"
+  | "owner"
+  | "fines"
+  | "infractions"
+  | "tracking";
+
 type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
 type Infraction = Database["public"]["Tables"]["infractions"]["Row"];
 
@@ -34,6 +43,7 @@ type Props = {
   transitIdDocuments?: TransitIdDocRow[];
   transitIdUrls?: TransitIdDocUrls;
   showIdAuthenticityCheck?: boolean;
+  visibleSections?: VehicleDetailSection[];
 };
 
 export function VehicleDetailContent({
@@ -48,7 +58,10 @@ export function VehicleDetailContent({
   transitIdDocuments = [],
   transitIdUrls = { front: null, back: null },
   showIdAuthenticityCheck = false,
+  visibleSections,
 }: Props) {
+  const show = (section: VehicleDetailSection) =>
+    !visibleSections || visibleSections.includes(section);
   const status = (vehicle.verification_status ?? "pending_review") as VerificationStatus;
   const financialRows: Array<{ fine_amount: number | string; status: PaymentStatus }> =
     infractions.map((infraction) => {
@@ -84,6 +97,7 @@ export function VehicleDetailContent({
 
   return (
     <div className="space-y-5">
+      {show("summary") && (
       <div
         id="vehicle-detail-summary"
         className="flex flex-wrap items-start gap-3 scroll-mt-3"
@@ -125,7 +139,9 @@ export function VehicleDetailContent({
           )}
         </div>
       </div>
+      )}
 
+      {show("registration") && (
       <dl
         id="vehicle-detail-registration"
         className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm rounded-lg border border-stone-200 dark:border-slate-800 p-4 bg-stone-50/50 dark:bg-slate-900/40 scroll-mt-3"
@@ -173,8 +189,9 @@ export function VehicleDetailContent({
           </>
         )}
       </dl>
+      )}
 
-      {showIdSection && (
+      {show("id") && showIdSection && (
         <div id="vehicle-detail-id" className="scroll-mt-3">
         <TransitIdDocumentGallery
           passportNumber={vehicle.transit_passport_id}
@@ -185,7 +202,7 @@ export function VehicleDetailContent({
         </div>
       )}
 
-      {showOwner && owner && (
+      {show("owner") && showOwner && owner && (
         <div id="vehicle-detail-owner" className="text-sm scroll-mt-3">
           <p className="font-medium text-stone-900 dark:text-stone-100 mb-1">Owner</p>
           <p className="text-stone-600 dark:text-slate-400">
@@ -195,6 +212,7 @@ export function VehicleDetailContent({
         </div>
       )}
 
+      {show("fines") && (
       <div
         id="vehicle-detail-fines"
         className="rounded-lg border border-stone-200 dark:border-slate-800 p-4 scroll-mt-3"
@@ -215,8 +233,9 @@ export function VehicleDetailContent({
           {infractions.length} total
         </p>
       </div>
+      )}
 
-      {infractions.length > 0 && (
+      {show("infractions") && infractions.length > 0 && (
         <div id="vehicle-detail-infractions" className="scroll-mt-3">
           <p className="text-sm font-semibold text-stone-900 dark:text-stone-100 mb-2 flex items-center gap-1.5">
             <AlertTriangle className="h-4 w-4" />
@@ -238,7 +257,7 @@ export function VehicleDetailContent({
         </div>
       )}
 
-      {trackingEvents.length > 0 && (
+      {show("tracking") && trackingEvents.length > 0 && (
         <div id="vehicle-detail-tracking" className="scroll-mt-3">
           <p className="text-sm font-semibold text-stone-900 dark:text-stone-100 mb-2 flex items-center gap-1.5">
             <MapPin className="h-4 w-4" />

@@ -27,7 +27,17 @@ type Props = {
     message: string
   ) => Promise<{ ok: true } | { ok: false; error: string }>;
   embedded?: boolean;
+  /** Fill available height (e.g. inside a fixed-height modal tab). */
+  fillHeight?: boolean;
 };
+
+function commentAlignEnd(
+  comment: DriverProfileComment,
+  viewer: Viewer
+): boolean {
+  const isStaffMessage = Boolean(comment.staffName);
+  return viewer.role === "staff" ? isStaffMessage : !isStaffMessage;
+}
 
 export function DriverProfileComments({
   driverProfileId,
@@ -35,6 +45,7 @@ export function DriverProfileComments({
   loadComments,
   sendComment,
   embedded = false,
+  fillHeight = false,
 }: Props) {
   const [comments, setComments] = useState<DriverProfileComment[]>([]);
   const [message, setMessage] = useState("");
@@ -75,14 +86,14 @@ export function DriverProfileComments({
 
   return (
     <section
-      id="documents"
       className={cn(
         "scroll-mt-6",
-        embedded ? "space-y-4" : "space-y-4 border-t border-stone-200 dark:border-slate-800 pt-4"
+        fillHeight && "flex flex-col min-h-0 h-full",
+        embedded ? "space-y-0" : "space-y-4 border-t border-stone-200 dark:border-slate-800 pt-4"
       )}
     >
       {!embedded && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 mb-4">
           <MessageSquare className="h-4 w-4 text-brand-600 dark:text-brand-400" />
           <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
             Chat with staff
@@ -90,26 +101,46 @@ export function DriverProfileComments({
         </div>
       )}
 
-      <div className="rounded-lg border border-stone-200 dark:border-slate-800 bg-stone-50/40 dark:bg-slate-900/30">
-        <div className="max-h-72 overflow-y-auto p-3 space-y-3">
+      <div
+        className={cn(
+          "rounded-lg border border-stone-200 dark:border-slate-800 bg-stone-50/40 dark:bg-slate-900/30 flex flex-col",
+          fillHeight && "flex-1 min-h-0"
+        )}
+      >
+        <div
+          className={cn(
+            "overflow-y-auto p-3 space-y-3",
+            fillHeight ? "flex-1 min-h-0" : "max-h-72"
+          )}
+        >
           {loading ? (
-            <p className="text-sm text-stone-500 dark:text-slate-400">Loading comments…</p>
+            <div className="animate-pulse space-y-3" aria-label="Loading comments">
+              <div className="flex gap-3">
+                <div className="h-9 w-9 shrink-0 rounded-full bg-stone-200 dark:bg-slate-800" />
+                <div className="h-14 flex-1 max-w-[70%] rounded-xl bg-stone-100 dark:bg-slate-800/70" />
+              </div>
+              <div className="flex flex-row-reverse gap-3">
+                <div className="h-9 w-9 shrink-0 rounded-full bg-stone-200 dark:bg-slate-800" />
+                <div className="h-12 flex-1 max-w-[60%] rounded-xl bg-stone-100 dark:bg-slate-800/70" />
+              </div>
+            </div>
           ) : comments.length === 0 ? (
             <p className="text-sm text-stone-500 dark:text-slate-400">
               No comments yet. Start the conversation with the driver here.
             </p>
           ) : (
             comments.map((comment, index) => {
-              const isStaff = Boolean(comment.staffName);
+              const isStaffMessage = Boolean(comment.staffName);
               const label = commentSenderLabel(comment, viewer);
-              const isMe = label === "me";
+              const displayLabel = label === "me" ? "You" : label;
+              const alignEnd = commentAlignEnd(comment, viewer);
 
               return (
                 <div
                   key={`${comment.timeSent}-${index}`}
                   className={cn(
                     "flex gap-3",
-                    isMe ? "flex-row-reverse" : "flex-row"
+                    alignEnd ? "flex-row-reverse" : "flex-row"
                   )}
                 >
                   {comment.staffAvatar ? (
@@ -123,7 +154,7 @@ export function DriverProfileComments({
                     <span
                       className={cn(
                         "h-9 w-9 shrink-0 rounded-full grid place-items-center text-xs font-semibold",
-                        isStaff
+                        isStaffMessage
                           ? "bg-brand-100 text-brand-800 dark:bg-brand-950/50 dark:text-brand-200"
                           : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
                       )}
@@ -134,7 +165,7 @@ export function DriverProfileComments({
                   <div
                     className={cn(
                       "min-w-0 max-w-[85%] rounded-xl px-3 py-2 text-sm",
-                      isMe
+                      alignEnd
                         ? "bg-brand-600 text-white"
                         : "bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-stone-900 dark:text-stone-100"
                     )}
@@ -142,10 +173,12 @@ export function DriverProfileComments({
                     <div
                       className={cn(
                         "flex items-center gap-2 text-xs mb-1",
-                        isMe ? "text-brand-100" : "text-stone-500 dark:text-slate-400"
+                        alignEnd
+                          ? "text-brand-100"
+                          : "text-stone-500 dark:text-slate-400"
                       )}
                     >
-                      <span className="font-semibold capitalize">{label}</span>
+                      <span className="font-semibold">{displayLabel}</span>
                       <span>{formatDateTime(comment.timeSent)}</span>
                     </div>
                     <p className="whitespace-pre-wrap break-words">
@@ -160,7 +193,7 @@ export function DriverProfileComments({
 
         <form
           onSubmit={handleSubmit}
-          className="border-t border-stone-200 dark:border-slate-800 p-3 space-y-3"
+          className="shrink-0 border-t border-stone-200 dark:border-slate-800 p-3 space-y-3"
         >
           {error && <Alert variant="error">{error}</Alert>}
           <Textarea

@@ -313,6 +313,91 @@ export async function approveDriverProfile(
     if (error) return { ok: false, error: friendlyError(error) };
 
     revalidatePath("/staff/drivers");
+    revalidatePath("/driver");
+    revalidatePath("/driver/profile");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: friendlyError(err) };
+  }
+}
+
+/** Reject and lock a driver profile — any staff member can do this. */
+export async function rejectDriverProfile(
+  driverProfileId: string,
+  message: string
+): Promise<StaffActionResult> {
+  try {
+    const auth = await requireStaffProfileForAction();
+    if ("ok" in auth) return auth;
+
+    const trimmed = message.trim();
+    if (!trimmed) {
+      return { ok: false, error: "A message explaining the rejection is required." };
+    }
+
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        verification_status: "rejected",
+        admin_message: trimmed,
+      })
+      .eq("id", driverProfileId)
+      .eq("role", "driver");
+
+    if (error) return { ok: false, error: friendlyError(error) };
+
+    revalidatePath("/staff/drivers");
+    revalidatePath("/driver");
+    revalidatePath("/driver/profile");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: friendlyError(err) };
+  }
+}
+
+/** Approve a vehicle — any staff member can do this. */
+export async function approveVehicleAsStaff(
+  vehicleId: string
+): Promise<StaffActionResult> {
+  try {
+    const auth = await requireStaffProfileForAction();
+    if ("ok" in auth) return auth;
+
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("vehicles")
+      .update({ verification_status: "active" })
+      .eq("id", vehicleId);
+
+    if (error) return { ok: false, error: friendlyError(error) };
+
+    revalidatePath("/staff/vehicles");
+    revalidatePath("/staff/drivers");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: friendlyError(err) };
+  }
+}
+
+/** Reject / lock a vehicle — any staff member can do this. */
+export async function rejectVehicleAsStaff(
+  vehicleId: string
+): Promise<StaffActionResult> {
+  try {
+    const auth = await requireStaffProfileForAction();
+    if ("ok" in auth) return auth;
+
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("vehicles")
+      .update({ verification_status: "rejected" })
+      .eq("id", vehicleId);
+
+    if (error) return { ok: false, error: friendlyError(error) };
+
+    revalidatePath("/staff/vehicles");
+    revalidatePath("/staff/drivers");
     return { ok: true };
   } catch (err) {
     return { ok: false, error: friendlyError(err) };

@@ -15,12 +15,21 @@ type Props = {
   userId: string;
   status: VerificationStatus;
   adminMessage: string | null;
+  /** Hide approve — use when approve is shown elsewhere (e.g. modal footer). */
+  hideApprove?: boolean;
+  /** Hide reject — use when reject is shown elsewhere (e.g. modal footer). */
+  hideReject?: boolean;
+  /** Inline button row without extra wrapper spacing. */
+  compact?: boolean;
 };
 
 export function DriverVerificationPanel({
   userId,
   status,
   adminMessage,
+  hideApprove = false,
+  hideReject = false,
+  compact = false,
 }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -50,25 +59,29 @@ export function DriverVerificationPanel({
   };
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className={compact ? "contents" : "flex flex-col gap-3"}>
       <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          loading={pending}
-          onClick={() => run("active")}
-        >
-          <Check className="h-4 w-4 mr-1.5" />
-          Approve driver
-        </Button>
-        <Button
-          type="button"
-          variant="danger"
-          loading={pending}
-          onClick={() => setMessageOpen(true)}
-        >
-          <X className="h-4 w-4 mr-1.5" />
-          Reject / message
-        </Button>
+        {!hideApprove && (
+          <Button
+            type="button"
+            loading={pending}
+            onClick={() => run("active")}
+          >
+            <Check className="h-4 w-4 mr-1.5" />
+            Approve driver
+          </Button>
+        )}
+        {!hideReject && (
+          <Button
+            type="button"
+            variant="danger"
+            loading={pending}
+            onClick={() => setMessageOpen(true)}
+          >
+            <X className="h-4 w-4 mr-1.5" />
+            Reject / message
+          </Button>
+        )}
         <Button
           type="button"
           variant="secondary"
@@ -81,7 +94,9 @@ export function DriverVerificationPanel({
           Send message
         </Button>
       </div>
-      {feedback && <Alert variant={feedback.variant}>{feedback.message}</Alert>}
+      {feedback && !compact && (
+        <Alert variant={feedback.variant}>{feedback.message}</Alert>
+      )}
 
       <Modal
         open={messageOpen}

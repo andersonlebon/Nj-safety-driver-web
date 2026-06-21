@@ -4,17 +4,11 @@ import { useState } from "react";
 import { Eye, Users } from "lucide-react";
 import { PaginatedTableFrame } from "@/components/table";
 import { Button } from "@/components/ui/Button";
-import { Modal } from "@/components/ui/Modal";
 import { CountryBadge } from "@/components/vehicles/CountryBadge";
-import { DriverDocumentsTabs } from "@/components/documents/DriverDocumentsTabs";
-import { DriverProfileComments } from "@/components/driver/DriverProfileComments";
 import { formatDate } from "@/lib/utils";
 import type { TableQuery } from "@/lib/pagination";
-import { DriverVerificationPanel, VerificationStatusBadge } from "./DriverVerificationPanel";
-import {
-  getDriverProfileCommentsForStaff,
-  postDriverProfileCommentAsStaff,
-} from "./actions";
+import { DriverDetailModal } from "./DriverDetailModal";
+import { VerificationStatusBadge } from "./DriverVerificationPanel";
 import type { Database, StaffRole } from "@/lib/types/database";
 
 type Driver = Database["public"]["Tables"]["profiles"]["Row"];
@@ -135,195 +129,15 @@ export function AdminDriversTable({
       </PaginatedTableFrame>
 
       {selected && (
-        <Modal
+        <DriverDetailModal
+          driver={selected}
           open={Boolean(selected)}
           onClose={close}
-          title={selected.full_name || selected.email || "Driver details"}
-          description="Review profile, uploaded documents, and verification — actions stay pinned at the bottom."
-          className="max-w-4xl"
-          sectionNav={[
-            { id: "driver-detail-profile", label: "Profile" },
-            { id: "driver-detail-documents", label: "Documents" },
-            { id: "driver-detail-vehicles", label: "Vehicles" },
-            { id: "driver-detail-comments", label: "Comments" },
-            ...(canManageDrivers
-              ? [{ id: "driver-detail-verification", label: "Verify" }]
-              : []),
-          ]}
-          footer={
-            <div className="flex flex-col-reverse sm:flex-row sm:items-end gap-3 sm:justify-between">
-              <Button type="button" variant="secondary" onClick={close} className="w-full sm:w-auto">
-                Close
-              </Button>
-              {canManageDrivers && (
-                <div className="flex-1 min-w-0 w-full">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-slate-400 mb-2">
-                    Driver verification
-                  </p>
-                  <DriverVerificationPanel
-                    userId={selected.id}
-                    status={selected.verification_status ?? "pending_documents"}
-                    adminMessage={selected.admin_message}
-                  />
-                </div>
-              )}
-            </div>
-          }
-        >
-          <DriverDetailModalBody
-            driver={selected}
-            staffId={staffId}
-            staffName={staffName}
-            vehicles={vehiclesByDriver[selected.id] ?? []}
-            canManageDrivers={canManageDrivers}
-          />
-        </Modal>
+          staffName={staffName}
+          vehicles={vehiclesByDriver[selected.id] ?? []}
+          canManageDrivers={canManageDrivers}
+        />
       )}
     </>
-  );
-}
-
-function DriverDetailModalBody({
-  driver,
-  staffName,
-  vehicles,
-  canManageDrivers,
-}: {
-  driver: Driver;
-  staffId: string;
-  staffName: string;
-  vehicles: DriverVehicle[];
-  canManageDrivers: boolean;
-}) {
-  return (
-    <div className="space-y-6">
-      <dl
-        id="driver-detail-profile"
-        className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm rounded-lg border border-stone-200 dark:border-slate-800 p-4 bg-stone-50/50 dark:bg-slate-900/40 scroll-mt-3"
-      >
-        <dt className="text-stone-500 dark:text-slate-400">Email</dt>
-        <dd className="font-medium text-stone-900 dark:text-stone-100 break-all">
-          {driver.email || "—"}
-        </dd>
-        <dt className="text-stone-500 dark:text-slate-400">Phone</dt>
-        <dd className="font-medium text-stone-900 dark:text-stone-100">
-          {driver.phone || "—"}
-        </dd>
-        <dt className="text-stone-500 dark:text-slate-400">Nationality</dt>
-        <dd>
-          <CountryBadge code={driver.nationality_country ?? "GA"} />
-        </dd>
-        <dt className="text-stone-500 dark:text-slate-400">National ID</dt>
-        <dd className="font-medium text-stone-900 dark:text-stone-100">
-          {driver.national_id || "—"}
-        </dd>
-        <dt className="text-stone-500 dark:text-slate-400">License #</dt>
-        <dd className="font-medium text-stone-900 dark:text-stone-100">
-          {driver.driver_license || "—"}
-        </dd>
-        <dt className="text-stone-500 dark:text-slate-400">Address</dt>
-        <dd className="font-medium text-stone-900 dark:text-stone-100 col-span-2">
-          {driver.address || "—"}
-        </dd>
-        <dt className="text-stone-500 dark:text-slate-400">Joined</dt>
-        <dd className="font-medium text-stone-900 dark:text-stone-100">
-          {formatDate(driver.created_at)}
-        </dd>
-        <dt className="text-stone-500 dark:text-slate-400">Verification</dt>
-        <dd>
-          <VerificationStatusBadge
-            status={driver.verification_status ?? "pending_documents"}
-          />
-        </dd>
-        {driver.admin_message && (
-          <>
-            <dt className="text-stone-500 dark:text-slate-400 col-span-2">
-              Last staff message
-            </dt>
-            <dd className="col-span-2 text-stone-700 dark:text-slate-300 italic">
-              {driver.admin_message}
-            </dd>
-          </>
-        )}
-      </dl>
-
-      <DriverDocumentsTabs ownerId={driver.id} vehicles={vehicles} />
-
-      <DriverProfileComments
-        driverProfileId={driver.id}
-        viewer={{
-          role: "staff",
-          displayName: staffName || "Staff member",
-        }}
-        loadComments={getDriverProfileCommentsForStaff}
-        sendComment={postDriverProfileCommentAsStaff}
-      />
-
-      <DriverVehiclesSection vehicles={vehicles} />
-
-      {canManageDrivers && (
-        <div
-          id="driver-detail-verification"
-          className="rounded-lg border border-dashed border-stone-200 dark:border-slate-700 p-3 text-sm text-stone-600 dark:text-slate-400 scroll-mt-3"
-        >
-          Compare documents above with the profile, then approve or reject using
-          the actions pinned at the bottom.
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DriverVehiclesSection({ vehicles }: { vehicles: DriverVehicle[] }) {
-  return (
-    <section
-      id="driver-detail-vehicles"
-      className="space-y-3 border-t border-stone-200 dark:border-slate-800 pt-4 scroll-mt-3"
-    >
-      <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
-        Vehicles and plates
-      </h3>
-      {vehicles.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-stone-200 dark:border-slate-700 p-3 text-sm text-stone-500 dark:text-slate-400">
-          No vehicles registered for this driver.
-        </p>
-      ) : (
-        <div className="overflow-x-auto rounded-lg border border-stone-200 dark:border-slate-800">
-          <table className="w-full text-sm">
-            <thead className="text-left bg-stone-50/60 dark:bg-slate-900/60 text-stone-500 dark:text-slate-400">
-              <tr>
-                <th className="py-2 px-3 font-medium">Plate</th>
-                <th className="py-2 px-3 font-medium">Country</th>
-                <th className="py-2 px-3 font-medium">Vehicle</th>
-                <th className="py-2 px-3 font-medium">Verification</th>
-              </tr>
-            </thead>
-            <tbody>
-              {vehicles.map((vehicle) => (
-                <tr
-                  key={vehicle.id}
-                  className="border-t border-stone-100 dark:border-slate-800"
-                >
-                  <td className="py-2 px-3 font-mono font-semibold text-stone-900 dark:text-stone-100">
-                    {vehicle.plate_number}
-                  </td>
-                  <td className="py-2 px-3">
-                    <CountryBadge code={vehicle.registration_country} />
-                  </td>
-                  <td className="py-2 px-3 text-stone-700 dark:text-slate-300">
-                    {[vehicle.brand, vehicle.model].filter(Boolean).join(" ") || "—"}
-                  </td>
-                  <td className="py-2 px-3">
-                    <VerificationStatusBadge
-                      status={vehicle.verification_status ?? "pending_review"}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </section>
   );
 }
