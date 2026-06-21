@@ -156,11 +156,17 @@ export function EvidenceSlot({
   };
 
   const hasFile = Boolean(value.file);
+  const hasRemotePreview = Boolean(!value.file && value.previewUrl);
+  const hasSelection = hasFile || hasRemotePreview;
   const isUploading = status === "uploading";
   const isDone = status === "uploaded";
   const isBusy = isUploading || disabled;
   const shownError = errorMessage ?? localError;
   const isListLayout = layout === "list";
+  const isRemotePdf =
+    hasRemotePreview &&
+    (value.previewUrl!.toLowerCase().includes(".pdf") ||
+      value.previewUrl!.toLowerCase().includes("application/pdf"));
 
   const titleBlock = (
     <div className="min-w-0">
@@ -197,7 +203,7 @@ export function EvidenceSlot({
           !isListLayout && (compactPreview ? "h-28 sm:h-32" : "aspect-[4/3]")
         )}
       >
-        {hasFile && value.previewUrl ? (
+        {hasSelection && value.previewUrl && !isRemotePdf ? (
           <button
             type="button"
             onClick={() => setPreviewOpen(true)}
@@ -214,7 +220,7 @@ export function EvidenceSlot({
               {t("common.preview")}
             </span>
           </button>
-        ) : hasFile && isPdf(value.file) ? (
+        ) : hasSelection && (isPdf(value.file) || isRemotePdf) ? (
           <div className="flex h-full w-full flex-col items-center justify-center gap-0.5 bg-stone-100 text-stone-500 dark:bg-slate-800 dark:text-slate-400">
             <FileText className={cn(isListLayout ? "h-8 w-8" : "h-10 w-10")} />
             <span className="max-w-[90%] truncate px-2 text-[10px]">
@@ -254,7 +260,7 @@ export function EvidenceSlot({
         )}
       </div>
 
-      {hasFile && !isBusy && (
+      {hasSelection && !isBusy && (
         <div className="absolute right-1.5 top-1.5 flex items-center gap-1">
           <button
             type="button"
@@ -289,9 +295,9 @@ export function EvidenceSlot({
   );
 
   const actionRow =
-    !isListLayout && hasFile ? (
+    !isListLayout && hasSelection ? (
       <p className="truncate text-[11px] text-stone-500 dark:text-slate-400">
-        {value.file!.name}
+        {value.file?.name ?? t("evidence.uploaded")}
       </p>
     ) : null;
 

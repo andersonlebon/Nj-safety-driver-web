@@ -96,14 +96,17 @@ export type Database = {
       driver_profiles: {
         Row: {
           profile_id: string;
+          profile_comments: Json;
           created_at: string;
         };
         Insert: {
           profile_id: string;
+          profile_comments?: Json;
           created_at?: string;
         };
         Update: {
           profile_id?: string;
+          profile_comments?: Json;
           created_at?: string;
         };
       };

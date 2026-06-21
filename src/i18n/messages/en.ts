@@ -37,7 +37,7 @@ export const en = {
   },
   nav: {
     overview: "Overview",
-    personalInfo: "Personal info",
+    personalInfo: "Account",
     vehicles: "Vehicles",
     documents: "Documents",
     infractions: "Infractions",

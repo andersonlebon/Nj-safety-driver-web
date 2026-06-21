@@ -15,6 +15,14 @@ import {
   assessTransitIdAuthenticity,
 } from "@/lib/transit-id-documents";
 import type { PaymentStatus, TransactionStatus } from "@/lib/types/database";
+import {
+  buildStaffProfileComment,
+  type DriverProfileComment,
+} from "@/lib/driver-profile-comments";
+import {
+  appendDriverProfileComment,
+  fetchDriverProfileComments,
+} from "@/lib/driver-profile-comments-store";
 
 export type StaffActionResult = { ok: true; vehicleId?: string } | { ok: false; error: string };
 
@@ -462,6 +470,43 @@ export async function saveInfractionTemplate(
     if (error) return { ok: false, error: friendlyError(error) };
 
     revalidatePath("/staff/infraction-templates");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: friendlyError(err) };
+  }
+}
+
+export async function getDriverProfileCommentsForStaff(
+  driverProfileId: string
+): Promise<DriverProfileComment[]> {
+  const auth = await requireStaffProfileForAction();
+  if ("ok" in auth) return [];
+
+  const supabase = createClient();
+  return fetchDriverProfileComments(supabase, driverProfileId);
+}
+
+export async function postDriverProfileCommentAsStaff(
+  driverProfileId: string,
+  message: string
+): Promise<StaffActionResult> {
+  try {
+    const auth = await requireStaffProfileForAction();
+    if ("ok" in auth) return auth;
+
+    const trimmed = message.trim();
+    if (!trimmed) return { ok: false, error: "Comment cannot be empty." };
+
+    const supabase = createClient();
+    const result = await appendDriverProfileComment(
+      supabase,
+      driverProfileId,
+      buildStaffProfileComment(auth.profile, trimmed)
+    );
+
+    if (!result.ok) return result;
+
+    revalidatePath("/staff/drivers");
     return { ok: true };
   } catch (err) {
     return { ok: false, error: friendlyError(err) };

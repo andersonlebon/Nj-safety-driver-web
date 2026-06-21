@@ -39,7 +39,7 @@ export const fr: Messages = {
   },
   nav: {
     overview: "Vue d'ensemble",
-    personalInfo: "Informations personnelles",
+    personalInfo: "Compte",
     vehicles: "Véhicules",
     documents: "Documents",
     infractions: "Infractions",

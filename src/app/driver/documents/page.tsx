@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function DriverDocumentsPage() {
-  redirect("/driver/profile#documents");
+  redirect("/driver/profile#files");
 }

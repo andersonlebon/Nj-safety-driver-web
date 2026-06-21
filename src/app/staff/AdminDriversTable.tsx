@@ -7,9 +7,14 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { CountryBadge } from "@/components/vehicles/CountryBadge";
 import { DriverDocumentsTabs } from "@/components/documents/DriverDocumentsTabs";
+import { DriverProfileComments } from "@/components/driver/DriverProfileComments";
 import { formatDate } from "@/lib/utils";
 import type { TableQuery } from "@/lib/pagination";
 import { DriverVerificationPanel, VerificationStatusBadge } from "./DriverVerificationPanel";
+import {
+  getDriverProfileCommentsForStaff,
+  postDriverProfileCommentAsStaff,
+} from "./actions";
 import type { Database, StaffRole } from "@/lib/types/database";
 
 type Driver = Database["public"]["Tables"]["profiles"]["Row"];
@@ -33,6 +38,7 @@ export function AdminDriversTable({
   preserveParams,
   drivers,
   staffId,
+  staffName,
   staffRole,
   vehiclesByDriver = {},
   canManageDrivers = staffRole === "admin",
@@ -43,6 +49,7 @@ export function AdminDriversTable({
   preserveParams?: Record<string, string>;
   drivers: Driver[];
   staffId: string;
+  staffName: string;
   staffRole: StaffRole;
   vehiclesByDriver?: Record<string, DriverVehicle[]>;
   canManageDrivers?: boolean;
@@ -138,6 +145,7 @@ export function AdminDriversTable({
             { id: "driver-detail-profile", label: "Profile" },
             { id: "driver-detail-documents", label: "Documents" },
             { id: "driver-detail-vehicles", label: "Vehicles" },
+            { id: "driver-detail-comments", label: "Comments" },
             ...(canManageDrivers
               ? [{ id: "driver-detail-verification", label: "Verify" }]
               : []),
@@ -165,6 +173,7 @@ export function AdminDriversTable({
           <DriverDetailModalBody
             driver={selected}
             staffId={staffId}
+            staffName={staffName}
             vehicles={vehiclesByDriver[selected.id] ?? []}
             canManageDrivers={canManageDrivers}
           />
@@ -176,11 +185,13 @@ export function AdminDriversTable({
 
 function DriverDetailModalBody({
   driver,
+  staffName,
   vehicles,
   canManageDrivers,
 }: {
   driver: Driver;
   staffId: string;
+  staffName: string;
   vehicles: DriverVehicle[];
   canManageDrivers: boolean;
 }) {
@@ -237,6 +248,16 @@ function DriverDetailModalBody({
       </dl>
 
       <DriverDocumentsTabs ownerId={driver.id} vehicles={vehicles} />
+
+      <DriverProfileComments
+        driverProfileId={driver.id}
+        viewer={{
+          role: "staff",
+          displayName: staffName || "Staff member",
+        }}
+        loadComments={getDriverProfileCommentsForStaff}
+        sendComment={postDriverProfileCommentAsStaff}
+      />
 
       <DriverVehiclesSection vehicles={vehicles} />
 

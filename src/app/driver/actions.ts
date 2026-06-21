@@ -5,6 +5,14 @@ import { createClient } from "@/lib/supabase/server";
 import { friendlyError } from "@/lib/errors";
 import { requireDriverProfileForAction } from "@/lib/auth";
 import type { DocumentType } from "@/lib/types/database";
+import {
+  buildDriverProfileComment,
+  type DriverProfileComment,
+} from "@/lib/driver-profile-comments";
+import {
+  appendDriverProfileComment,
+  fetchDriverProfileComments,
+} from "@/lib/driver-profile-comments-store";
 
 export type DriverActionResult = { ok: true } | { ok: false; error: string };
 
@@ -86,4 +94,41 @@ export async function submitDocumentsForReview(): Promise<DriverActionResult> {
   revalidatePath("/driver/profile");
   revalidatePath("/admin/drivers");
   return { ok: true };
+}
+
+export async function getDriverProfileCommentsForDriver(): Promise<
+  DriverProfileComment[]
+> {
+  const auth = await requireDriverProfileForAction();
+  if ("ok" in auth) return [];
+
+  const supabase = createClient();
+  return fetchDriverProfileComments(supabase, auth.profile.id);
+}
+
+export async function postDriverProfileCommentAsDriver(
+  _driverProfileId: string,
+  message: string
+): Promise<DriverActionResult> {
+  try {
+    const auth = await requireDriverProfileForAction();
+    if ("ok" in auth) return auth;
+
+    const trimmed = message.trim();
+    if (!trimmed) return { ok: false, error: "Comment cannot be empty." };
+
+    const supabase = createClient();
+    const result = await appendDriverProfileComment(
+      supabase,
+      auth.profile.id,
+      buildDriverProfileComment(auth.profile, trimmed)
+    );
+
+    if (!result.ok) return result;
+
+    revalidatePath("/driver/profile");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: friendlyError(err) };
+  }
 }

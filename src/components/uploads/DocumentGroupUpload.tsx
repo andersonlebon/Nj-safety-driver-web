@@ -44,7 +44,7 @@ function attachmentComplete(
   value: EvidenceSlotValue | undefined
 ): boolean {
   if (!attachment.required) return true;
-  return Boolean(value?.file);
+  return Boolean(value?.file || value?.previewUrl);
 }
 
 export function DocumentGroupUpload({

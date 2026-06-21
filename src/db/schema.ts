@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   integer,
+  jsonb,
   numeric,
   pgEnum,
   pgTable,
@@ -88,6 +89,7 @@ export const driverProfiles = pgTable("driver_profiles", {
   profileId: uuid("profile_id")
     .primaryKey()
     .references(() => profiles.id, { onDelete: "cascade" }),
+  profileComments: jsonb("profile_comments").notNull().default([]),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .default(sql`now()`),

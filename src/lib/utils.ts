@@ -14,6 +14,17 @@ export function formatDate(date: string | Date): string {
   });
 }
 
+export function formatDateTime(date: string | Date): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  return d.toLocaleString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 export function formatCurrency(amount: number): string {
   // Central African CFA franc — Gabon's official currency.
   // We intentionally render the symbol as "FCFA" (the colloquial in-country

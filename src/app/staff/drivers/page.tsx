@@ -33,6 +33,7 @@ export default async function AgentDriversPage({
             totalCount={pageData.totalCount}
             drivers={pageData.rows}
             staffId={me.id}
+            staffName={me.full_name ?? me.email ?? "Staff member"}
             staffRole={staffProfile.staff_role}
             vehiclesByDriver={pageData.vehiclesByDriver}
             canManageDrivers={false}

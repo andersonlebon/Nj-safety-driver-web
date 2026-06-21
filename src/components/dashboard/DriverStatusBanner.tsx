@@ -21,9 +21,7 @@ export function DriverStatusBanner({
     return null;
   }
 
-  const completeHref = onboardedAt
-    ? "/driver/profile#documents"
-    : "/driver/profile";
+  const documentsHref = onboardedAt ? "/driver/profile#files" : "/driver/profile";
 
   const completeLabel = !onboardedAt
     ? "Complete profile"
@@ -80,7 +78,7 @@ export function DriverStatusBanner({
             {(verificationStatus === "pending_documents" ||
               verificationStatus === "rejected") && (
               <Link
-                href={completeHref}
+                href={documentsHref}
                 className="btn-secondary shrink-0 text-sm py-2 px-3 text-center"
               >
                 {completeLabel}
