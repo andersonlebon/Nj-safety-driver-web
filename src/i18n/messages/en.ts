@@ -183,6 +183,11 @@ export const en = {
     deliveredOn: "Delivered {date}",
     expiresOn: "Expires {date}",
     empty: "No documents uploaded yet.",
+    personalSection: "Personal documents",
+    vehicleSection: "Vehicle — {plate}",
+    notUploaded: "Not uploaded",
+    partialUpload: "{done}/{total} files",
+    replaceDocument: "Replace",
   },
 } as const;
 

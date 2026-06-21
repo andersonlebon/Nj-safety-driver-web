@@ -191,5 +191,10 @@ export const fr: Messages = {
     deliveredOn: "Délivré le {date}",
     expiresOn: "Expire le {date}",
     empty: "Aucun document téléversé pour l'instant.",
+    personalSection: "Documents personnels",
+    vehicleSection: "Véhicule — {plate}",
+    notUploaded: "Non téléversé",
+    partialUpload: "{done}/{total} fichiers",
+    replaceDocument: "Remplacer",
   },
 };
