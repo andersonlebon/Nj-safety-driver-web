@@ -50,6 +50,7 @@ export default async function AgentInfractionsPage({
             infractions={pageData.rows}
             transactionStatusByInfraction={pageData.transactionStatusByInfraction}
             canManageVehicles={canManageVehicles}
+            allowStatusUpdates={false}
           />
         </CardBody>
       </Card>

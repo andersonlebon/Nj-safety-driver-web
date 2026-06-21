@@ -6,8 +6,10 @@ export function resolveLedgerStatus(
   infractionStatus: PaymentStatus,
   transactionStatus?: TransactionStatus | null
 ): LedgerStatus {
-  if (transactionStatus) return transactionStatus;
-  return infractionStatus;
+  if (infractionStatus === "paid") return "paid";
+  if (infractionStatus === "pending") return "pending";
+  if (transactionStatus === "pending") return "pending";
+  return "unpaid";
 }
 
 export function infractionStatusFromLedger(

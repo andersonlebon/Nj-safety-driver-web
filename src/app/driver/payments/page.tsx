@@ -7,66 +7,11 @@ import { StatCard } from "@/components/dashboard/StatCard";
 import { Alert } from "@/components/ui/Alert";
 import { parseTableQuery } from "@/lib/pagination";
 import { loadInfractionsPaginated } from "@/lib/queries/infractions";
+import { loadTransactionsByInfractionIds } from "@/lib/queries/payments";
+import { summarizeInfractionPayment } from "@/lib/payments";
 import { formatCurrency } from "@/lib/utils";
-import type { TransactionStatus } from "@/lib/types/database";
 import { DriverPaymentsTable } from "./DriverPaymentsTable";
 import { getTranslations } from "@/i18n/server";
-
-type LedgerTransaction = { amount: number | string; status: TransactionStatus };
-
-/**
- * Loads every infraction + matching transaction for a driver exactly once.
- * Returns both the aggregate stats and the full transaction map so the page can
- * build the ledger rows without re-querying transactions.
- */
-async function loadDriverPaymentLedger(
-  supabase: ReturnType<typeof createClient>,
-  driverId: string
-) {
-  const { data: infractions } = await supabase
-    .from("infractions")
-    .select("id, fine_amount, status")
-    .eq("driver_id", driverId);
-
-  const list = infractions ?? [];
-  const infractionIds = list.map((infraction) => infraction.id);
-  const { data: transactions } =
-    infractionIds.length > 0
-      ? await supabase
-          .from("transactions")
-          .select("infraction_id, amount, status")
-          .in("infraction_id", infractionIds)
-      : { data: [] };
-
-  const transactionMap = new Map<string, LedgerTransaction>(
-    (transactions ?? []).map((transaction) => [
-      transaction.infraction_id,
-      { amount: transaction.amount, status: transaction.status as TransactionStatus },
-    ])
-  );
-
-  let unpaid = 0;
-  let pending = 0;
-  let paid = 0;
-  let totalDue = 0;
-
-  for (const infraction of list) {
-    const transaction = transactionMap.get(infraction.id);
-    const status = (transaction?.status ?? infraction.status) as TransactionStatus;
-    const amount = Number(transaction?.amount ?? infraction.fine_amount);
-
-    if (status === "unpaid" || status === "initialized") {
-      unpaid += 1;
-      totalDue += amount;
-    } else if (status === "pending") {
-      pending += 1;
-    } else if (status === "paid") {
-      paid += 1;
-    }
-  }
-
-  return { stats: { unpaid, pending, paid, totalDue }, transactionMap };
-}
 
 export default async function DriverPaymentsPage({
   searchParams,
@@ -78,21 +23,37 @@ export default async function DriverPaymentsPage({
   const supabase = createClient();
   const tableQuery = parseTableQuery(searchParams);
 
-  const [pageData, ledger] = await Promise.all([
-    loadInfractionsPaginated(supabase, tableQuery, { driverId: profile.id }),
-    loadDriverPaymentLedger(supabase, profile.id),
-  ]);
-
-  const { stats, transactionMap } = ledger;
-
-  const ledgerRows = pageData.rows.map((infraction) => {
-    const transaction = transactionMap.get(infraction.id);
-    return {
-      infraction,
-      amount: Number(transaction?.amount ?? infraction.fine_amount),
-      status: (transaction?.status ?? infraction.status) as TransactionStatus,
-    };
+  const pageData = await loadInfractionsPaginated(supabase, tableQuery, {
+    driverId: profile.id,
   });
+
+  const infractionIds = pageData.rows.map((row) => row.id);
+  const transactionsByInfraction = await loadTransactionsByInfractionIds(
+    supabase,
+    infractionIds
+  );
+
+  const ledgerRows = pageData.rows.map((infraction) => ({
+    infraction,
+    summary: summarizeInfractionPayment({
+      fineAmount: infraction.fine_amount,
+      amountPaid: infraction.amount_paid,
+      paymentTransactionCount: infraction.payment_transaction_count,
+      infractionStatus: infraction.status,
+      transactions: transactionsByInfraction[infraction.id] ?? [],
+    }),
+  }));
+
+  const stats = ledgerRows.reduce(
+    (acc, { summary }) => {
+      if (summary.ledgerStatus === "paid") acc.paid += 1;
+      else if (summary.ledgerStatus === "pending") acc.pending += 1;
+      else acc.unpaid += 1;
+      acc.totalDue += summary.remaining;
+      return acc;
+    },
+    { unpaid: 0, pending: 0, paid: 0, totalDue: 0 }
+  );
 
   return (
     <div className="space-y-6">

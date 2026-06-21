@@ -35,7 +35,8 @@ type InfractionRow = {
   id: string;
   plate_number: string;
   infraction_type: string;
-  fine_amount: number | string;
+  fine_amount: number;
+  amount_paid: number;
   status: PaymentStatus;
   created_at: string;
 };
@@ -67,7 +68,7 @@ export default async function DriverOverviewPage() {
     supabase
       .from("infractions")
       .select(
-        "id, plate_number, infraction_type, fine_amount, status, created_at"
+        "id, plate_number, infraction_type, fine_amount, amount_paid, status, created_at"
       )
       .eq("driver_id", profile.id)
       .order("created_at", { ascending: false }),
@@ -77,52 +78,38 @@ export default async function DriverOverviewPage() {
   const infractions: InfractionRow[] = (infractionRows ?? []).map((i) => ({
     ...i,
     fine_amount: Number(i.fine_amount),
+    amount_paid: Number(i.amount_paid ?? 0),
   }));
-  const infractionIds = infractions.map((infraction) => infraction.id);
-  const { data: transactionRows } =
-    infractionIds.length > 0
-      ? await supabase
-          .from("transactions")
-          .select("infraction_id, amount, status")
-          .in("infraction_id", infractionIds)
-      : { data: [] };
-  const transactionMap = new Map(
-    (transactionRows ?? []).map((transaction) => [
-      transaction.infraction_id,
-      transaction,
-    ])
-  );
-  const transactionTotals = infractions.reduce(
-    (totals, infraction) => {
-      const transaction = transactionMap.get(infraction.id);
-      const status = transaction?.status ?? infraction.status;
-      const amount = Number(transaction?.amount ?? infraction.fine_amount);
-      if (status === "initialized") {
-        totals.unpaid += amount;
-      } else if (status === "paid") {
-        totals.paid += amount;
-      } else if (status === "pending") {
-        totals.pending += amount;
-      } else {
-        totals.unpaid += amount;
-      }
-      return totals;
-    },
-    { paid: 0, pending: 0, unpaid: 0 }
-  );
 
   const transactionStatusCounts = infractions.reduce(
     (counts, infraction) => {
-      const status = transactionMap.get(infraction.id)?.status ?? infraction.status;
-      if (status === "initialized") counts.unpaid += 1;
-      else if (status === "paid") counts.paid += 1;
-      else if (status === "pending") counts.pending += 1;
+      if (infraction.status === "paid") counts.paid += 1;
+      else if (infraction.status === "pending") counts.pending += 1;
       else counts.unpaid += 1;
       return counts;
     },
     { paid: 0, pending: 0, unpaid: 0 }
   );
-  const totalDue = transactionTotals.unpaid;
+  const totalDue = infractions.reduce((sum, infraction) => {
+    if (infraction.status === "paid") return sum;
+    return sum + Math.max(infraction.fine_amount - infraction.amount_paid, 0);
+  }, 0);
+
+  const transactionTotals = infractions.reduce(
+    (totals, infraction) => {
+      const remaining = Math.max(infraction.fine_amount - infraction.amount_paid, 0);
+      if (infraction.status === "paid") {
+        totals.paid += infraction.fine_amount;
+      } else if (infraction.status === "pending") {
+        totals.paid += infraction.amount_paid;
+        totals.pending += remaining;
+      } else {
+        totals.unpaid += remaining;
+      }
+      return totals;
+    },
+    { paid: 0, pending: 0, unpaid: 0 }
+  );
 
   const monthly = sumByMonth(infractions, 6);
   const recent = infractions.slice(0, 5);

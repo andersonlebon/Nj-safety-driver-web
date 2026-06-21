@@ -223,14 +223,6 @@ export async function fileInfraction(input: FileInfractionInput): Promise<StaffA
     if (error) return { ok: false, error: friendlyError(error) };
 
     if (inserted?.id) {
-      const { error: transactionError } = await supabase.from("transactions").insert({
-        infraction_id: inserted.id,
-        amount: fineAmount,
-        status: "unpaid",
-      });
-      if (transactionError) {
-        return { ok: false, error: `Infraction filed but transaction failed: ${friendlyError(transactionError)}` };
-      }
       const { error: trackingError } = await supabase.from("vehicle_tracking_events").insert({
         vehicle_id: input.vehicle_id,
         plate_number: plate,
@@ -256,45 +248,20 @@ export async function fileInfraction(input: FileInfractionInput): Promise<StaffA
   }
 }
 
-/** Payment status updates — any staff member. */
+/** @deprecated Use payment transaction review on /staff/payments instead. */
 export async function updateInfractionPaymentStatus(
   infractionId: string,
-  status: PaymentStatus | TransactionStatus
+  _status: PaymentStatus | TransactionStatus
 ): Promise<StaffActionResult> {
   try {
     const auth = await requireStaffProfileForAction();
     if ("ok" in auth) return auth;
 
     if (!infractionId) return { ok: false, error: "Missing infraction id." };
-    const transactionStatus: TransactionStatus =
-      status === "paid" ? "paid"
-      : status === "pending" ? "pending"
-      : status === "initialized" ? "initialized"
-      : "unpaid";
-    const nextInfractionStatus: PaymentStatus =
-      transactionStatus === "paid" ? "paid" : "unpaid";
-
-    const supabase = createClient();
-    const { data: updated, error } = await supabase
-      .from("infractions")
-      .update({ status: nextInfractionStatus })
-      .eq("id", infractionId)
-      .select("id, fine_amount")
-      .single();
-
-    if (error) return { ok: false, error: friendlyError(error) };
-
-    const { error: transactionError } = await supabase.from("transactions").upsert(
-      { infraction_id: updated.id, amount: Number(updated.fine_amount), status: transactionStatus },
-      { onConflict: "infraction_id" }
-    );
-    if (transactionError) return { ok: false, error: friendlyError(transactionError) };
-
-    revalidatePath("/staff/infractions");
-    revalidatePath("/staff/search");
-    revalidatePath("/driver/infractions");
-    revalidatePath("/driver/payments");
-    return { ok: true };
+    return {
+      ok: false,
+      error: "Review driver payment transactions on the Payments page.",
+    };
   } catch (err) {
     return { ok: false, error: friendlyError(err) };
   }

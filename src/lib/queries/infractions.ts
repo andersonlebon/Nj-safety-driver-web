@@ -7,11 +7,15 @@ import {
   type TableQuery,
 } from "@/lib/pagination";
 import { applyTableQueryFilters } from "@/lib/queries/table-filters";
+import {
+  loadTransactionsByInfractionIds,
+  primaryTransactionStatus,
+} from "@/lib/queries/payments";
 
 type Infraction = Database["public"]["Tables"]["infractions"]["Row"];
 
 const INFRACTION_LIST_COLUMNS =
-  "id, plate_number, registration_country, infraction_type, description, location, fine_amount, status, evidence_path, agent_id, driver_id, vehicle_id, created_at, updated_at";
+  "id, plate_number, registration_country, infraction_type, description, location, fine_amount, amount_paid, payment_transaction_count, status, evidence_path, agent_id, driver_id, vehicle_id, created_at, updated_at";
 
 export type InfractionsPageData = PaginatedResult<Infraction> & {
   transactionStatusByInfraction: Record<string, TransactionStatus>;
@@ -35,21 +39,10 @@ export async function loadInfractionsPaginated(
   if (options?.agentId) query = query.eq("agent_id", options.agentId);
   if (options?.driverId) query = query.eq("driver_id", options.driverId);
 
-  if (tableQuery.status === "pending" || tableQuery.status === "initialized") {
-    const { data: pendingRows } = await supabase
-      .from("transactions")
-      .select("infraction_id")
-      .eq("status", tableQuery.status);
-    const ids = ((pendingRows ?? []) as Array<{ infraction_id: string }>).map(
-      (row) => row.infraction_id
-    );
-    if (ids.length === 0) {
-      return {
-        ...paginatedResult([], 0, tableQuery),
-        transactionStatusByInfraction: {},
-      };
-    }
-    query = query.in("id", ids);
+  if (tableQuery.status === "pending") {
+    query = query.eq("status", "pending");
+  } else if (tableQuery.status === "initialized") {
+    query = query.eq("status", "unpaid");
   } else if (tableQuery.status === "paid" || tableQuery.status === "unpaid") {
     query = query.eq("status", tableQuery.status);
   }
@@ -69,19 +62,16 @@ export async function loadInfractionsPaginated(
 
   const rows = (data ?? []) as Infraction[];
   const infractionIds = rows.map((row) => row.id);
-
-  const { data: transactions } =
-    infractionIds.length > 0
-      ? await supabase
-          .from("transactions")
-          .select("infraction_id, status")
-          .in("infraction_id", infractionIds)
-      : { data: [] };
+  const transactionsByInfraction = await loadTransactionsByInfractionIds(
+    supabase,
+    infractionIds
+  );
 
   const transactionStatusByInfraction = Object.fromEntries(
-    ((transactions ?? []) as Array<{ infraction_id: string; status: string }>).map(
-      (transaction) => [transaction.infraction_id, transaction.status as TransactionStatus]
-    )
+    Object.entries(transactionsByInfraction).map(([infractionId, transactions]) => [
+      infractionId,
+      primaryTransactionStatus(transactions) ?? ("unpaid" as TransactionStatus),
+    ])
   );
 
   return {
@@ -94,17 +84,12 @@ export async function loadTransactionsForInfractionIds(
   supabase: SupabaseClient<Database>,
   infractionIds: string[]
 ): Promise<Record<string, TransactionStatus>> {
-  if (infractionIds.length === 0) return {};
-
-  const { data: transactions } = await supabase
-    .from("transactions")
-    .select("infraction_id, status")
-    .in("infraction_id", infractionIds);
-
+  const grouped = await loadTransactionsByInfractionIds(supabase, infractionIds);
   return Object.fromEntries(
-    ((transactions ?? []) as Array<{ infraction_id: string; status: string }>).map(
-      (transaction) => [transaction.infraction_id, transaction.status as TransactionStatus]
-    )
+    Object.entries(grouped).map(([infractionId, transactions]) => [
+      infractionId,
+      primaryTransactionStatus(transactions) ?? ("unpaid" as TransactionStatus),
+    ])
   );
 }
 

@@ -9,6 +9,7 @@ import {
   Radar,
   ListChecks,
   User,
+  Wallet,
 } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import type { NavItem } from "@/components/dashboard/Sidebar";
@@ -69,6 +70,11 @@ export default async function StaffLayout({
 
   const adminNav: NavItem[] = isAdmin
     ? [
+        {
+          href: "/staff/payments",
+          label: t("nav.payments"),
+          icon: <Wallet className="h-4 w-4" />,
+        },
         {
           href: "/staff/agents",
           label: t("nav.agents"),

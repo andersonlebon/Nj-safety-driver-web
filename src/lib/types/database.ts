@@ -5,7 +5,13 @@ export type ProfileRole = "driver" | "staff";
 export type StaffRole = "agent" | "admin";
 
 export type PaymentStatus = "unpaid" | "paid" | "pending";
-export type TransactionStatus = "initialized" | "unpaid" | "paid" | "pending";
+export type TransactionStatus =
+  | "initialized"
+  | "unpaid"
+  | "paid"
+  | "pending"
+  | "rejected";
+export type PaymentMethod = "manual" | "mobile_money" | "card" | "bank_transfer";
 export type VerificationStatus =
   | "pending_documents"
   | "pending_review"
@@ -305,6 +311,8 @@ export type Database = {
           description: string | null;
           location: string | null;
           fine_amount: string;
+          amount_paid: string;
+          payment_transaction_count: number;
           status: PaymentStatus;
           evidence_path: string | null;
           created_at: string;
@@ -320,6 +328,8 @@ export type Database = {
           description?: string | null;
           location?: string | null;
           fine_amount?: string;
+          amount_paid?: string;
+          payment_transaction_count?: number;
           status?: PaymentStatus;
           evidence_path?: string | null;
           created_at?: string;
@@ -335,6 +345,8 @@ export type Database = {
           description?: string | null;
           location?: string | null;
           fine_amount?: string;
+          amount_paid?: string;
+          payment_transaction_count?: number;
           status?: PaymentStatus;
           evidence_path?: string | null;
           created_at?: string;
@@ -347,6 +359,12 @@ export type Database = {
           id: string;
           infraction_id: string;
           amount: string;
+          payment_method: PaymentMethod;
+          receipt_path: string | null;
+          submitted_by: string | null;
+          reviewed_by: string | null;
+          reviewed_at: string | null;
+          rejection_reason: string | null;
           status: TransactionStatus;
           created_at: string;
           updated_at: string;
@@ -355,6 +373,12 @@ export type Database = {
           id?: string;
           infraction_id: string;
           amount?: string;
+          payment_method?: PaymentMethod;
+          receipt_path?: string | null;
+          submitted_by?: string | null;
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          rejection_reason?: string | null;
           status?: TransactionStatus;
           created_at?: string;
           updated_at?: string;
@@ -363,6 +387,12 @@ export type Database = {
           id?: string;
           infraction_id?: string;
           amount?: string;
+          payment_method?: PaymentMethod;
+          receipt_path?: string | null;
+          submitted_by?: string | null;
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          rejection_reason?: string | null;
           status?: TransactionStatus;
           created_at?: string;
           updated_at?: string;

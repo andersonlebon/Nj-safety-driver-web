@@ -370,28 +370,54 @@ export const driverInfractions = {
 
 export const driverPayments = {
   title: "Paiements",
-  description: "Suivez le statut de paiement de vos infractions.",
+  description:
+    "Payez vos amendes et suivez les paiements partiels jusqu'à règlement complet de chaque infraction.",
   stats: {
-    totalDue: "Total dû",
+    totalDue: "Reste à payer",
     unpaid: "Impayé",
-    pending: "En attente",
+    pending: "En validation",
     paid: "Payé",
   },
   manualNotice:
-    "Les paiements sont actuellement suivis manuellement. Contactez votre agence locale pour enregistrer un paiement ; une fois confirmé, le statut sera mis à jour ici.",
-  ledgerTitle: "Registre des paiements",
+    "Seuls les paiements manuels sont disponibles pour l'instant. Téléversez votre reçu pour chaque paiement ; un administrateur le validera avant que le montant ne soit appliqué à l'amende.",
+  ledgerTitle: "Paiements des infractions",
   searchPlaceholder: "Plaque, type…",
   emptyTitle: "Rien à payer",
   emptyDescription: "Aucune infraction enregistrée.",
-  summary: "{count} ligne(s) du registre",
+  summary: "{count} infraction(s)",
   date: "Date",
   plate: "Plaque",
   type: "Type",
   amount: "Montant",
-  status: "Statut",
+  totalDue: "Total dû",
+  paidSoFar: "Déjà payé",
+  remaining: "Reste à payer",
+  transactions: "Transactions",
+  actions: "Actions",
+  submitPayment: "Soumettre un paiement",
+  awaitingReview: "En validation",
+  noAction: "Réglé",
   filterPaid: "Payé",
   filterUnpaid: "Impayé",
   filterPending: "En attente",
+  submitDialog: {
+    title: "Soumettre un paiement manuel",
+    description:
+      "Téléversez une preuve de paiement pour {plate}. Solde restant : {remaining}.",
+    amountLabel: "Montant payé",
+    receiptLabel: "Reçu de paiement",
+    receiptHint: "JPG, PNG, WEBP, HEIC ou PDF jusqu'à 10 Mo.",
+    manualOnly:
+      "Seuls les paiements manuels sont actifs pour l'instant. Mobile money et carte arrivent bientôt.",
+    submit: "Soumettre pour validation",
+  },
+  methods: {
+    manual: "Reçu manuel",
+    mobile_money: "Mobile money",
+    card: "Carte bancaire",
+    bank_transfer: "Virement bancaire",
+    comingSoon: "Bientôt disponible",
+  },
 } as const;
 
 export const driverShared = {

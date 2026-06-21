@@ -277,11 +277,39 @@ export const staffOverview = {
   },
 } as const;
 
+export const staffPayments = {
+  title: "Validation des paiements",
+  description:
+    "Examinez les reçus de paiement manuel soumis par les conducteurs et approuvez ou rejetez chaque transaction.",
+  reviewNotice:
+    "L'approbation ajoute le montant au solde de l'infraction. Lorsque le total payé atteint le montant de l'amende, l'infraction passe automatiquement en payé.",
+  pendingTitle: "En attente de validation ({count})",
+  emptyTitle: "Aucun paiement en attente",
+  emptyDescription:
+    "Aucun paiement manuel soumis par un conducteur n'attend de validation.",
+  submittedAt: "Soumis le",
+  driver: "Conducteur",
+  plate: "Plaque",
+  infraction: "Infraction",
+  amount: "Montant",
+  progress: "Progression",
+  afterApproval: "Après validation : {amount} sur {total}",
+  receipt: "Reçu",
+  viewReceipt: "Voir le reçu",
+  noReceipt: "Aucun reçu",
+  actions: "Actions",
+  approve: "Approuver",
+  reject: "Rejeter",
+  confirmReject: "Confirmer le rejet",
+  rejectReasonLabel: "Motif du rejet",
+  unknownDriver: "Conducteur inconnu",
+} as const;
+
 export const staffInfractions = {
   page: {
     title: "Toutes les infractions",
     description:
-      "Les agents déposent des infractions depuis la recherche plaque. Mettez à jour le statut de paiement ici au fur et à mesure de la collecte des amendes.",
+      "Les agents déposent des infractions depuis la recherche plaque. Les conducteurs soumettent des paiements manuels depuis leur tableau de bord ; validez-les dans Paiements.",
   },
   table: {
     searchPlaceholder: "Plaque, type, lieu…",
@@ -679,6 +707,7 @@ export const staffFr = {
   border: staffBorder,
   tracking: staffTracking,
   templates: staffTemplates,
+  payments: staffPayments,
   errors: staffErrors,
   shared: staffShared,
 } as const;

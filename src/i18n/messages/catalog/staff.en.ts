@@ -269,11 +269,38 @@ export const staffOverview = {
   },
 } as const;
 
+export const staffPayments = {
+  title: "Payment reviews",
+  description:
+    "Review manual payment receipts submitted by drivers and approve or reject each transaction.",
+  reviewNotice:
+    "Approving a transaction adds its amount to the infraction balance. When the total paid reaches the fine amount, the infraction is marked paid automatically.",
+  pendingTitle: "Pending reviews ({count})",
+  emptyTitle: "No pending payments",
+  emptyDescription: "Drivers have not submitted any manual payments awaiting review.",
+  submittedAt: "Submitted",
+  driver: "Driver",
+  plate: "Plate",
+  infraction: "Infraction",
+  amount: "Amount",
+  progress: "Progress",
+  afterApproval: "After approval: {amount} of {total}",
+  receipt: "Receipt",
+  viewReceipt: "View receipt",
+  noReceipt: "No receipt",
+  actions: "Actions",
+  approve: "Approve",
+  reject: "Reject",
+  confirmReject: "Confirm reject",
+  rejectReasonLabel: "Rejection reason",
+  unknownDriver: "Unknown driver",
+} as const;
+
 export const staffInfractions = {
   page: {
     title: "All infractions",
     description:
-      "Agents file infractions from plate search. Update payment status here as fines are collected.",
+      "Agents file infractions from plate search. Drivers submit manual payments from their dashboard; review them under Payments.",
   },
   table: {
     searchPlaceholder: "Plate, type, location…",
@@ -665,6 +692,7 @@ export const staffEn = {
   border: staffBorder,
   tracking: staffTracking,
   templates: staffTemplates,
+  payments: staffPayments,
   errors: staffErrors,
   shared: staffShared,
 } as const;

@@ -7,6 +7,7 @@ export type {
   Database,
   DocumentType,
   Json,
+  PaymentMethod,
   PaymentStatus,
   ProfileRole,
   StaffRole,

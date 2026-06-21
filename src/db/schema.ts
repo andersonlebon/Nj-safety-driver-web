@@ -28,6 +28,13 @@ export const transactionStatus = pgEnum("transaction_status", [
   "pending",
   "unpaid",
   "paid",
+  "rejected",
+]);
+export const paymentMethod = pgEnum("payment_method", [
+  "manual",
+  "mobile_money",
+  "card",
+  "bank_transfer",
 ]);
 export const documentType = pgEnum("document_type", [
   "identity",
@@ -214,6 +221,12 @@ export const infractions = pgTable("infractions", {
   fineAmount: numeric("fine_amount", { precision: 10, scale: 2 })
     .notNull()
     .default("0"),
+  amountPaid: numeric("amount_paid", { precision: 10, scale: 2 })
+    .notNull()
+    .default("0"),
+  paymentTransactionCount: integer("payment_transaction_count")
+    .notNull()
+    .default(0),
   status: paymentStatus("status").notNull().default("unpaid"),
   evidencePath: text("evidence_path"),
   createdAt: timestamp("created_at", { withTimezone: true })
@@ -231,6 +244,16 @@ export const transactions = pgTable("transactions", {
     .notNull()
     .references(() => infractions.id, { onDelete: "cascade" }),
   amount: numeric("amount", { precision: 10, scale: 2 }).notNull().default("0"),
+  paymentMethod: paymentMethod("payment_method").notNull().default("manual"),
+  receiptPath: text("receipt_path"),
+  submittedBy: uuid("submitted_by").references(() => profiles.id, {
+    onDelete: "set null",
+  }),
+  reviewedBy: uuid("reviewed_by").references(() => profiles.id, {
+    onDelete: "set null",
+  }),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  rejectionReason: text("rejection_reason"),
   status: transactionStatus("status").notNull().default("initialized"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

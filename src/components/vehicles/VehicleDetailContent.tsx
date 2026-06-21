@@ -69,15 +69,13 @@ export function VehicleDetailContent({
   const financialRows: Array<{ fine_amount: number | string; status: PaymentStatus }> =
     infractions.map((infraction) => {
       const transactionStatus = transactionStatusByInfraction[infraction.id];
-      return {
-        fine_amount: infraction.fine_amount,
-        status:
-          !transactionStatus || transactionStatus === "initialized"
-            ? infraction.status === "paid"
-              ? "paid"
-              : "unpaid"
-            : transactionStatus,
-      };
+      if (infraction.status === "paid") {
+        return { fine_amount: infraction.fine_amount, status: "paid" as const };
+      }
+      if (transactionStatus === "pending" || infraction.status === "pending") {
+        return { fine_amount: infraction.fine_amount, status: "pending" as const };
+      }
+      return { fine_amount: infraction.fine_amount, status: "unpaid" as const };
     });
   const unpaid = financialRows.filter((i) => i.status === "unpaid");
   const paymentTotals = totalsByPaymentStatus(financialRows);
