@@ -28,6 +28,7 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { getTranslations } from "@/i18n/server";
 import type { PaymentStatus } from "@/lib/types/database";
 
 type InfractionRow = {
@@ -47,6 +48,7 @@ type VehicleRow = {
 
 export default async function DriverOverviewPage() {
   const { profile } = await requireDriverProfile();
+  const { t } = await getTranslations();
   const supabase = createClient();
 
   const [
@@ -131,45 +133,53 @@ export default async function DriverOverviewPage() {
   });
 
   const statusSlices: DonutSlice[] = [
-    { label: "Paid", value: transactionStatusCounts.paid, color: statusColor.paid },
-    { label: "Pending", value: transactionStatusCounts.pending, color: statusColor.pending },
-    { label: "Unpaid", value: transactionStatusCounts.unpaid, color: statusColor.unpaid },
+    { label: t("driver.overview.charts.paid"), value: transactionStatusCounts.paid, color: statusColor.paid },
+    { label: t("driver.overview.charts.pending"), value: transactionStatusCounts.pending, color: statusColor.pending },
+    { label: t("driver.overview.charts.unpaid"), value: transactionStatusCounts.unpaid, color: statusColor.unpaid },
   ];
 
   const scoreDescription =
     score >= 80
-      ? "All clear. Keep it up — drive safely."
+      ? t("driver.overview.compliance.descriptionExcellent")
       : score >= 50
-        ? "Action recommended. Resolve open items soon."
-        : "Critical. Address unpaid infractions before driving.";
+        ? t("driver.overview.compliance.descriptionWarning")
+        : t("driver.overview.compliance.descriptionCritical");
+
+  const firstName = profile?.full_name?.split(" ")[0];
+  const welcomeTitle = firstName
+    ? t("driver.overview.welcomeWithName", { firstName })
+    : t("driver.overview.welcome");
 
   return (
     <div>
       <PageHeader
-        title={`Welcome${profile?.full_name ? ", " + profile.full_name.split(" ")[0] : ""}`}
-        description="Manage your driver profile, vehicles, and infractions."
+        title={welcomeTitle}
+        description={t("driver.overview.description")}
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
-          label="Vehicles"
+          label={t("driver.overview.kpi.vehicles")}
           value={vehicles.length}
           icon={<Car className="h-4 w-4" />}
           accent="brand"
           hint={
             vehicles.length === 0
-              ? "Register your first vehicle"
-              : `${vehicles.filter((v) => v.insurance_status).length} insured · ${vehicles.filter((v) => v.inspection_status).length} inspected`
+              ? t("driver.overview.kpi.registerFirst")
+              : t("driver.overview.kpi.insuredInspected", {
+                  insured: vehicles.filter((v) => v.insurance_status).length,
+                  inspected: vehicles.filter((v) => v.inspection_status).length,
+                })
           }
         />
         <KpiCard
-          label="Documents"
+          label={t("driver.overview.kpi.documents")}
           value={docCount ?? 0}
           icon={<FileText className="h-4 w-4" />}
           accent="navy"
         />
         <KpiCard
-          label="Open infractions"
+          label={t("driver.overview.kpi.openInfractions")}
           value={transactionStatusCounts.unpaid + transactionStatusCounts.pending}
           icon={<AlertTriangle className="h-4 w-4" />}
           accent={
@@ -179,12 +189,14 @@ export default async function DriverOverviewPage() {
           }
           hint={
             transactionStatusCounts.pending > 0
-              ? `${transactionStatusCounts.pending} pending payment`
-              : "No outstanding fines"
+              ? t("driver.overview.kpi.pendingPayment", {
+                  count: transactionStatusCounts.pending,
+                })
+              : t("driver.overview.kpi.noOutstanding")
           }
         />
         <KpiCard
-          label="Total due"
+          label={t("driver.overview.kpi.totalDue")}
           value={formatCurrency(totalDue)}
           icon={<Wallet className="h-4 w-4" />}
           accent={totalDue > 0 ? "gold" : "stone"}
@@ -197,13 +209,13 @@ export default async function DriverOverviewPage() {
             <CardTitle>
               <span className="inline-flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-brand-700 dark:text-brand-400" />
-                Fines accumulated — last 6 months
+                {t("driver.overview.charts.finesTitle")}
               </span>
             </CardTitle>
             <span className="text-xs text-stone-500 dark:text-slate-400">
-              Total: {formatCurrency(
-                monthly.reduce((s, m) => s + m.value, 0)
-              )}
+              {t("driver.overview.charts.total", {
+                amount: formatCurrency(monthly.reduce((s, m) => s + m.value, 0)),
+              })}
             </span>
           </CardHeader>
           <CardBody>
@@ -212,8 +224,8 @@ export default async function DriverOverviewPage() {
               valueFormat="currency-short"
               tickFormat="month"
               labelFormat="month"
-              tooltipSeriesName="Total"
-              ariaLabel="Total fines per month, last 6 months"
+              tooltipSeriesName={t("driver.overview.charts.finesTooltipSeries")}
+              ariaLabel={t("driver.overview.charts.finesAriaLabel")}
             />
           </CardBody>
         </Card>
@@ -223,7 +235,7 @@ export default async function DriverOverviewPage() {
             <CardTitle>
               <span className="inline-flex items-center gap-2">
                 <PieIcon className="h-4 w-4 text-navy-700 dark:text-navy-300" />
-                Payment status
+                {t("driver.overview.charts.paymentStatusTitle")}
               </span>
             </CardTitle>
           </CardHeader>
@@ -231,26 +243,32 @@ export default async function DriverOverviewPage() {
             <DonutChartCard
               data={statusSlices}
               valueFormat="number"
-              ariaLabel="Distribution of payment statuses for your infractions"
+              ariaLabel={t("driver.overview.charts.paymentStatusAriaLabel")}
             />
             <div className="mt-2 grid grid-cols-3 text-center text-xs">
               <div>
                 <p className="font-semibold text-stone-900 dark:text-stone-100">
                   {formatCurrency(transactionTotals.paid)}
                 </p>
-                <p className="text-stone-500 dark:text-slate-400">Paid</p>
+                <p className="text-stone-500 dark:text-slate-400">
+                  {t("driver.overview.charts.paid")}
+                </p>
               </div>
               <div>
                 <p className="font-semibold text-stone-900 dark:text-stone-100">
                   {formatCurrency(transactionTotals.pending)}
                 </p>
-                <p className="text-stone-500 dark:text-slate-400">Pending</p>
+                <p className="text-stone-500 dark:text-slate-400">
+                  {t("driver.overview.charts.pending")}
+                </p>
               </div>
               <div>
                 <p className="font-semibold text-stone-900 dark:text-stone-100">
                   {formatCurrency(transactionTotals.unpaid)}
                 </p>
-                <p className="text-stone-500 dark:text-slate-400">Unpaid</p>
+                <p className="text-stone-500 dark:text-slate-400">
+                  {t("driver.overview.charts.unpaid")}
+                </p>
               </div>
             </div>
           </CardBody>
@@ -263,7 +281,7 @@ export default async function DriverOverviewPage() {
             <CardTitle>
               <span className="inline-flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-brand-700 dark:text-brand-400" />
-                Compliance score
+                {t("driver.overview.compliance.title")}
               </span>
             </CardTitle>
           </CardHeader>
@@ -274,41 +292,50 @@ export default async function DriverOverviewPage() {
               valueFormat="raw"
             />
             <p className="mt-3 text-xs text-stone-500 dark:text-slate-400">
-              Formula: 100 minus {COMPLIANCE_RULES.unpaidInfractionPenalty} pts
-              per unpaid infraction. Payment transactions are tracked separately;
-              points are restored only when the infraction is marked paid. Scores
-              at or below {COMPLIANCE_RULES.minimumAllowedToDrive}% require
-              review before driving.
+              {t("driver.overview.compliance.formula", {
+                penalty: COMPLIANCE_RULES.unpaidInfractionPenalty,
+                minimum: COMPLIANCE_RULES.minimumAllowedToDrive,
+              })}
             </p>
           </CardBody>
         </Card>
 
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Recent infractions</CardTitle>
+            <CardTitle>{t("driver.overview.recentInfractions.title")}</CardTitle>
             <Link
               href="/driver/infractions"
               className="text-sm font-medium text-brand-700 dark:text-brand-400 hover:underline"
             >
-              View all
+              {t("driver.overview.recentInfractions.viewAll")}
             </Link>
           </CardHeader>
           <CardBody>
             {recent.length === 0 ? (
               <EmptyState
-                title="No infractions"
-                description="You currently have no infractions on record."
+                title={t("driver.overview.recentInfractions.emptyTitle")}
+                description={t("driver.overview.recentInfractions.emptyDescription")}
               />
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="text-left text-stone-500 dark:text-slate-400 border-b border-stone-200 dark:border-slate-800">
                     <tr>
-                      <th className="py-2 pr-4 font-medium">Date</th>
-                      <th className="py-2 pr-4 font-medium">Plate</th>
-                      <th className="py-2 pr-4 font-medium">Type</th>
-                      <th className="py-2 pr-4 font-medium">Amount</th>
-                      <th className="py-2 pr-4 font-medium">Status</th>
+                      <th className="py-2 pr-4 font-medium">
+                        {t("driver.overview.recentInfractions.date")}
+                      </th>
+                      <th className="py-2 pr-4 font-medium">
+                        {t("driver.overview.recentInfractions.plate")}
+                      </th>
+                      <th className="py-2 pr-4 font-medium">
+                        {t("driver.overview.recentInfractions.type")}
+                      </th>
+                      <th className="py-2 pr-4 font-medium">
+                        {t("driver.overview.recentInfractions.amount")}
+                      </th>
+                      <th className="py-2 pr-4 font-medium">
+                        {t("driver.overview.recentInfractions.status")}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>

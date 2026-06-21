@@ -1,0 +1,396 @@
+export const driverShell = {
+  banner: {
+    accountStatus: "Account status: {status}",
+    pendingDocumentsBody:
+      "Your profile is not fully active yet. Complete your personal information and upload the required documents on your profile page.",
+    pendingReviewBody:
+      "An administrator is reviewing your documents. You can still browse your dashboard while you wait.",
+    rejectedBody:
+      "Your account was not approved. Review the message below and update your profile or documents.",
+    ctaCompleteProfile: "Complete profile",
+    ctaUpdateDocuments: "Update documents",
+    ctaUploadDocuments: "Upload documents",
+    adminMessageTitle: "Action required from administrator",
+    adminMessageBody: "{message}",
+  },
+} as const;
+
+export const driverOverview = {
+  welcome: "Welcome",
+  welcomeWithName: "Welcome, {firstName}",
+  description:
+    "Manage your driver profile, vehicles, and infractions.",
+  kpi: {
+    vehicles: "Vehicles",
+    registerFirst: "Register your first vehicle",
+    insuredInspected: "{insured} insured · {inspected} inspected",
+    documents: "Documents",
+    openInfractions: "Open infractions",
+    pendingPayment: "{count} pending payment",
+    noOutstanding: "No outstanding fines",
+    totalDue: "Total due",
+  },
+  charts: {
+    finesTitle: "Fines accumulated — last 6 months",
+    total: "Total: {amount}",
+    finesAriaLabel: "Total fines per month, last 6 months",
+    finesTooltipSeries: "Total",
+    paymentStatusTitle: "Payment status",
+    paymentStatusAriaLabel:
+      "Distribution of payment statuses for your infractions",
+    paid: "Paid",
+    pending: "Pending",
+    unpaid: "Unpaid",
+  },
+  compliance: {
+    title: "Compliance score",
+    descriptionExcellent: "All clear. Keep it up — drive safely.",
+    descriptionWarning: "Action recommended. Resolve open items soon.",
+    descriptionCritical:
+      "Critical. Address unpaid infractions before driving.",
+    formula:
+      "Formula: 100 minus {penalty} pts per unpaid infraction. Payment transactions are tracked separately; points are restored only when the infraction is marked paid. Scores at or below {minimum}% require review before driving.",
+  },
+  recentInfractions: {
+    title: "Recent infractions",
+    viewAll: "View all",
+    emptyTitle: "No infractions",
+    emptyDescription: "You currently have no infractions on record.",
+    date: "Date",
+    plate: "Plate",
+    type: "Type",
+    amount: "Amount",
+    status: "Status",
+  },
+} as const;
+
+export const driverProfile = {
+  onboarding: {
+    title: "Complete your profile",
+    description:
+      "Add your personal details, documents, and vehicle to activate your driver account.",
+    errors: {
+      allFieldsRequired: "All personal information fields are required.",
+      notAuthenticated: "Not authenticated.",
+      missingPersonalInfo: "Missing personal information.",
+      filePathsNotScoped:
+        "Uploaded file paths are not scoped to your account.",
+      duplicateBeforeSubmit:
+        "Duplicate document image detected. Please replace one attachment before submitting.",
+      profileSaveFailed: "Unable to save your profile: {error}",
+      vehicleSaveFailed: "Vehicle could not be saved: {error}",
+      documentSaveFailed: "Document could not be saved: {error}",
+      documentUploadFailed: "Document upload failed: {error}",
+      completeFailed: "Unable to complete onboarding: {error}",
+    },
+  },
+  tabs: {
+    ariaLabel: "Profile sections",
+    personalInfo: "Personal info",
+    documents: "Documents",
+    chat: "Chat with staff",
+  },
+  personal: {
+    title: "Personal information",
+    description:
+      "Manage your profile, documents, and messages with staff.",
+    editButton: "Edit profile",
+    editDialogTitle: "Personal information",
+    editDialogDescription: "Update your contact and identity details.",
+    fullName: "Full name",
+    email: "Email",
+    phone: "Phone",
+    nationalId: "National ID",
+    driverLicense: "Driver license",
+    memberSince: "Member since",
+    address: "Address",
+    emptyValue: "—",
+    fallbackName: "Driver",
+  },
+  form: {
+    fullName: "Full name",
+    phone: "Phone number",
+    nationalId: "National ID number",
+    driverLicense: "Driver license number",
+    nationality: "Nationality",
+    address: "Address",
+    save: "Save changes",
+    success: "Profile updated successfully.",
+  },
+  chat: {
+    title: "Chat with staff",
+    loadingAria: "Loading comments",
+    empty:
+      "No comments yet. Start the conversation with the driver here.",
+    senderYou: "You",
+    senderUnknown: "Unknown",
+    formLabel: "Add a comment",
+    formPlaceholder:
+      "Ask for missing documents, clarify details, or leave a note for the driver…",
+    formSend: "Send comment",
+    errorEmpty: "Write a comment before sending.",
+    errorEmptyServer: "Comment cannot be empty.",
+  },
+} as const;
+
+export const driverDocuments = {
+  title: "Documents",
+  description:
+    "Upload each required document below. Tap a row to add or replace files.",
+  submit: {
+    button: "Submit all documents for verification",
+    dialogTitle: "Cannot submit yet",
+    errorMissingPersonal:
+      "Upload your National ID (front & back) and driver's license (front & back) before submitting for review.",
+    errorNoVehicle:
+      "Register at least one vehicle before submitting for review.",
+    errorMissingVehicleDocs:
+      "Each vehicle needs a front photo and registration card (carte grise) before review.",
+  },
+  validation: {
+    deliveredRequired: "Delivered date is required for this document.",
+    deliveredFuture: "Delivered date cannot be in the future.",
+    expirationRequired: "Expiration date is required for this document.",
+    expirationPast: "Expiration date must be today or in the future.",
+    expirationBeforeDelivered:
+      "Expiration date must be on or after the delivered date.",
+  },
+  legacyUpload: {
+    trigger: "Upload document",
+    title: "Upload a document",
+    description:
+      "Add identity, license, or vehicle papers in a few guided steps.",
+    stepType: "Document type",
+    stepDetails: "Details",
+    stepFile: "Upload file",
+    docType: "What are you uploading?",
+    typeIdentity: "Identity document",
+    typeDriverLicense: "Driving license",
+    typeVehiclePhoto: "Vehicle photo",
+    typeVehicleRegistration: "Vehicle registration",
+    typeInsurance: "Insurance certificate",
+    typeInspection: "Technical inspection",
+    typeOther: "Other",
+    vehicle: "Vehicle",
+    selectVehicle: "— select a vehicle —",
+    label: "Label (optional)",
+    labelPlaceholder: "e.g. front, back, 2025",
+    deliveredDate: "Delivered date",
+    expirationDate: "Expiration date",
+    noDatesNeeded: "This document type does not need validity dates.",
+    evidenceDescription: "Drag and drop or tap to choose a clear photo or PDF.",
+    submit: "Upload document",
+    errorSelectVehicle: "Please select a vehicle for this document.",
+    errorFileRequired: "Please add a photo or PDF to upload.",
+    errorNotSignedIn: "Not signed in.",
+    errorDuplicateFile:
+      "This exact file is already uploaded. Use Replace on the existing document if needed.",
+  },
+  legacyList: {
+    typeIdentity: "National ID",
+    typeDriverLicense: "Driver's license",
+    typeInsurance: "Insurance",
+    typeInspection: "Technical inspection",
+    typeVehiclePhoto: "Vehicle photo",
+    typeRegistration: "Vehicle registration",
+    typePassport: "Passport / travel ID",
+    typeOther: "Other",
+    categoryIdentity: "Identity",
+    categoryDriverLicense: "Driver's license",
+    categoryVehiclePhotos: "Vehicle photos",
+    categoryVehiclePapers: "Vehicle papers",
+    categoryOther: "Other",
+    columnType: "Type",
+    columnLabel: "Label",
+    columnFile: "File",
+    columnUploaded: "Uploaded",
+    columnExpiry: "Expiry",
+    columnActions: "Actions",
+    actionView: "View",
+    actionReplace: "Replace",
+    actionReplaceTitle: "Replace this file",
+    actionDeleteTitle: "Delete this document",
+    confirmDelete: "Delete this document?",
+    errorDuplicateFile:
+      "This exact file is already uploaded. Choose a different photo.",
+    replaceHint:
+      "Use “Replace” to keep the same slot but swap the file — the old version is removed automatically.",
+    expiryNoDate: "No expiry date",
+    expiryExpired: "Expired {days} day(s) ago",
+    expiryExpiresSoon: "Expires in {days} day(s)",
+    expiryValidUntil: "Valid until {date}",
+  },
+} as const;
+
+export const driverVehicles = {
+  title: "Vehicles",
+  description: "Register and manage your vehicles.",
+  listHeading: "Your vehicles",
+  emptyTitle: "No vehicles registered",
+  emptyDescription: 'Click "Add vehicle" to register your first car.',
+  addButton: "Add vehicle",
+  addDialog: {
+    title: "Register a vehicle",
+    description:
+      "Add a new vehicle in two quick steps. Upload photos from Documents afterward.",
+  },
+  form: {
+    stepCountryPlate: "Country & plate",
+    stepDetails: "Vehicle details",
+    stepStatus: "Status",
+    registrationCountry: "Registration country",
+    plateNumber: "Plate number",
+    platePlaceholder: "e.g. AB-123-CD or foreign plate",
+    brand: "Brand",
+    model: "Model",
+    color: "Color",
+    selectColor: "Select a color",
+    colorBlack: "Black",
+    colorWhite: "White",
+    colorSilver: "Silver",
+    colorGray: "Gray",
+    colorRed: "Red",
+    colorBlue: "Blue",
+    colorGreen: "Green",
+    colorOther: "Other",
+    year: "Year",
+    insurance: "Insurance",
+    inspection: "Technical inspection",
+    notInsured: "Not insured",
+    insured: "Insured",
+    notInspected: "Not inspected",
+    inspectionValid: "Inspection valid",
+    foreignAlert:
+      "Foreign plate — ensure border documents are uploaded after registration.",
+    submit: "Register vehicle",
+    errorPlateRequired: "Plate number is required.",
+  },
+  plateScan: {
+    scanLabel: "Scan plate with camera",
+    analyzing: "Analyzing photo…",
+    confirmButton: "Confirm plate",
+    suggested:
+      "Suggested plate ({confidence}% confidence) — please verify.",
+    hint: "Point the camera at the plate, then confirm or edit the number. Automatic OCR is coming in a future release.",
+    ready: "Plate ready — continue or search.",
+  },
+  card: {
+    insurance: "Insurance",
+    inspection: "Inspection",
+    lastSeen: "Last seen:",
+    fullPage: "Full page",
+    deleteAria: "Delete vehicle",
+    confirmDelete: "Delete this vehicle? This cannot be undone.",
+  },
+  detail: {
+    description: "Vehicle registration, fines, and tracking history.",
+    backLink: "Back to vehicles",
+    modalTitle: "Vehicle {plate}",
+    modalDescription:
+      "Use the section links to jump to registration, fines, or tracking.",
+    close: "Close",
+    sectionOverview: "Overview",
+    sectionRegistration: "Registration",
+    sectionIdDocs: "ID docs",
+    sectionOwner: "Owner",
+    sectionFines: "Fines",
+    sectionInfractions: "Infractions",
+    sectionTracking: "Tracking",
+    foreignBadge: "Foreign / transit",
+    noDetails: "No vehicle details",
+    registered: "Registered",
+    insurance: "Insurance",
+    inspection: "Inspection",
+    valid: "Valid",
+    missing: "Missing",
+    borderCheckpoint: "Border checkpoint",
+    borderEntry: "Border entry",
+    transitDriver: "Transit driver",
+    transitPhone: "Transit phone",
+    passportId: "Passport / ID no.",
+    notes: "Notes",
+    finesTitle: "Fine totals",
+    paid: "Paid",
+    pending: "Pending",
+    unpaid: "Unpaid",
+    finesSummary: "{unpaid} unpaid infraction(s) of {total} total",
+    infractionsTitle: "Recent infractions",
+    trackingTitle: "Tracking",
+    trackingEmpty: "No tracking history yet.",
+  },
+  tracking: {
+    eventInfraction: "Infraction recorded",
+    eventAgentCheckin: "Agent check-in",
+    eventRegistration: "Vehicle registered",
+    eventVerification: "Verification update",
+    eventNote: "Note",
+  },
+} as const;
+
+export const driverInfractions = {
+  title: "Infractions",
+  description:
+    "View-only: infractions are filed by field agents and administrators. Contact support if you believe a record is incorrect.",
+  searchPlaceholder: "Plate, type, location…",
+  emptyTitle: "No infractions",
+  emptyDescription: "You currently have no infractions on record.",
+  summary: "{count} infraction(s)",
+  summaryMatching: "{count} matching row(s)",
+  date: "Date",
+  plate: "Plate",
+  type: "Type",
+  location: "Location",
+  amount: "Amount",
+  status: "Status",
+  filterPaid: "Paid",
+  filterUnpaid: "Unpaid",
+  filterPending: "Pending",
+  emptyValue: "—",
+} as const;
+
+export const driverPayments = {
+  title: "Payments",
+  description: "Track the payment status of your infractions.",
+  stats: {
+    totalDue: "Total due",
+    unpaid: "Unpaid",
+    pending: "Pending",
+    paid: "Paid",
+  },
+  manualNotice:
+    "Payments are currently tracked manually. Contact your local agency to register a payment; once confirmed, the status will be updated here.",
+  ledgerTitle: "Payment ledger",
+  searchPlaceholder: "Plate, type…",
+  emptyTitle: "Nothing to pay",
+  emptyDescription: "No infractions on record.",
+  summary: "{count} ledger row(s)",
+  date: "Date",
+  plate: "Plate",
+  type: "Type",
+  amount: "Amount",
+  status: "Status",
+  filterPaid: "Paid",
+  filterUnpaid: "Unpaid",
+  filterPending: "Pending",
+} as const;
+
+export const driverShared = {
+  tables: {
+    reset: "Reset",
+    paginationPage:
+      "Page {page} of {totalPages} ({filteredCount}{ofTotal, select, other { of {totalRows}} none {}} rows)",
+    paginationPrevious: "Previous",
+    paginationNext: "Next",
+  },
+} as const;
+
+export const driverEn = {
+  shell: driverShell,
+  overview: driverOverview,
+  profile: driverProfile,
+  documents: driverDocuments,
+  vehicles: driverVehicles,
+  infractions: driverInfractions,
+  payments: driverPayments,
+  shared: driverShared,
+} as const;

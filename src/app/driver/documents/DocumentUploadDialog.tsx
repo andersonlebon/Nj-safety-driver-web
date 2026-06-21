@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -18,6 +18,8 @@ import {
 } from "@/lib/document-rules";
 import { saveDocumentAttachment } from "@/lib/document-groups-client";
 import { sha256File } from "@/lib/file-hash";
+import { useI18n } from "@/i18n/context";
+import { translateDocumentValidationError } from "@/i18n/labels";
 import {
   EvidenceSlot,
   PHOTO_OR_PDF_ACCEPT,
@@ -30,20 +32,18 @@ type VehicleOption = Pick<
   "id" | "plate_number"
 >;
 
-const STEPS = ["Document type", "Details", "Upload file"];
-
-const docTypes: {
+const DOC_TYPE_VALUES: {
   value: DocumentType;
-  label: string;
+  labelKey: string;
   scope: "driver" | "vehicle";
 }[] = [
-  { value: "identity", label: "Identity document", scope: "driver" },
-  { value: "driver_license", label: "Driving license", scope: "driver" },
-  { value: "vehicle_photo", label: "Vehicle photo", scope: "vehicle" },
-  { value: "vehicle_registration", label: "Vehicle registration", scope: "vehicle" },
-  { value: "insurance", label: "Insurance certificate", scope: "vehicle" },
-  { value: "technical_inspection", label: "Technical inspection", scope: "vehicle" },
-  { value: "other", label: "Other", scope: "driver" },
+  { value: "identity", labelKey: "driver.documents.legacyUpload.typeIdentity", scope: "driver" },
+  { value: "driver_license", labelKey: "driver.documents.legacyUpload.typeDriverLicense", scope: "driver" },
+  { value: "vehicle_photo", labelKey: "driver.documents.legacyUpload.typeVehiclePhoto", scope: "vehicle" },
+  { value: "vehicle_registration", labelKey: "driver.documents.legacyUpload.typeVehicleRegistration", scope: "vehicle" },
+  { value: "insurance", labelKey: "driver.documents.legacyUpload.typeInsurance", scope: "vehicle" },
+  { value: "technical_inspection", labelKey: "driver.documents.legacyUpload.typeInspection", scope: "vehicle" },
+  { value: "other", labelKey: "driver.documents.legacyUpload.typeOther", scope: "driver" },
 ];
 
 function folderFor(docType: DocumentType, vehicleId: string | null): string {
@@ -65,7 +65,24 @@ export function DocumentUploadDialog({
   ownerId: string;
   vehicles: VehicleOption[];
 }) {
+  const { t } = useI18n();
   const router = useRouter();
+  const steps = useMemo(
+    () => [
+      t("driver.documents.legacyUpload.stepType"),
+      t("driver.documents.legacyUpload.stepDetails"),
+      t("driver.documents.legacyUpload.stepFile"),
+    ],
+    [t]
+  );
+  const docTypes = useMemo(
+    () =>
+      DOC_TYPE_VALUES.map((entry) => ({
+        ...entry,
+        label: t(entry.labelKey),
+      })),
+    [t]
+  );
   const [step, setStep] = useState(0);
   const [docType, setDocType] = useState<DocumentType>("identity");
   const [vehicleId, setVehicleId] = useState("");
@@ -98,17 +115,18 @@ export function DocumentUploadDialog({
     if (step === 0) return null;
     if (step === 1) {
       if (scope === "vehicle" && vehicles.length > 0 && !vehicleId) {
-        return "Please select a vehicle for this document.";
+        return t("driver.documents.legacyUpload.errorSelectVehicle");
       }
-      const expiryError = validateDocumentDates(
-        docType,
-        issuedAt || null,
-        expiresAt || null
+      const expiryError = translateDocumentValidationError(
+        t,
+        validateDocumentDates(docType, issuedAt || null, expiresAt || null)
       );
       if (expiryError) return expiryError;
       return null;
     }
-    if (!evidence.file) return "Please add a photo or PDF to upload.";
+    if (!evidence.file) {
+      return t("driver.documents.legacyUpload.errorFileRequired");
+    }
     return null;
   };
 
@@ -128,7 +146,7 @@ export function DocumentUploadDialog({
       data: { user: authUser },
     } = await supabase.auth.getUser();
     if (!authUser) {
-      setError("Not signed in.");
+      setError(t("driver.documents.legacyUpload.errorNotSignedIn"));
       setLoading(false);
       return;
     }
@@ -143,7 +161,7 @@ export function DocumentUploadDialog({
       .maybeSingle();
 
     if (duplicate) {
-      setError("This exact file is already uploaded. Use Replace on the existing document if needed.");
+      setError(t("driver.documents.legacyUpload.errorDuplicateFile"));
       setLoading(false);
       return;
     }
@@ -188,21 +206,25 @@ export function DocumentUploadDialog({
     router.refresh();
   };
 
+  const selectedDocLabel =
+    docTypes.find((d) => d.value === docType)?.label ??
+    t("driver.documents.legacyUpload.docType");
+
   return (
     <FormDialog
       triggerLabel={
         <>
           <Upload className="h-4 w-4 mr-1.5" />
-          Upload document
+          {t("driver.documents.legacyUpload.trigger")}
         </>
       }
-      title="Upload a document"
-      description="Add identity, license, or vehicle papers in a few guided steps."
+      title={t("driver.documents.legacyUpload.title")}
+      description={t("driver.documents.legacyUpload.description")}
       modalClassName="max-w-lg"
     >
       {({ close }) => (
         <div>
-          <StepWizard steps={STEPS} currentStep={step} onStepChange={setStep} />
+          <StepWizard steps={steps} currentStep={step} onStepChange={setStep} />
           {error && (
             <Alert variant="error" className="mb-4">
               {error}
@@ -211,17 +233,20 @@ export function DocumentUploadDialog({
 
           {step === 0 && (
             <Select
-              label="What are you uploading?"
+              label={t("driver.documents.legacyUpload.docType")}
               name="doc_type"
               value={docType}
-                onChange={(e) => {
-                  const next = e.target.value as DocumentType;
-                  setDocType(next);
-                  if (!documentRequiresIssuedDate(next) && !documentRequiresExpiry(next)) {
-                    setIssuedAt("");
-                    setExpiresAt("");
-                  }
-                }}
+              onChange={(e) => {
+                const next = e.target.value as DocumentType;
+                setDocType(next);
+                if (
+                  !documentRequiresIssuedDate(next) &&
+                  !documentRequiresExpiry(next)
+                ) {
+                  setIssuedAt("");
+                  setExpiresAt("");
+                }
+              }}
             >
               {docTypes.map((d) => (
                 <option key={d.value} value={d.value}>
@@ -235,12 +260,14 @@ export function DocumentUploadDialog({
             <div className="space-y-4">
               {scope === "vehicle" && vehicles.length > 0 && (
                 <Select
-                  label="Vehicle"
+                  label={t("driver.documents.legacyUpload.vehicle")}
                   name="vehicle_id"
                   value={vehicleId}
                   onChange={(e) => setVehicleId(e.target.value)}
                 >
-                  <option value="">— select a vehicle —</option>
+                  <option value="">
+                    {t("driver.documents.legacyUpload.selectVehicle")}
+                  </option>
                   {vehicles.map((v) => (
                     <option key={v.id} value={v.id}>
                       {v.plate_number}
@@ -249,15 +276,15 @@ export function DocumentUploadDialog({
                 </Select>
               )}
               <Input
-                label="Label (optional)"
+                label={t("driver.documents.legacyUpload.label")}
                 name="label"
                 value={label}
                 onChange={(e) => setLabel(e.target.value)}
-                placeholder="e.g. front, back, 2025"
+                placeholder={t("driver.documents.legacyUpload.labelPlaceholder")}
               />
               {requiresIssued && (
                 <Input
-                  label="Delivered date"
+                  label={t("driver.documents.legacyUpload.deliveredDate")}
                   type="date"
                   name="issued_at"
                   value={issuedAt}
@@ -267,7 +294,7 @@ export function DocumentUploadDialog({
               )}
               {requiresExpiry ? (
                 <Input
-                  label="Expiration date"
+                  label={t("driver.documents.legacyUpload.expirationDate")}
                   type="date"
                   name="expires_at"
                   value={expiresAt}
@@ -276,7 +303,7 @@ export function DocumentUploadDialog({
                 />
               ) : !requiresIssued ? (
                 <Alert variant="info">
-                  This document type does not need validity dates.
+                  {t("driver.documents.legacyUpload.noDatesNeeded")}
                 </Alert>
               ) : null}
             </div>
@@ -284,8 +311,8 @@ export function DocumentUploadDialog({
 
           {step === 2 && (
             <EvidenceSlot
-              title={docTypes.find((d) => d.value === docType)?.label ?? "Document"}
-              description="Drag and drop or tap to choose a clear photo or PDF."
+              title={selectedDocLabel}
+              description={t("driver.documents.legacyUpload.evidenceDescription")}
               required
               accept={PHOTO_OR_PDF_ACCEPT}
               value={evidence}
@@ -298,7 +325,7 @@ export function DocumentUploadDialog({
 
           <StepWizardFooter
             step={step}
-            totalSteps={STEPS.length}
+            totalSteps={steps.length}
             loading={loading}
             onBack={() => {
               setError(null);
@@ -312,10 +339,10 @@ export function DocumentUploadDialog({
                 return;
               }
               setError(null);
-              setStep((s) => Math.min(STEPS.length - 1, s + 1));
+              setStep((s) => Math.min(steps.length - 1, s + 1));
             }}
             onSubmit={() => upload(close)}
-            submitLabel="Upload document"
+            submitLabel={t("driver.documents.legacyUpload.submit")}
           />
         </div>
       )}

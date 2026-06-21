@@ -10,6 +10,7 @@ import { loadInfractionsPaginated } from "@/lib/queries/infractions";
 import { formatCurrency } from "@/lib/utils";
 import type { TransactionStatus } from "@/lib/types/database";
 import { DriverPaymentsTable } from "./DriverPaymentsTable";
+import { getTranslations } from "@/i18n/server";
 
 type LedgerTransaction = { amount: number | string; status: TransactionStatus };
 
@@ -73,6 +74,7 @@ export default async function DriverPaymentsPage({
   searchParams?: Record<string, string | string[] | undefined>;
 }) {
   const { profile } = await requireDriverProfile();
+  const { t } = await getTranslations();
   const supabase = createClient();
   const tableQuery = parseTableQuery(searchParams);
 
@@ -95,29 +97,28 @@ export default async function DriverPaymentsPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Payments"
-        description="Track the payment status of your infractions."
+        title={t("driver.payments.title")}
+        description={t("driver.payments.description")}
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          label="Total due"
+          label={t("driver.payments.stats.totalDue")}
           value={formatCurrency(stats.totalDue)}
           icon={<Wallet className="h-4 w-4" />}
         />
-        <StatCard label="Unpaid" value={stats.unpaid} />
-        <StatCard label="Pending" value={stats.pending} />
-        <StatCard label="Paid" value={stats.paid} />
+        <StatCard label={t("driver.payments.stats.unpaid")} value={stats.unpaid} />
+        <StatCard label={t("driver.payments.stats.pending")} value={stats.pending} />
+        <StatCard label={t("driver.payments.stats.paid")} value={stats.paid} />
       </div>
 
-      <Alert variant="info">
-        Payments are currently tracked manually. Contact your local agency to
-        register a payment; once confirmed, the status will be updated here.
-      </Alert>
+      <Alert variant="info">{t("driver.payments.manualNotice")}</Alert>
 
       <Card>
         <CardBody>
-          <h3 className="text-sm font-semibold text-slate-900 mb-4">Payment ledger</h3>
+          <h3 className="text-sm font-semibold text-slate-900 mb-4">
+            {t("driver.payments.ledgerTitle")}
+          </h3>
           <DriverPaymentsTable
             pathname="/driver/payments"
             query={pageData.query}

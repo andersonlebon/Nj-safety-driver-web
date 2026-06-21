@@ -6,9 +6,11 @@ import { Search } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { normalizePlate } from "@/lib/utils";
+import { useI18n } from "@/i18n/context";
 
 export function SearchForm({ initialPlate }: { initialPlate?: string }) {
   const router = useRouter();
+  const { t } = useI18n();
   const [plate, setPlate] = useState(initialPlate || "");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -23,7 +25,7 @@ export function SearchForm({ initialPlate }: { initialPlate?: string }) {
       <div className="flex-1">
         <Input
           name="plate"
-          placeholder="Enter plate number, e.g. ABC-1234"
+          placeholder={t("staff.search.form.platePlaceholder")}
           value={plate}
           onChange={(e) => setPlate(e.target.value)}
           autoFocus
@@ -32,7 +34,7 @@ export function SearchForm({ initialPlate }: { initialPlate?: string }) {
       </div>
       <Button type="submit">
         <Search className="h-4 w-4" />
-        Search
+        {t("staff.search.form.submit")}
       </Button>
     </form>
   );

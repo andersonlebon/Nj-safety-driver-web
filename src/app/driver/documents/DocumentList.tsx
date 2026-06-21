@@ -17,23 +17,13 @@ import { friendlyError } from "@/lib/errors";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
 import { formatDate } from "@/lib/utils";
-import { documentExpiryState } from "@/lib/verification";
 import { sha256File } from "@/lib/file-hash";
 import { hasDuplicateDocumentHash } from "@/lib/document-duplicate";
+import { useI18n } from "@/i18n/context";
+import { documentExpiryLabel } from "@/i18n/labels";
 import type { Database, DocumentType } from "@/lib/types/database";
 
 type Doc = Database["public"]["Tables"]["documents"]["Row"];
-
-const labels: Record<DocumentType, string> = {
-  identity: "National ID",
-  driver_license: "Driver's license",
-  insurance: "Insurance",
-  technical_inspection: "Technical inspection",
-  vehicle_photo: "Vehicle photo",
-  vehicle_registration: "Vehicle registration",
-  passport: "Passport / travel ID",
-  other: "Other",
-};
 
 type CategoryKey =
   | "identity"
@@ -42,33 +32,33 @@ type CategoryKey =
   | "vehicle_papers"
   | "other";
 
-const CATEGORIES: {
+const CATEGORY_DEFS: {
   key: CategoryKey;
-  title: string;
+  titleKey: string;
   icon: typeof IdCard;
   match: (doc: Doc) => boolean;
 }[] = [
   {
     key: "identity",
-    title: "Identity",
+    titleKey: "driver.documents.legacyList.categoryIdentity",
     icon: IdCard,
     match: (d) => d.doc_type === "identity",
   },
   {
     key: "driver_license",
-    title: "Driver's license",
+    titleKey: "driver.documents.legacyList.categoryDriverLicense",
     icon: CreditCard,
     match: (d) => d.doc_type === "driver_license",
   },
   {
     key: "vehicle_photos",
-    title: "Vehicle photos",
+    titleKey: "driver.documents.legacyList.categoryVehiclePhotos",
     icon: Camera,
     match: (d) => d.doc_type === "vehicle_photo",
   },
   {
     key: "vehicle_papers",
-    title: "Vehicle papers",
+    titleKey: "driver.documents.legacyList.categoryVehiclePapers",
     icon: FileText,
     match: (d) =>
       d.doc_type === "vehicle_registration" ||
@@ -77,11 +67,22 @@ const CATEGORIES: {
   },
   {
     key: "other",
-    title: "Other",
+    titleKey: "driver.documents.legacyList.categoryOther",
     icon: FileText,
     match: (d) => d.doc_type === "other",
   },
 ];
+
+const DOC_TYPE_LABEL_KEYS: Record<DocumentType, string> = {
+  identity: "driver.documents.legacyList.typeIdentity",
+  driver_license: "driver.documents.legacyList.typeDriverLicense",
+  insurance: "driver.documents.legacyList.typeInsurance",
+  technical_inspection: "driver.documents.legacyList.typeInspection",
+  vehicle_photo: "driver.documents.legacyList.typeVehiclePhoto",
+  vehicle_registration: "driver.documents.legacyList.typeRegistration",
+  passport: "driver.documents.legacyList.typePassport",
+  other: "driver.documents.legacyList.typeOther",
+};
 
 function extOf(file: File): string {
   return file.name.split(".").pop()?.toLowerCase() || "bin";
@@ -94,18 +95,23 @@ function folderOfPath(filePath: string): string {
 }
 
 export function DocumentList({ documents }: { documents: Doc[] }) {
+  const { t } = useI18n();
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
   const [replaceTarget, setReplaceTarget] = useState<Doc | null>(null);
+  const emptyValue = t("driver.infractions.emptyValue");
 
   const grouped = useMemo(() => {
-    return CATEGORIES.map((c) => ({
+    return CATEGORY_DEFS.map((c) => ({
       ...c,
+      title: t(c.titleKey),
       docs: documents.filter(c.match),
     })).filter((c) => c.docs.length > 0);
-  }, [documents]);
+  }, [documents, t]);
+
+  const docTypeLabel = (docType: DocumentType) => t(DOC_TYPE_LABEL_KEYS[docType]);
 
   const handleDownload = async (doc: Doc) => {
     setBusyId(doc.id);
@@ -124,7 +130,7 @@ export function DocumentList({ documents }: { documents: Doc[] }) {
   };
 
   const handleDelete = async (doc: Doc) => {
-    if (!confirm("Delete this document?")) return;
+    if (!confirm(t("driver.documents.legacyList.confirmDelete"))) return;
     setBusyId(doc.id);
     setError(null);
     const supabase = createClient();
@@ -176,7 +182,7 @@ export function DocumentList({ documents }: { documents: Doc[] }) {
       vehicleId: target.vehicle_id,
     });
     if (duplicate) {
-      setError("This exact file is already uploaded. Choose a different photo.");
+      setError(t("driver.documents.legacyList.errorDuplicateFile"));
       setBusyId(null);
       return;
     }
@@ -253,12 +259,24 @@ export function DocumentList({ documents }: { documents: Doc[] }) {
               <table className="w-full text-sm">
                 <thead className="text-left bg-stone-50/60 dark:bg-slate-900/60 text-stone-500 dark:text-slate-400">
                   <tr>
-                    <th className="py-2 px-3 font-medium">Type</th>
-                    <th className="py-2 px-3 font-medium">Label</th>
-                    <th className="py-2 px-3 font-medium">File</th>
-                    <th className="py-2 px-3 font-medium">Uploaded</th>
-                    <th className="py-2 px-3 font-medium">Expiry</th>
-                    <th className="py-2 px-3 font-medium text-right">Actions</th>
+                    <th className="py-2 px-3 font-medium">
+                      {t("driver.documents.legacyList.columnType")}
+                    </th>
+                    <th className="py-2 px-3 font-medium">
+                      {t("driver.documents.legacyList.columnLabel")}
+                    </th>
+                    <th className="py-2 px-3 font-medium">
+                      {t("driver.documents.legacyList.columnFile")}
+                    </th>
+                    <th className="py-2 px-3 font-medium">
+                      {t("driver.documents.legacyList.columnUploaded")}
+                    </th>
+                    <th className="py-2 px-3 font-medium">
+                      {t("driver.documents.legacyList.columnExpiry")}
+                    </th>
+                    <th className="py-2 px-3 font-medium text-right">
+                      {t("driver.documents.legacyList.columnActions")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -268,10 +286,10 @@ export function DocumentList({ documents }: { documents: Doc[] }) {
                       className="border-t border-stone-100 dark:border-slate-800"
                     >
                       <td className="py-2 px-3 font-medium text-stone-900 dark:text-stone-100">
-                        {labels[d.doc_type]}
+                        {docTypeLabel(d.doc_type)}
                       </td>
                       <td className="py-2 px-3 text-stone-600 dark:text-slate-400">
-                        {d.label ?? "—"}
+                        {d.label ?? emptyValue}
                       </td>
                       <td className="py-2 px-3 text-stone-700 dark:text-slate-300">
                         {d.file_name || d.file_path.split("/").pop()}
@@ -281,7 +299,7 @@ export function DocumentList({ documents }: { documents: Doc[] }) {
                       </td>
                       <td className="py-2 px-3">
                         {(() => {
-                          const exp = documentExpiryState(d.expires_at);
+                          const exp = documentExpiryLabel(t, d.expires_at);
                           return (
                             <span
                               className={
@@ -308,24 +326,24 @@ export function DocumentList({ documents }: { documents: Doc[] }) {
                             loading={busyId === d.id}
                           >
                             <Download className="h-4 w-4" />
-                            View
+                            {t("driver.documents.legacyList.actionView")}
                           </Button>
                           <Button
                             variant="secondary"
                             type="button"
                             onClick={() => startReplace(d)}
                             loading={busyId === d.id}
-                            title="Replace this file"
+                            title={t("driver.documents.legacyList.actionReplaceTitle")}
                           >
                             <RefreshCw className="h-4 w-4" />
-                            Replace
+                            {t("driver.documents.legacyList.actionReplace")}
                           </Button>
                           <Button
                             variant="danger"
                             type="button"
                             onClick={() => handleDelete(d)}
                             loading={busyId === d.id}
-                            title="Delete this document"
+                            title={t("driver.documents.legacyList.actionDeleteTitle")}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -342,8 +360,7 @@ export function DocumentList({ documents }: { documents: Doc[] }) {
 
       <p className="text-xs text-stone-500 dark:text-slate-400 flex items-center gap-1.5">
         <Upload className="h-3.5 w-3.5" />
-        Use “Replace” to keep the same slot but swap the file — the old version is
-        removed automatically.
+        {t("driver.documents.legacyList.replaceHint")}
       </p>
     </div>
   );

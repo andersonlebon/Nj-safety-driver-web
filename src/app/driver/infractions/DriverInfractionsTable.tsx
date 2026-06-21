@@ -1,20 +1,16 @@
 "use client";
 
+import { useMemo } from "react";
 import { AlertTriangle } from "lucide-react";
 import { PaginatedTableFrame } from "@/components/table";
 import { InfractionStatusBadge } from "@/components/ui/InfractionStatusBadge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { resolveLedgerStatus } from "@/lib/transactions";
+import { useI18n } from "@/i18n/context";
 import type { TableQuery } from "@/lib/pagination";
 import type { Database, TransactionStatus } from "@/lib/types/database";
 
 type Infraction = Database["public"]["Tables"]["infractions"]["Row"];
-
-const STATUS_FILTER_OPTIONS = [
-  { value: "paid", label: "Paid" },
-  { value: "unpaid", label: "Unpaid" },
-  { value: "pending", label: "Pending" },
-];
 
 export function DriverInfractionsTable({
   pathname,
@@ -29,28 +25,38 @@ export function DriverInfractionsTable({
   infractions: Infraction[];
   transactionStatusByInfraction: Record<string, TransactionStatus>;
 }) {
+  const { t } = useI18n();
+  const statusFilterOptions = useMemo(
+    () => [
+      { value: "paid", label: t("driver.infractions.filterPaid") },
+      { value: "unpaid", label: t("driver.infractions.filterUnpaid") },
+      { value: "pending", label: t("driver.infractions.filterPending") },
+    ],
+    [t]
+  );
+
   return (
     <PaginatedTableFrame
       pathname={pathname}
       query={query}
       totalCount={totalCount}
-      statusOptions={STATUS_FILTER_OPTIONS}
-      searchPlaceholder="Plate, type, location…"
+      statusOptions={statusFilterOptions}
+      searchPlaceholder={t("driver.infractions.searchPlaceholder")}
       emptyIcon={<AlertTriangle className="h-8 w-8" />}
-      emptyTitle="No infractions"
-      emptyDescription="You currently have no infractions on record."
-      unfilteredHint={`${totalCount} infraction${totalCount === 1 ? "" : "s"}`}
+      emptyTitle={t("driver.infractions.emptyTitle")}
+      emptyDescription={t("driver.infractions.emptyDescription")}
+      unfilteredHint={t("driver.infractions.summary", { count: totalCount })}
     >
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-left text-stone-500 dark:text-slate-400 border-b border-stone-200 dark:border-slate-800">
             <tr>
-              <th className="py-2 pr-4 font-medium">Date</th>
-              <th className="py-2 pr-4 font-medium">Plate</th>
-              <th className="py-2 pr-4 font-medium">Type</th>
-              <th className="py-2 pr-4 font-medium">Location</th>
-              <th className="py-2 pr-4 font-medium">Amount</th>
-              <th className="py-2 pr-4 font-medium">Status</th>
+              <th className="py-2 pr-4 font-medium">{t("driver.infractions.date")}</th>
+              <th className="py-2 pr-4 font-medium">{t("driver.infractions.plate")}</th>
+              <th className="py-2 pr-4 font-medium">{t("driver.infractions.type")}</th>
+              <th className="py-2 pr-4 font-medium">{t("driver.infractions.location")}</th>
+              <th className="py-2 pr-4 font-medium">{t("driver.infractions.amount")}</th>
+              <th className="py-2 pr-4 font-medium">{t("driver.infractions.status")}</th>
             </tr>
           </thead>
           <tbody>
@@ -79,7 +85,7 @@ export function DriverInfractionsTable({
                     )}
                   </td>
                   <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">
-                    {infraction.location || "—"}
+                    {infraction.location || t("driver.infractions.emptyValue")}
                   </td>
                   <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">
                     {formatCurrency(Number(infraction.fine_amount))}

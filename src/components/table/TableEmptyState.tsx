@@ -1,4 +1,7 @@
+"use client";
+
 import { EmptyState } from "@/components/ui/EmptyState";
+import { useI18n } from "@/i18n/context";
 import type { ReactNode } from "react";
 
 type Props = {
@@ -16,15 +19,17 @@ export function TableEmptyState({
   filtered = false,
   searchTerm,
 }: Props) {
+  const { t } = useI18n();
+
   if (filtered) {
     return (
       <EmptyState
         icon={icon}
-        title="No matching rows"
+        title={t("tables.noMatchingRows")}
         description={
           searchTerm
-            ? `Nothing matches "${searchTerm}". Try clearing filters.`
-            : "Try clearing filters or adjusting your search."
+            ? t("tables.noMatchForSearch", { searchTerm })
+            : t("tables.clearFiltersHint")
         }
       />
     );

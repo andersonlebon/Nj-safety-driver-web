@@ -7,6 +7,7 @@ import { loadInfractionsPaginated } from "@/lib/queries/infractions";
 import { requireStaffProfile } from "@/lib/auth";
 import { InfractionsTable } from "./InfractionsTable";
 import { CreateInfractionDialog } from "../search/CreateInfractionDialog";
+import { getTranslations } from "@/i18n/server";
 
 export default async function AgentInfractionsPage({
   searchParams,
@@ -17,6 +18,7 @@ export default async function AgentInfractionsPage({
   const tableQuery = parseTableQuery(searchParams);
   const { staffProfile } = await requireStaffProfile();
   const canManageVehicles = staffProfile.staff_role === "admin";
+  const { t } = await getTranslations();
 
   const [pageData, { data: templates }] = await Promise.all([
     loadInfractionsPaginated(supabase, tableQuery),
@@ -30,8 +32,8 @@ export default async function AgentInfractionsPage({
   return (
     <div>
       <PageHeader
-        title="All infractions"
-        description="Agents file infractions from plate search. Update payment status here as fines are collected."
+        title={t("staff.infractions.page.title")}
+        description={t("staff.infractions.page.description")}
         actions={
           <CreateInfractionDialog
             includePlateStep

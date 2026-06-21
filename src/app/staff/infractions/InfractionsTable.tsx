@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AlertTriangle, Eye } from "lucide-react";
@@ -13,19 +14,13 @@ import { Button } from "@/components/ui/Button";
 import { InfractionStatusBadge } from "@/components/ui/InfractionStatusBadge";
 import { useStaffVehicleDetailModal } from "@/hooks/use-staff-vehicle-detail-modal";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { useI18n } from "@/i18n/context";
 import type { TableQuery } from "@/lib/pagination";
 import type { Database, PaymentStatus, TransactionStatus } from "@/lib/types/database";
 
 type Infraction = Database["public"]["Tables"]["infractions"]["Row"] & {
   registration_country?: string | null;
 };
-
-const STATUS_FILTER_OPTIONS = [
-  { value: "paid", label: "Paid" },
-  { value: "unpaid", label: "Unpaid" },
-  { value: "pending", label: "Pending" },
-  { value: "initialized", label: "Initialized" },
-];
 
 export function InfractionsTable({
   pathname,
@@ -47,6 +42,17 @@ export function InfractionsTable({
   canManageVehicles?: boolean;
 }) {
   const router = useRouter();
+  const { t } = useI18n();
+  const emDash = t("staff.shared.emDash");
+  const statusFilterOptions = useMemo(
+    () => [
+      { value: "paid", label: t("staff.infractions.table.filterPaid") },
+      { value: "unpaid", label: t("staff.infractions.table.filterUnpaid") },
+      { value: "pending", label: t("staff.infractions.table.filterPending") },
+      { value: "initialized", label: t("staff.infractions.table.filterInitialized") },
+    ],
+    [t]
+  );
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { openFromInfraction, modal } = useStaffVehicleDetailModal({
@@ -84,24 +90,24 @@ export function InfractionsTable({
         query={query}
         totalCount={totalCount}
         preserveParams={preserveParams}
-        statusOptions={STATUS_FILTER_OPTIONS}
-        searchPlaceholder="Plate, type, location…"
+        statusOptions={statusFilterOptions}
+        searchPlaceholder={t("staff.infractions.table.searchPlaceholder")}
         emptyIcon={<AlertTriangle className="h-8 w-8" />}
-        emptyTitle="No infractions"
-        emptyDescription="Use plate search to file the first infraction."
-        unfilteredHint={`${totalCount} infraction${totalCount === 1 ? "" : "s"}`}
+        emptyTitle={t("staff.infractions.table.emptyTitle")}
+        emptyDescription={t("staff.infractions.table.emptyDescription")}
+        unfilteredHint={t("staff.infractions.table.unfilteredHint", { count: totalCount })}
       >
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-stone-500 dark:text-slate-400 border-b border-stone-200 dark:border-slate-800">
               <tr>
-                <th className="py-2 pr-4 font-medium">Date</th>
-                <th className="py-2 pr-4 font-medium">Plate</th>
-                <th className="py-2 pr-4 font-medium">Type</th>
-                <th className="py-2 pr-4 font-medium">Location</th>
-                <th className="py-2 pr-4 font-medium">Amount</th>
-                <th className="py-2 pr-4 font-medium">Status</th>
-                <th className="py-2 pr-4 font-medium">Evidence</th>
+                <th className="py-2 pr-4 font-medium">{t("staff.infractions.table.date")}</th>
+                <th className="py-2 pr-4 font-medium">{t("staff.infractions.table.plate")}</th>
+                <th className="py-2 pr-4 font-medium">{t("staff.infractions.table.type")}</th>
+                <th className="py-2 pr-4 font-medium">{t("staff.infractions.table.location")}</th>
+                <th className="py-2 pr-4 font-medium">{t("staff.infractions.table.amount")}</th>
+                <th className="py-2 pr-4 font-medium">{t("staff.infractions.table.status")}</th>
+                <th className="py-2 pr-4 font-medium">{t("staff.infractions.table.evidence")}</th>
               </tr>
             </thead>
             <tbody>
@@ -131,7 +137,7 @@ export function InfractionsTable({
                       )}
                     </td>
                     <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">
-                      {i.location || "—"}
+                      {i.location || emDash}
                     </td>
                     <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">
                       {formatCurrency(Number(i.fine_amount))}
@@ -155,9 +161,9 @@ export function InfractionsTable({
                               updateStatus(i.id, e.target.value as PaymentStatus)
                             }
                           >
-                            <option value="unpaid">Unpaid</option>
-                            <option value="pending">Pending</option>
-                            <option value="paid">Paid</option>
+                            <option value="unpaid">{t("staff.infractions.table.statusUnpaid")}</option>
+                            <option value="pending">{t("staff.infractions.table.statusPending")}</option>
+                            <option value="paid">{t("staff.infractions.table.statusPaid")}</option>
                           </select>
                         ) : null}
                       </div>
@@ -172,11 +178,11 @@ export function InfractionsTable({
                             void viewEvidence(i.evidence_path as string);
                           }}
                         >
-                          <Eye className="h-4 w-4" /> View
+                          <Eye className="h-4 w-4" /> {t("staff.infractions.table.viewEvidence")}
                         </Button>
                       ) : (
                         <span className="text-stone-400 dark:text-slate-500 text-xs">
-                          None
+                          {t("staff.infractions.table.noEvidence")}
                         </span>
                       )}
                     </td>

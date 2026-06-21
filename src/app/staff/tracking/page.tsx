@@ -10,6 +10,7 @@ import {
   LastKnownLocationBadge,
   VehicleTrackingTimeline,
 } from "@/components/tracking/VehicleTrackingTimeline";
+import { getTranslations } from "@/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,8 @@ export default async function AdminTrackingPage({
 }: {
   searchParams?: { plate?: string };
 }) {
+  const { t } = await getTranslations();
+  const emDash = t("staff.shared.emDash");
   const supabase = createClient();
   const filterPlate = searchParams?.plate
     ? normalizePlate(searchParams.plate)
@@ -78,8 +81,8 @@ export default async function AdminTrackingPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Vehicle tracking"
-        description="Last known locations and activity history built from infractions, agent check-ins, and registrations."
+        title={t("staff.tracking.page.title")}
+        description={t("staff.tracking.page.description")}
       />
 
       <Card>
@@ -88,15 +91,15 @@ export default async function AdminTrackingPage({
             <input
               name="plate"
               defaultValue={searchParams?.plate ?? ""}
-              placeholder="Filter by plate (e.g. GA-1234-AB)"
+              placeholder={t("staff.tracking.page.filterPlaceholder")}
               className="input flex-1"
             />
             <button type="submit" className="btn-primary">
-              Search
+              {t("staff.tracking.page.search")}
             </button>
             {filterPlate && (
               <Link href="/staff/tracking" className="btn-secondary text-center">
-                Clear
+                {t("staff.tracking.page.clear")}
               </Link>
             )}
           </form>
@@ -106,8 +109,8 @@ export default async function AdminTrackingPage({
       {!vehicles || vehicles.length === 0 ? (
         <EmptyState
           icon={<Radar className="h-8 w-8" />}
-          title="No vehicles to track"
-          description="Registered vehicles will appear here with their location history."
+          title={t("staff.tracking.page.emptyTitle")}
+          description={t("staff.tracking.page.emptyDescription")}
         />
       ) : (
         <div className="space-y-4">
@@ -124,14 +127,17 @@ export default async function AdminTrackingPage({
                       </p>
                       <p className="text-sm text-stone-600 dark:text-slate-400">
                         {[v.brand, v.model, v.color].filter(Boolean).join(" · ") ||
-                          "—"}
+                          emDash}
                         {" · "}
-                        Owner: {ownerMap[v.owner_id] ?? "—"}
+                        {t("staff.tracking.page.ownerPrefix", {
+                          name: ownerMap[v.owner_id] ?? emDash,
+                        })}
                       </p>
                       <p className="text-xs text-stone-500 dark:text-slate-500 mt-1">
-                        Registered {formatDate(v.created_at)} ·{" "}
-                        {events.length} tracking event
-                        {events.length === 1 ? "" : "s"}
+                        {t("staff.tracking.page.registeredMeta", {
+                          date: formatDate(v.created_at),
+                          count: events.length,
+                        })}
                       </p>
                     </div>
                     {last && (
@@ -146,7 +152,7 @@ export default async function AdminTrackingPage({
                   <details className="group">
                     <summary className="cursor-pointer text-sm font-medium text-brand-700 dark:text-brand-300 flex items-center gap-1">
                       <MapPin className="h-4 w-4" />
-                      View full timeline
+                      {t("staff.tracking.page.viewTimeline")}
                     </summary>
                     <div className="mt-3">
                       <VehicleTrackingTimeline events={events.slice(0, 15)} />

@@ -11,6 +11,7 @@ import {
 import { AgentApplicationReview } from "../AgentApplicationReview";
 import { AdminAgentsTable } from "../AdminAgentsTable";
 import { Clock } from "lucide-react";
+import { getTranslations } from "@/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -27,27 +28,29 @@ export default async function StaffAgentsPage({
     loadPendingAgentApplications(admin),
     loadStaffDirectoryPaginated(admin, tableQuery),
   ]);
+  const { t } = await getTranslations();
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Agents & administrators"
-        description="Review agent applications and manage field agent accounts."
+        title={t("staff.agents.page.title")}
+        description={t("staff.agents.page.description")}
       />
 
       <Card>
         <CardHeader>
           <CardTitle>
-            Pending agent applications
-            {pending.length > 0 ? ` (${pending.length})` : ""}
+            {pending.length > 0
+              ? t("staff.agents.pending.titleWithCount", { count: pending.length })
+              : t("staff.agents.pending.title")}
           </CardTitle>
         </CardHeader>
         <CardBody>
           {pending.length === 0 ? (
             <EmptyState
               icon={<Clock className="h-8 w-8" />}
-              title="No pending applications"
-              description="New agent requests appear here for review and approval."
+              title={t("staff.agents.pending.emptyTitle")}
+              description={t("staff.agents.pending.emptyDescription")}
             />
           ) : (
             <AgentApplicationReview applicants={pending} />

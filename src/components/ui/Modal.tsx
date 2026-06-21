@@ -4,6 +4,7 @@ import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/context";
 import {
   ModalSectionNav,
   type ModalSectionLink,
@@ -32,6 +33,7 @@ export function Modal({
   footer,
   sectionNav,
 }: Props) {
+  const { t } = useI18n();
   const scrollBodyId = useId().replace(/:/g, "");
   const structured = Boolean(footer || sectionNav);
   const [mounted, setMounted] = useState(false);
@@ -60,7 +62,7 @@ export function Modal({
       <button
         type="button"
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        aria-label="Close dialog"
+        aria-label={t("common.close")}
         onClick={onClose}
       />
       <div
@@ -109,7 +111,7 @@ export function Modal({
               type="button"
               onClick={onClose}
               className="shrink-0 rounded-lg p-1.5 text-stone-500 hover:bg-stone-100 dark:hover:bg-slate-800"
-              aria-label="Close"
+              aria-label={t("common.close")}
             >
               <X className="h-4 w-4" />
             </button>

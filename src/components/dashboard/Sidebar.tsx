@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/context";
 import type { ReactNode } from "react";
 
 export interface NavItem {
@@ -20,6 +21,8 @@ export function Sidebar({
   workspaceLabel: string;
 }) {
   const pathname = usePathname();
+  const { t } = useI18n();
+
   return (
     <aside className="hidden md:flex md:flex-col w-64 glass-panel border-r border-stone-200/80 dark:border-slate-800/80">
       <div className="px-5 py-5 border-b border-stone-200 dark:border-slate-800">
@@ -29,7 +32,7 @@ export function Sidebar({
           </span>
           <div>
             <p className="text-sm font-bold text-stone-900 dark:text-stone-100 leading-tight tracking-tight">
-              NJ-Drive
+              {t("app.name")}
             </p>
             <p className="text-xs text-stone-500 dark:text-slate-400 leading-tight">
               {workspaceLabel}

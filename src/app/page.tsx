@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { LandingNavbar } from "@/components/landing/LandingNavbar";
+import { getTranslations } from "@/i18n/server";
 import {
   ShieldCheck,
   Car,
@@ -8,448 +9,400 @@ import {
   ScanLine,
   Smartphone,
   CreditCard,
-  Landmark,
-  QrCode,
-  MapPin,
-  Globe,
-  Zap,
   CheckCircle2,
   UserCheck,
-  Gauge,
   ArrowRight,
   Clock,
-  LayoutDashboard,
+  Sparkles,
 } from "lucide-react";
 
-export default function LandingPage() {
+const CONTACT_EMAIL = "njsafetydriver@securiteroutiere.ga";
+
+export default async function LandingPage() {
+  const { t } = await getTranslations();
+  const year = new Date().getFullYear();
+
+  const flowSteps = [
+    t("landing.flow.steps.detected.title"),
+    t("landing.flow.steps.notified.title"),
+    t("landing.flow.steps.reviewed.title"),
+    t("landing.flow.steps.paid.title"),
+    t("landing.flow.steps.receipt.title"),
+  ].map((title, index) => {
+    const keys = [
+      "detected",
+      "notified",
+      "reviewed",
+      "paid",
+      "receipt",
+    ] as const;
+    const key = keys[index];
+    return {
+      number: String(index + 1).padStart(2, "0"),
+      title,
+      description: t(`landing.flow.steps.${key}.description`),
+    };
+  });
+
+  const featureItems = [
+    {
+      icon: <FileText className="h-5 w-5" />,
+      title: t("landing.features.items.documents.title"),
+      description: t("landing.features.items.documents.description"),
+      accent: "brand" as const,
+    },
+    {
+      icon: <ScanLine className="h-5 w-5" />,
+      title: t("landing.features.items.plateSearch.title"),
+      description: t("landing.features.items.plateSearch.description"),
+      accent: "navy" as const,
+    },
+    {
+      icon: <AlertTriangle className="h-5 w-5" />,
+      title: t("landing.features.items.infractions.title"),
+      description: t("landing.features.items.infractions.description"),
+      accent: "gold" as const,
+    },
+    {
+      icon: <CreditCard className="h-5 w-5" />,
+      title: t("landing.features.items.payments.title"),
+      description: t("landing.features.items.payments.description"),
+      accent: "brand" as const,
+    },
+  ];
+
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Gabon flag accent stripe — green · gold · navy */}
       <div
         aria-hidden
         className="h-1 bg-gradient-to-r from-brand-700 via-gold-500 to-navy-700"
       />
 
-      {/* ── Header ── */}
-      <header className="sticky top-0 z-10 glass-panel border-b border-stone-200/80 dark:border-slate-800/80">
-        <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-700 text-white shadow-sm ring-1 ring-brand-600/20">
-              <ShieldCheck className="h-5 w-5" />
-            </span>
-            <div>
-              <p className="text-sm font-bold text-stone-900 dark:text-stone-100 tracking-tight leading-tight">
-                NJ Safety Driver
-              </p>
-              <p className="text-xs text-stone-500 dark:text-stone-400 leading-tight">
-                République Gabonaise
-              </p>
-            </div>
-          </Link>
-          <nav className="flex items-center gap-2">
-            <ThemeToggle />
-            <Link href="/login" className="btn-secondary text-sm">
-              Connexion
-            </Link>
-            <Link href="/register" className="btn-primary text-sm">
-              S&apos;inscrire
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <LandingNavbar />
 
       <main className="flex-1">
-        {/* ── 1. Hero ── */}
+        {/* Hero */}
         <section className="relative overflow-hidden landing-hero">
-          {/* Decorative background shield */}
           <div
             aria-hidden
-            className="absolute right-0 top-1/2 -translate-y-1/2 opacity-[0.04] dark:opacity-[0.025] hidden lg:block pointer-events-none"
-          >
-            <ShieldCheck className="h-[480px] w-[480px] text-brand-700" />
-          </div>
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(34,120,70,0.12),transparent)] dark:bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(34,120,70,0.08),transparent)]"
+          />
+          <div
+            aria-hidden
+            className="absolute -right-24 top-20 h-72 w-72 rounded-full bg-gold-400/10 blur-3xl dark:bg-gold-500/5"
+          />
+          <div
+            aria-hidden
+            className="absolute -left-24 bottom-0 h-64 w-64 rounded-full bg-brand-500/10 blur-3xl dark:bg-brand-600/5"
+          />
 
-          <div className="relative mx-auto max-w-7xl px-6 py-20 lg:py-32">
-            <div className="max-w-3xl">
-              {/* Official badges */}
-              <div className="flex flex-wrap items-center gap-2 mb-6">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-200/60 bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-800 dark:border-brand-800/40 dark:bg-brand-950/50 dark:text-brand-300">
-                  <ShieldCheck className="h-3 w-3" />
-                  République Gabonaise
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-gold-200/60 bg-gold-50 px-3 py-1 text-xs font-semibold text-gold-800 dark:border-gold-800/40 dark:bg-gold-950/50 dark:text-gold-300">
-                  Ministère des Transports
-                </span>
-                <span className="inline-flex items-center rounded-full bg-stone-100 dark:bg-slate-800 px-2.5 py-1 text-xs font-medium text-stone-600 dark:text-slate-400">
-                  Version 1.0
-                </span>
+          <div className="relative mx-auto max-w-7xl px-6 py-16 lg:py-24">
+            <div className="grid gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+              <div>
+                <div className="flex flex-wrap items-center gap-2 mb-6">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-200/60 bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-800 dark:border-brand-800/40 dark:bg-brand-950/50 dark:text-brand-300">
+                    <ShieldCheck className="h-3 w-3" />
+                    {t("landing.hero.badgeRepublic")}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-gold-200/60 bg-gold-50 px-3 py-1 text-xs font-semibold text-gold-800 dark:border-gold-800/40 dark:bg-gold-950/50 dark:text-gold-300">
+                    {t("landing.hero.badgeMinistry")}
+                  </span>
+                  <span className="inline-flex items-center rounded-full bg-stone-100 dark:bg-slate-800 px-2.5 py-1 text-xs font-medium text-stone-600 dark:text-slate-400">
+                    {t("landing.hero.version")}
+                  </span>
+                </div>
+
+                <h1 className="text-4xl font-bold tracking-tight text-stone-900 dark:text-stone-100 sm:text-5xl lg:text-[3.25rem] leading-[1.08]">
+                  {t("landing.hero.title")}
+                  <br />
+                  <span className="bg-gradient-to-r from-brand-700 via-brand-600 to-navy-700 bg-clip-text text-transparent dark:from-brand-400 dark:via-brand-300 dark:to-navy-300">
+                    {t("landing.hero.titleHighlight")}
+                  </span>
+                </h1>
+
+                <p className="mt-6 text-lg text-stone-600 dark:text-slate-400 leading-relaxed max-w-xl">
+                  {t("landing.hero.description")}
+                </p>
+
+                <div className="mt-8 flex flex-wrap items-center gap-3">
+                  <Link href="/register" className="btn-primary px-6 text-base shadow-md shadow-brand-700/15">
+                    {t("landing.hero.ctaDriver")}
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                  <Link href="/register/agent" className="btn-secondary px-6 text-base">
+                    {t("landing.hero.ctaAgent")}
+                  </Link>
+                </div>
+
+                <Link
+                  href="/login"
+                  className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:text-brand-800 dark:text-brand-400 dark:hover:text-brand-300 transition-colors"
+                >
+                  {t("landing.hero.ctaLogin")}
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+
+                <div className="mt-10 flex flex-wrap items-center gap-6 text-xs text-stone-500 dark:text-slate-500">
+                  <TrustItem label={t("landing.hero.trustSsl")} />
+                  <TrustItem label={t("landing.hero.trustOtp")} />
+                  <TrustItem label={t("landing.hero.trustAudit")} />
+                </div>
               </div>
 
-              <h1 className="text-4xl font-bold tracking-tight text-stone-900 dark:text-stone-100 sm:text-5xl lg:text-6xl leading-[1.08]">
-                La sécurité routière
-                <br />
-                <span className="text-brand-700 dark:text-brand-400">
-                  numérisée au Gabon
-                </span>
-              </h1>
-
-              <p className="mt-6 text-lg text-stone-600 dark:text-slate-400 leading-relaxed max-w-2xl">
-                Application gouvernementale gabonaise de contrôle routier — une
-                plateforme numérique complète conçue pour moderniser la gestion de
-                la sécurité routière, faciliter les contrôles des agents,
-                automatiser le traitement des infractions et simplifier le paiement
-                des amendes pour tous les usagers de la route.
-              </p>
-
-              <div className="mt-8 flex flex-wrap items-center gap-3">
-                <Link href="/register" className="btn-primary px-6 text-base">
-                  Portail conducteur
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-                <Link href="/register/agent" className="btn-secondary px-6 text-base">
-                  Devenir agent
-                </Link>
-                <Link href="/login?role=agent" className="btn-secondary px-6 text-base">
-                  Connexion agent
-                </Link>
-              </div>
-
-              <div className="mt-10 flex flex-wrap items-center gap-6 text-xs text-stone-500 dark:text-slate-500">
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-brand-600 dark:text-brand-400" />
-                  Chiffrement SSL 256-bit
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-brand-600 dark:text-brand-400" />
-                  Authentification 2 facteurs
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-brand-600 dark:text-brand-400" />
-                  Audit trail horodaté
-                </span>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                <ProductPreviewCard
+                  href="/register"
+                  icon={<Car className="h-6 w-6" />}
+                  tag={t("landing.products.driver.tag")}
+                  title={t("landing.products.driver.title")}
+                  description={t("landing.products.driver.description")}
+                  cta={t("landing.products.driver.cta")}
+                  variant="brand"
+                />
+                <ProductPreviewCard
+                  href="/register/agent"
+                  icon={<UserCheck className="h-6 w-6" />}
+                  tag={t("landing.products.agent.tag")}
+                  title={t("landing.products.agent.title")}
+                  description={t("landing.products.agent.description")}
+                  cta={t("landing.products.agent.cta")}
+                  variant="navy"
+                />
               </div>
             </div>
           </div>
         </section>
 
-        {/* ── 2. Stats bar ── */}
+        {/* Stats */}
         <section className="border-y border-stone-200/70 dark:border-slate-800/70 landing-surface">
           <div className="mx-auto max-w-7xl px-6 py-8">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 divide-x-0 sm:divide-x divide-stone-100 dark:divide-slate-800">
-              <Stat value="98.5 %" label="Précision OCR plaques (ANPR)" />
-              <Stat value="−30 %" label="Réduction pour paiement sous 72 h" />
-              <Stat value="500+" label="Agents enrôlés — Phase 1 Libreville" />
-              <Stat value="6" label="Modules fonctionnels couvrant tout le cycle" />
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+              <Stat value={t("landing.stats.drivers.value")} label={t("landing.stats.drivers.label")} />
+              <Stat value={t("landing.stats.agents.value")} label={t("landing.stats.agents.label")} />
+              <Stat value={t("landing.stats.discount.value")} label={t("landing.stats.discount.label")} />
+              <Stat value={t("landing.stats.digital.value")} label={t("landing.stats.digital.label")} />
             </div>
           </div>
         </section>
 
-        {/* ── 3. Six modules ── */}
+        {/* Product details */}
         <section className="landing-surface-alt border-b border-stone-200/70 dark:border-slate-800/70">
           <div className="mx-auto max-w-7xl px-6 py-16 lg:py-20">
             <SectionHeader
-              eyebrow="Sommaire de l'application"
-              title="Six modules pour couvrir tout le cycle routier"
-              description="De l'enregistrement du conducteur jusqu'au paiement sécurisé des amendes, chaque étape est numérisée, tracée et auditée."
+              eyebrow={t("landing.products.eyebrow")}
+              title={t("landing.products.title")}
+              description={t("landing.products.description")}
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              <Module
-                icon={<UserCheck className="h-5 w-5" />}
-                tag="Module 01"
-                title="Enregistrement Personnel"
-                description="Profil conducteur complet : nom, CNI, permis de conduire et catégorie, date d'obtention et d'expiration, photo d'identité. Données véhicule : plaque, marque, modèle, VIN, carte grise, assurance, contrôle technique."
-                accent="brand"
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <ProductDetailCard
+                href="/register"
+                icon={<Car className="h-6 w-6" />}
+                tag={t("landing.products.driver.tag")}
+                title={t("landing.products.driver.title")}
+                description={t("landing.products.driver.description")}
+                features={[
+                  t("landing.products.driver.features.0"),
+                  t("landing.products.driver.features.1"),
+                  t("landing.products.driver.features.2"),
+                  t("landing.products.driver.features.3"),
+                ]}
+                cta={t("landing.products.driver.cta")}
+                variant="brand"
               />
-              <Module
-                icon={<ShieldCheck className="h-5 w-5" />}
-                tag="Module 02"
-                title="Espace Agent de Sécurité"
-                description="Connexion sécurisée NIP + OTP (attribué par le Ministère de l'Intérieur). Accès instantané au profil complet du conducteur, historique des infractions et amendes impayées. Chaque session est horodatée et enregistrée."
-                accent="navy"
-              />
-              <Module
-                icon={<Gauge className="h-5 w-5" />}
-                tag="Module 03"
-                title="Contrôle des Radars"
-                description="Gestion centralisée des flashers de vitesse géolocalisés déployés sur le réseau routier gabonais. Tableau de bord des infractions captées : heure exacte, photo de plaque, vitesse mesurée, génération automatique du PV."
-                accent="gold"
-              />
-              <Module
-                icon={<FileText className="h-5 w-5" />}
-                tag="Module 04"
-                title="Téléversement de Documents"
-                description="Dépôt sécurisé de la CNI / passeport, permis de conduire (recto-verso), carte grise, attestation d'assurance en cours de validité et certificat de contrôle technique délivré par un centre agréé. Max 5 Mo / document."
-                accent="brand"
-              />
-              <Module
-                icon={<AlertTriangle className="h-5 w-5" />}
-                tag="Module 05"
-                title="Gestion des Infractions"
-                description="Suivi complet du cycle : détection automatique (radar) ou manuelle (agent), notification push + SMS immédiate, consultation du dossier avec photo de preuve, paiement sécurisé multi-canaux et quittance officielle PDF."
-                accent="navy"
-              />
-              <Module
-                icon={<ScanLine className="h-5 w-5" />}
-                tag="Module 06"
-                title="Scan de Plaque (ANPR / OCR)"
-                description="Reconnaissance optique par IA entraînée sur les formats de plaques gabonaises. Précision de 98,5 % en conditions standard. Basculement vers saisie manuelle assistée en cas d'occlusion ou de faible luminosité."
-                accent="gold"
+              <ProductDetailCard
+                href="/register/agent"
+                icon={<ShieldCheck className="h-6 w-6" />}
+                tag={t("landing.products.agent.tag")}
+                title={t("landing.products.agent.title")}
+                description={t("landing.products.agent.description")}
+                features={[
+                  t("landing.products.agent.features.0"),
+                  t("landing.products.agent.features.1"),
+                  t("landing.products.agent.features.2"),
+                  t("landing.products.agent.features.3"),
+                ]}
+                cta={t("landing.products.agent.cta")}
+                variant="navy"
               />
             </div>
           </div>
         </section>
 
-        {/* ── 4. Infraction flow ── */}
+        {/* Features */}
         <section className="landing-surface border-b border-stone-200/70 dark:border-slate-800/70">
           <div className="mx-auto max-w-7xl px-6 py-16 lg:py-20">
             <SectionHeader
-              eyebrow="Cycle de l'amende"
-              title="De l'infraction à la quittance officielle"
-              description="Un processus entièrement dématérialisé, inspiré des meilleures pratiques de France, du Maroc et d'Afrique du Sud."
+              eyebrow={t("landing.features.eyebrow")}
+              title={t("landing.features.title")}
             />
 
-            {/* 5-step flow */}
-            <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-10">
-              {[
-                {
-                  n: "01",
-                  title: "Infraction Détectée",
-                  desc: "Enregistrée automatiquement par radar ou manuellement par l'agent. Associée au profil conducteur.",
-                },
-                {
-                  n: "02",
-                  title: "Notification Immédiate",
-                  desc: "Alerte push et SMS au conducteur avec détail de l'infraction, montant et date limite de paiement.",
-                },
-                {
-                  n: "03",
-                  title: "Consultation du Dossier",
-                  desc: "Tableau de bord : type d'infraction, photo de preuve, localisation GPS, montant et statut.",
-                },
-                {
-                  n: "04",
-                  title: "Paiement Sécurisé",
-                  desc: "Mobile Money, carte bancaire (3D Secure) ou virement Trésor Public. QR Code disponible.",
-                },
-                {
-                  n: "05",
-                  title: "Quittance Officielle",
-                  desc: "Reçu numérique certifié PDF généré et archivé automatiquement dans le profil de l'usager.",
-                },
-              ].map((s) => (
-                <Step key={s.n} number={s.n} title={s.title} description={s.desc} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              {featureItems.map((item) => (
+                <FeatureCard key={item.title} {...item} />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Flow */}
+        <section className="landing-surface-alt border-b border-stone-200/70 dark:border-slate-800/70">
+          <div className="mx-auto max-w-7xl px-6 py-16 lg:py-20">
+            <SectionHeader
+              eyebrow={t("landing.flow.eyebrow")}
+              title={t("landing.flow.title")}
+              description={t("landing.flow.description")}
+            />
+
+            <div className="relative grid grid-cols-1 sm:grid-cols-5 gap-4 mb-10">
+              <div
+                aria-hidden
+                className="hidden sm:block absolute top-[1.375rem] left-[10%] right-[10%] h-px bg-gradient-to-r from-transparent via-brand-300/60 to-transparent dark:via-brand-700/40"
+              />
+              {flowSteps.map((step) => (
+                <Step key={step.number} {...step} />
               ))}
             </div>
 
-            {/* 72h discount callout */}
-            <div className="rounded-xl border border-gold-200 bg-gold-50 dark:border-gold-800/40 dark:bg-gold-950/20 p-5 flex gap-4 items-start max-w-3xl">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gold-600 text-white">
+            <div className="rounded-2xl border border-gold-200/80 bg-gradient-to-br from-gold-50 to-white dark:from-gold-950/30 dark:to-slate-900/40 dark:border-gold-800/40 p-5 sm:p-6 flex gap-4 items-start max-w-3xl shadow-sm">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gold-600 text-white shadow-sm">
                 <Clock className="h-5 w-5" />
               </span>
               <div>
                 <p className="font-bold text-stone-900 dark:text-stone-100">
-                  Réduction de 30 % pour paiement rapide
+                  {t("landing.flow.discountTitle")}
                 </p>
-                <p className="mt-1 text-sm text-stone-600 dark:text-slate-400 leading-relaxed">
-                  Les paiements effectués dans les{" "}
-                  <strong className="text-stone-800 dark:text-stone-200">72 heures</strong>{" "}
-                  suivant la notification bénéficient d&apos;une réduction de{" "}
-                  <strong className="text-gold-700 dark:text-gold-400">30 %</strong>{" "}
-                  sur le montant de l&apos;amende — dispositif d&apos;incitation au règlement rapide conforme au barème officiel gabonais.
+                <p className="mt-1.5 text-sm text-stone-600 dark:text-slate-400 leading-relaxed">
+                  {t("landing.flow.discountBody", { hours: "72", percent: "30%" })}
                 </p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* ── 5. Payment methods ── */}
-        <section className="landing-surface-alt border-b border-stone-200/70 dark:border-slate-800/70">
+        {/* Payments */}
+        <section className="landing-surface border-b border-stone-200/70 dark:border-slate-800/70">
           <div className="mx-auto max-w-7xl px-6 py-16 lg:py-20">
             <SectionHeader
-              eyebrow="Système de paiement gouvernemental"
-              title="Passerelle multi-canaux connectée au Trésor Public"
-              description="Connectée au Trésor Public Gabonais, la passerelle garantit la sécurité des transactions, leur traçabilité et leur reversement automatique vers les caisses de l'État."
+              eyebrow={t("landing.payments.eyebrow")}
+              title={t("landing.payments.title")}
+              description={t("landing.payments.description")}
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-3xl">
               <PaymentMethod
                 icon={<Smartphone className="h-5 w-5" />}
-                title="Mobile Money"
-                description="Compatible Airtel Money, Moov Money et Orange Money. Débit depuis le portefeuille mobile en quelques secondes, sans saisir de coordonnées bancaires."
-                detail="Airtel · Moov · Orange"
+                title={t("landing.payments.mobileMoney.title")}
+                description={t("landing.payments.mobileMoney.description")}
+                detail={t("landing.payments.mobileMoney.detail")}
               />
               <PaymentMethod
                 icon={<CreditCard className="h-5 w-5" />}
-                title="Carte Bancaire"
-                description="Visa, Mastercard ou carte BGFI / UGB. Sécurisé via protocole 3D Secure et chiffrement SSL 256 bits. Confirmation instantanée."
-                detail="3D Secure · SSL 256-bit"
-              />
-              <PaymentMethod
-                icon={<Landmark className="h-5 w-5" />}
-                title="Virement Trésor Public"
-                description="Virement bancaire direct vers le compte officiel du Trésor Public Gabonais avec génération automatique d'une référence unique par dossier."
-                detail="Référence unique / dossier"
-              />
-              <PaymentMethod
-                icon={<QrCode className="h-5 w-5" />}
-                title="Paiement QR Code"
-                description="Chaque procès-verbal contient un QR Code unique scannable en agence bancaire ou au guichet du Trésor pour paiement en espèces."
-                detail="Scannable en agence ou guichet"
+                title={t("landing.payments.card.title")}
+                description={t("landing.payments.card.description")}
+                detail={t("landing.payments.card.detail")}
               />
             </div>
           </div>
         </section>
 
-        {/* ── 6. Three portals ── */}
-        <section className="landing-surface border-b border-stone-200/70 dark:border-slate-800/70">
+        {/* Portals */}
+        <section className="landing-surface-alt border-b border-stone-200/70 dark:border-slate-800/70">
           <div className="mx-auto max-w-7xl px-6 py-16 lg:py-20">
             <SectionHeader
-              eyebrow="Accès par rôle"
-              title="Un espace dédié pour chaque acteur de la sécurité routière"
+              eyebrow={t("landing.portals.eyebrow")}
+              title={t("landing.portals.title")}
             />
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Portal
                 href="/register"
                 icon={<Car className="h-6 w-6" />}
-                role="Conducteur"
-                subtitle="Driver Portal"
+                role={t("landing.portals.driver.role")}
+                subtitle={t("landing.portals.driver.subtitle")}
                 items={[
-                  "Enregistrement profil et véhicule (CNI, permis, plaque)",
-                  "Téléversement des documents officiels requis",
-                  "Consultation de l'historique des infractions",
-                  "Paiement des amendes — Mobile Money, carte, virement",
-                  "Téléchargement des quittances officielles PDF",
+                  t("landing.portals.driver.items.0"),
+                  t("landing.portals.driver.items.1"),
+                  t("landing.portals.driver.items.2"),
+                  t("landing.portals.driver.items.3"),
                 ]}
-                cta="Créer un compte conducteur"
+                cta={t("landing.portals.driver.cta")}
                 variant="brand"
               />
               <Portal
                 href="/register/agent"
                 icon={<ShieldCheck className="h-6 w-6" />}
-                role="Agent de Sécurité"
-                subtitle="Agent Workspace"
+                role={t("landing.portals.agent.role")}
+                subtitle={t("landing.portals.agent.subtitle")}
                 items={[
-                  "Candidature en ligne — validation par un administrateur",
-                  "Connexion sécurisée NIP + OTP (Ministère de l'Intérieur)",
-                  "Scan de plaque ANPR / OCR — précision 98,5 %",
-                  "Profil complet conducteur et antécédents en temps réel",
-                  "Émission de procès-verbal numérique (barème officiel)",
-                  "Upload de preuves photographiques géolocalisées",
+                  t("landing.portals.agent.items.0"),
+                  t("landing.portals.agent.items.1"),
+                  t("landing.portals.agent.items.2"),
+                  t("landing.portals.agent.items.3"),
                 ]}
-                cta="Postuler comme agent"
+                cta={t("landing.portals.agent.cta")}
                 variant="navy"
               />
-              <Portal
-                href="/login?role=admin"
-                icon={<LayoutDashboard className="h-6 w-6" />}
-                role="Administrateur"
-                subtitle="Admin Dashboard"
-                items={[
-                  "Supervision des agents et de leurs opérations de terrain",
-                  "Statistiques nationales : infractions, amendes, paiements",
-                  "Gestion des conducteurs, véhicules et documents",
-                  "Tableau de bord des radars actifs et en maintenance",
-                  "Journal d'audit horodaté — traçabilité complète",
-                ]}
-                cta="Connexion administrateur"
-                variant="stone"
-              />
             </div>
+
+            <p className="mt-8 text-center text-sm text-stone-500 dark:text-slate-400">
+              {t("landing.portals.loginHint")}{" "}
+              <Link
+                href="/login"
+                className="font-semibold text-brand-700 hover:text-brand-800 dark:text-brand-400 dark:hover:text-brand-300"
+              >
+                {t("landing.header.login")}
+              </Link>
+            </p>
           </div>
         </section>
 
-        {/* ── 7. Roadmap ── */}
-        <section className="landing-surface-alt border-b border-stone-200/70 dark:border-slate-800/70">
-          <div className="mx-auto max-w-7xl px-6 py-16 lg:py-20">
-            <SectionHeader
-              eyebrow="Vision & Feuille de route"
-              title="Un déploiement national par étapes"
-              description="NJ Safety Driver représente un tournant décisif dans la modernisation de la sécurité routière gabonaise. En unissant technologie mobile, intelligence artificielle et paiement numérique gouvernemental, l'application pose les fondations d'un système de contrôle routier transparent, efficace et équitable."
-            />
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <RoadmapPhase
-                icon={<MapPin className="h-5 w-5" />}
-                phase="Phase 1"
-                year="2025"
-                status="En cours"
-                items={[
-                  "Déploiement pilote à Libreville",
-                  "Enrôlement des 500 premiers agents",
-                  "Intégration des 50 radars existants",
-                  "Lancement du portail conducteur public",
-                ]}
-              />
-              <RoadmapPhase
-                icon={<Globe className="h-5 w-5" />}
-                phase="Phase 2"
-                year="2026"
-                status="Planifié"
-                items={[
-                  "Extension aux capitales provinciales",
-                  "Interconnexion avec le RCCM",
-                  "Intégration Trésor Public & assurances",
-                  "Application mobile iOS & Android",
-                ]}
-              />
-              <RoadmapPhase
-                icon={<Zap className="h-5 w-5" />}
-                phase="Phase 3"
-                year="2027"
-                status="Vision"
-                items={[
-                  "Couverture nationale complète",
-                  "Intelligence artificielle prédictive",
-                  "Rapport annuel automatisé au Parlement",
-                  "Interconnexion bases de données nationales",
-                ]}
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* ── 8. CTA ── */}
-        <section className="relative bg-brand-700/80 dark:bg-brand-900/75 backdrop-blur-sm">
-          <div className="mx-auto max-w-7xl px-6 py-16 text-center">
+        {/* CTA */}
+        <section className="relative overflow-hidden bg-brand-700/90 dark:bg-brand-900/85 backdrop-blur-sm">
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_55%)]"
+          />
+          <div className="relative mx-auto max-w-7xl px-6 py-16 text-center">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-white/90 mb-5">
-              <ShieldCheck className="h-3 w-3" />
-              Plateforme officielle — République Gabonaise
+              <Sparkles className="h-3 w-3" />
+              {t("landing.cta.badge")}
             </span>
-            <h2 className="text-2xl font-bold text-white sm:text-3xl tracking-tight mt-2">
-              Rejoignez la plateforme nationale
+            <h2 className="text-2xl font-bold text-white sm:text-3xl tracking-tight">
+              {t("landing.cta.title")}
             </h2>
-            <p className="mt-3 text-brand-100 max-w-xl mx-auto leading-relaxed">
-              Conducteurs, agents de sécurité et administrateurs — enregistrez-vous
-              et accédez à votre espace en quelques secondes.
+            <p className="mt-3 text-brand-100 max-w-2xl mx-auto leading-relaxed">
+              {t("landing.cta.description")}
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link
                 href="/register"
                 className="inline-flex items-center gap-2 rounded-lg bg-white px-6 py-2.5 text-sm font-semibold text-brand-800 hover:bg-brand-50 transition-colors shadow-sm"
               >
-                Créer un compte conducteur
+                {t("landing.cta.driverButton")}
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
-                href="/login"
+                href="/register/agent"
                 className="inline-flex items-center gap-2 rounded-lg border border-white/30 px-6 py-2.5 text-sm font-semibold text-white hover:bg-white/10 transition-colors"
               >
-                Se connecter
+                {t("landing.cta.agentButton")}
+              </Link>
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-2 rounded-lg border border-white/20 px-6 py-2.5 text-sm font-semibold text-white/90 hover:bg-white/5 transition-colors"
+              >
+                {t("landing.cta.loginButton")}
               </Link>
             </div>
             <p className="mt-8 text-xs text-brand-200">
-              Pour toute information ou partenariat institutionnel :{" "}
-              <span className="font-medium text-white">
-                njsafetydriver@securiteroutiere.ga
-              </span>
+              {t("landing.cta.contact")}{" "}
+              <span className="font-medium text-white">{CONTACT_EMAIL}</span>
             </p>
           </div>
         </section>
       </main>
 
-      {/* ── Footer ── */}
       <footer className="border-t border-stone-200/70 dark:border-slate-800/70 landing-surface">
         <div className="mx-auto max-w-7xl px-6 py-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
@@ -459,28 +412,28 @@ export default function LandingPage() {
               </span>
               <div>
                 <p className="text-sm font-bold text-stone-900 dark:text-stone-100">
-                  NJ Safety Driver
+                  {t("app.legacyName")}
                 </p>
                 <p className="text-xs text-stone-500 dark:text-slate-400">
-                  Version 1.0 — Sécurité Routière Gabonaise
+                  {t("landing.footer.version")}
                 </p>
               </div>
             </div>
             <div className="text-left sm:text-right space-y-0.5">
               <p className="text-xs text-stone-500 dark:text-slate-400">
-                Partenariat institutionnel
+                {t("landing.footer.partnership")}
               </p>
               <p className="text-xs font-medium text-brand-700 dark:text-brand-400">
-                njsafetydriver@securiteroutiere.ga
+                {CONTACT_EMAIL}
               </p>
               <p className="text-xs text-stone-400 dark:text-slate-500">
-                Ministère des Transports, République Gabonaise
+                {t("landing.footer.ministry")}
               </p>
             </div>
           </div>
           <div className="mt-6 pt-6 border-t border-stone-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-xs text-stone-400 dark:text-slate-500 text-center sm:text-left">
-              &copy; {new Date().getFullYear()} NJ Safety Driver · Tous droits réservés · République Gabonaise
+              &copy; {year} {t("app.legacyName")} · {t("landing.footer.copyright")}
             </p>
             <div
               aria-hidden
@@ -493,7 +446,14 @@ export default function LandingPage() {
   );
 }
 
-// ─── Sub-components ────────────────────────────────────────────────────────
+function TrustItem({ label }: { label: string }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <CheckCircle2 className="h-3.5 w-3.5 text-brand-600 dark:text-brand-400" />
+      {label}
+    </span>
+  );
+}
 
 function SectionHeader({
   eyebrow,
@@ -523,7 +483,7 @@ function SectionHeader({
 
 function Stat({ value, label }: { value: string; label: string }) {
   return (
-    <div className="text-center px-4 py-2">
+    <div className="text-center px-4 py-2 rounded-xl bg-white/40 dark:bg-slate-900/30 border border-stone-200/50 dark:border-slate-800/50">
       <p className="text-3xl font-bold tracking-tight text-brand-700 dark:text-brand-400">
         {value}
       </p>
@@ -534,15 +494,132 @@ function Stat({ value, label }: { value: string; label: string }) {
   );
 }
 
-function Module({
+function ProductPreviewCard({
+  href,
   icon,
   tag,
+  title,
+  description,
+  cta,
+  variant,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  tag: string;
+  title: string;
+  description: string;
+  cta: string;
+  variant: "brand" | "navy";
+}) {
+  const headerCls =
+    variant === "brand"
+      ? "from-brand-700 to-brand-800"
+      : "from-navy-800 to-navy-900";
+
+  return (
+    <Link
+      href={href}
+      className="group card overflow-hidden flex flex-col hover:shadow-card-hover hover:-translate-y-1 transition-all duration-200"
+    >
+      <div className={`bg-gradient-to-br ${headerCls} px-5 py-5`}>
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 text-white mb-4">
+          {icon}
+        </div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-white/70">
+          {tag}
+        </p>
+        <h3 className="mt-1 text-lg font-bold text-white leading-tight">{title}</h3>
+      </div>
+      <div className="p-5 flex flex-col flex-1">
+        <p className="text-sm text-stone-600 dark:text-slate-400 leading-relaxed flex-1">
+          {description}
+        </p>
+        <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 dark:text-brand-400 group-hover:gap-2 transition-all">
+          {cta}
+          <ArrowRight className="h-4 w-4" />
+        </span>
+      </div>
+    </Link>
+  );
+}
+
+function ProductDetailCard({
+  href,
+  icon,
+  tag,
+  title,
+  description,
+  features,
+  cta,
+  variant,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  tag: string;
+  title: string;
+  description: string;
+  features: string[];
+  cta: string;
+  variant: "brand" | "navy";
+}) {
+  const accentCls =
+    variant === "brand"
+      ? "bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-400"
+      : "bg-navy-50 text-navy-700 dark:bg-navy-950/50 dark:text-navy-300";
+
+  const buttonCls =
+    variant === "brand"
+      ? "bg-brand-700 text-white hover:bg-brand-600 dark:hover:bg-brand-500"
+      : "bg-navy-800 text-white hover:bg-navy-700";
+
+  return (
+    <div className="card p-6 lg:p-8 flex flex-col h-full">
+      <div className="flex items-start gap-4">
+        <span
+          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${accentCls}`}
+        >
+          {icon}
+        </span>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-brand-700 dark:text-brand-400">
+            {tag}
+          </p>
+          <h3 className="mt-1 text-xl font-bold text-stone-900 dark:text-stone-100">
+            {title}
+          </h3>
+          <p className="mt-2 text-sm text-stone-600 dark:text-slate-400 leading-relaxed">
+            {description}
+          </p>
+        </div>
+      </div>
+      <ul className="mt-6 space-y-3 flex-1">
+        {features.map((item) => (
+          <li key={item} className="flex items-start gap-2.5 text-sm">
+            <CheckCircle2 className="h-4 w-4 text-brand-600 dark:text-brand-400 shrink-0 mt-0.5" />
+            <span className="text-stone-700 dark:text-slate-300 leading-snug">
+              {item}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <Link
+        href={href}
+        className={`mt-6 inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold tracking-wide transition-all duration-200 ${buttonCls}`}
+      >
+        {cta}
+        <ArrowRight className="h-4 w-4" />
+      </Link>
+    </div>
+  );
+}
+
+function FeatureCard({
+  icon,
   title,
   description,
   accent,
 }: {
   icon: React.ReactNode;
-  tag: string;
   title: string;
   description: string;
   accent: "brand" | "navy" | "gold";
@@ -556,16 +633,11 @@ function Module({
 
   return (
     <div className="card p-6 flex flex-col gap-4 hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200">
-      <div className="flex items-center justify-between">
-        <span
-          className={`flex h-10 w-10 items-center justify-center rounded-lg ${iconCls}`}
-        >
-          {icon}
-        </span>
-        <span className="text-xs font-semibold text-stone-300 dark:text-slate-600 font-mono">
-          {tag}
-        </span>
-      </div>
+      <span
+        className={`flex h-10 w-10 items-center justify-center rounded-lg ${iconCls}`}
+      >
+        {icon}
+      </span>
       <div>
         <h3 className="font-bold text-stone-900 dark:text-stone-100">{title}</h3>
         <p className="mt-2 text-sm text-stone-600 dark:text-slate-400 leading-relaxed">
@@ -587,7 +659,7 @@ function Step({
 }) {
   return (
     <div className="relative flex flex-col items-center text-center px-2">
-      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-700 text-white font-bold text-sm shadow-sm mb-3 shrink-0">
+      <div className="relative z-[1] flex h-11 w-11 items-center justify-center rounded-xl bg-brand-700 text-white font-bold text-sm shadow-sm mb-3 shrink-0 ring-4 ring-white/80 dark:ring-slate-900/80">
         {number}
       </div>
       <h4 className="text-sm font-bold text-stone-900 dark:text-stone-100 leading-tight">
@@ -644,22 +716,16 @@ function Portal({
   subtitle: string;
   items: string[];
   cta: string;
-  variant: "brand" | "navy" | "stone";
+  variant: "brand" | "navy";
 }) {
-  const headerCls = {
-    brand: "bg-brand-700",
-    navy: "bg-navy-800",
-    stone: "bg-stone-800 dark:bg-slate-800",
-  }[variant];
-
-  const ctaCls = {
-    brand: "bg-brand-700 text-white hover:bg-brand-600 dark:hover:bg-brand-500",
-    navy: "bg-navy-800 text-white hover:bg-navy-700",
-    stone: "bg-stone-800 text-white hover:bg-stone-700 dark:bg-slate-700 dark:hover:bg-slate-600",
-  }[variant];
+  const headerCls = variant === "brand" ? "bg-brand-700" : "bg-navy-800";
+  const ctaCls =
+    variant === "brand"
+      ? "bg-brand-700 text-white hover:bg-brand-600 dark:hover:bg-brand-500"
+      : "bg-navy-800 text-white hover:bg-navy-700";
 
   return (
-    <div className="card overflow-hidden flex flex-col">
+    <div className="card overflow-hidden flex flex-col hover:shadow-card-hover transition-shadow duration-200">
       <div className={`${headerCls} px-6 py-6`}>
         <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 text-white mb-4">
           {icon}
@@ -686,60 +752,6 @@ function Portal({
           <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
-    </div>
-  );
-}
-
-function RoadmapPhase({
-  icon,
-  phase,
-  year,
-  status,
-  items,
-}: {
-  icon: React.ReactNode;
-  phase: string;
-  year: string;
-  status: "En cours" | "Planifié" | "Vision";
-  items: string[];
-}) {
-  const statusCls = {
-    "En cours":
-      "bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300",
-    Planifié:
-      "bg-gold-50 text-gold-800 dark:bg-gold-950/40 dark:text-gold-300",
-    Vision:
-      "bg-navy-50 text-navy-700 dark:bg-navy-950/50 dark:text-navy-300",
-  }[status];
-
-  return (
-    <div className="card p-6">
-      <div className="flex items-start justify-between mb-5">
-        <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-400">
-            {icon}
-          </span>
-          <div>
-            <p className="font-bold text-stone-900 dark:text-stone-100">
-              {phase}
-            </p>
-            <p className="text-sm text-stone-500 dark:text-slate-400">{year}</p>
-          </div>
-        </div>
-        <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusCls}`}>
-          {status}
-        </span>
-      </div>
-      <ul className="space-y-2.5">
-        {items.map((item) => (
-          <li key={item} className="flex items-start gap-2 text-sm">
-            <CheckCircle2 className="h-4 w-4 text-brand-600 dark:text-brand-400 shrink-0 mt-0.5" />
-            <span className="text-stone-600 dark:text-slate-400 leading-snug">
-              {item}
-            </span>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }

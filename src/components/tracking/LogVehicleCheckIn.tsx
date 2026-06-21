@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Alert } from "@/components/ui/Alert";
 import { Modal } from "@/components/ui/Modal";
 import { logVehicleCheckIn } from "@/app/staff/actions";
+import { useI18n } from "@/i18n/context";
 
 export function LogVehicleCheckIn({
   plate,
@@ -18,6 +19,7 @@ export function LogVehicleCheckIn({
   country?: string;
   vehicleId: string | null;
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
@@ -26,7 +28,7 @@ export function LogVehicleCheckIn({
 
   const submit = () => {
     if (!location.trim()) {
-      setError("Location is required for a check-in.");
+      setError(t("staff.search.results.checkInLocationRequired"));
       return;
     }
     setError(null);
@@ -53,29 +55,29 @@ export function LogVehicleCheckIn({
     <>
       <Button type="button" variant="secondary" onClick={() => setOpen(true)}>
         <MapPin className="h-4 w-4 mr-1.5" />
-        Log check-in
+        {t("staff.search.results.checkInTrigger")}
       </Button>
       <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title="Log vehicle check-in"
-        description={`Record where you observed plate ${plate}. This helps build the vehicle tracking history.`}
+        title={t("staff.search.results.checkInTitle")}
+        description={t("staff.search.results.checkInDescription", { plate })}
       >
         <div className="space-y-4">
           {error && <Alert variant="error">{error}</Alert>}
           <Input
-            label="Location"
+            label={t("staff.search.results.checkInLocation")}
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            placeholder="e.g. Boulevard Triomphal, Libreville"
+            placeholder={t("staff.search.results.checkInLocationPlaceholder")}
             required
           />
           <Textarea
-            label="Notes (optional)"
+            label={t("staff.search.results.checkInNotesOptional")}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={2}
-            placeholder="Routine patrol, document check, etc."
+            placeholder={t("staff.search.results.checkInNotesPlaceholder")}
           />
           <div className="flex justify-end gap-2">
             <Button
@@ -83,10 +85,10 @@ export function LogVehicleCheckIn({
               variant="secondary"
               onClick={() => setOpen(false)}
             >
-              Cancel
+              {t("staff.search.results.checkInCancel")}
             </Button>
             <Button type="button" loading={pending} onClick={submit}>
-              Save check-in
+              {t("staff.search.results.checkInSave")}
             </Button>
           </div>
         </div>

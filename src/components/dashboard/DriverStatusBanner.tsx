@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { AlertTriangle, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { Alert } from "@/components/ui/Alert";
+import { useI18n } from "@/i18n/context";
+import { verificationStatusLabel } from "@/i18n/labels";
 import type { VerificationStatus } from "@/lib/types/database";
-import { VERIFICATION_LABELS } from "@/lib/verification";
 
 type Props = {
   verificationStatus: VerificationStatus;
@@ -17,6 +18,8 @@ export function DriverStatusBanner({
   adminMessage,
   onboardedAt,
 }: Props) {
+  const { t } = useI18n();
+
   if (verificationStatus === "active" && !adminMessage) {
     return null;
   }
@@ -24,10 +27,10 @@ export function DriverStatusBanner({
   const documentsHref = onboardedAt ? "/driver/profile#files" : "/driver/profile";
 
   const completeLabel = !onboardedAt
-    ? "Complete profile"
+    ? t("driver.shell.banner.ctaCompleteProfile")
     : verificationStatus === "rejected"
-      ? "Update documents"
-      : "Upload documents";
+      ? t("driver.shell.banner.ctaUpdateDocuments")
+      : t("driver.shell.banner.ctaUploadDocuments");
 
   return (
     <div className="mb-6 space-y-3">
@@ -52,25 +55,23 @@ export function DriverStatusBanner({
               )}
               <div>
                 <p className="font-medium">
-                  Account status: {VERIFICATION_LABELS[verificationStatus]}
+                  {t("driver.shell.banner.accountStatus", {
+                    status: verificationStatusLabel(t, verificationStatus),
+                  })}
                 </p>
                 {verificationStatus === "pending_documents" && (
                   <p className="text-sm mt-1 opacity-90">
-                    Your profile is not fully active yet. Complete your personal
-                    information and upload the required documents on your profile
-                    page.
+                    {t("driver.shell.banner.pendingDocumentsBody")}
                   </p>
                 )}
                 {verificationStatus === "pending_review" && (
                   <p className="text-sm mt-1 opacity-90">
-                    An administrator is reviewing your documents. You can still
-                    browse your dashboard while you wait.
+                    {t("driver.shell.banner.pendingReviewBody")}
                   </p>
                 )}
                 {verificationStatus === "rejected" && (
                   <p className="text-sm mt-1 opacity-90">
-                    Your account was not approved. Review the message below and
-                    update your profile or documents.
+                    {t("driver.shell.banner.rejectedBody")}
                   </p>
                 )}
               </div>
@@ -93,7 +94,9 @@ export function DriverStatusBanner({
           <div className="flex gap-2">
             <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
             <div>
-              <p className="font-medium">Action required from administrator</p>
+              <p className="font-medium">
+                {t("driver.shell.banner.adminMessageTitle")}
+              </p>
               <p className="text-sm mt-1 whitespace-pre-wrap">{adminMessage}</p>
             </div>
           </div>

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AuthDialogCard } from "@/components/ui/AuthDialogCard";
 import { getSessionUser, getProfiles } from "@/lib/auth";
+import { getTranslations } from "@/i18n/server";
 import { AgentRegisterForm } from "./AgentRegisterForm";
 
 export const metadata = {
@@ -14,6 +15,7 @@ export default async function AgentRegisterPage() {
   const user = await getSessionUser();
   if (!user) redirect("/login?redirect=/register/agent");
 
+  const { t } = await getTranslations();
   const profiles = await getProfiles();
   const staffProfile = profiles.find((p) => p.role === "staff");
 
@@ -34,11 +36,10 @@ export default async function AgentRegisterPage() {
   return (
     <AuthDialogCard className="max-w-lg">
       <h1 className="text-xl font-semibold text-stone-900 dark:text-stone-100">
-        Apply as a field agent
+        {t("auth.agentRegister.pageTitle")}
       </h1>
       <p className="mt-1 text-sm text-stone-600 dark:text-slate-400">
-        Submit an application to become a traffic enforcement agent. An
-        administrator will review and approve access.
+        {t("auth.agentRegister.pageSubtitle")}
       </p>
       <div className="mt-6">
         <AgentRegisterForm

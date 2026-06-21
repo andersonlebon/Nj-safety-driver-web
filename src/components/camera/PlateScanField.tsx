@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
 import { CameraCapture } from "@/components/camera/CameraCapture";
-import { PLATE_SCAN_HINT, suggestPlateFromImage } from "@/lib/plate-scan";
+import { suggestPlateFromImage } from "@/lib/plate-scan";
+import { useI18n } from "@/i18n/context";
 
 type Props = {
   value: string;
@@ -19,10 +20,12 @@ type Props = {
 export function PlateScanField({
   value,
   onChange,
-  label = "Plate number",
+  label,
   required,
   name = "plate_number",
 }: Props) {
+  const { t } = useI18n();
+  const resolvedLabel = label ?? t("staff.search.plateScan.plateNumber");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -33,9 +36,13 @@ export function PlateScanField({
       const result = await suggestPlateFromImage(file);
       if (result?.plate) {
         onChange(result.plate);
-        setHint(`Suggested plate (${Math.round(result.confidence * 100)}% confidence) — please verify.`);
+        setHint(
+          t("staff.search.plateScan.suggestedPlateHint", {
+            confidence: Math.round(result.confidence * 100),
+          })
+        );
       } else {
-        setHint(PLATE_SCAN_HINT);
+        setHint(t("staff.search.plateScan.ocrComingHint"));
       }
     });
   };
@@ -43,15 +50,15 @@ export function PlateScanField({
   return (
     <div className="space-y-3">
       <Input
-        label={label}
+        label={resolvedLabel}
         name={name}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="e.g. AB-123-CD or foreign plate"
+        placeholder={t("staff.search.plateScan.platePlaceholder")}
         required={required}
       />
       <CameraCapture
-        label="Scan plate with camera"
+        label={t("staff.search.plateScan.scanWithCamera")}
         previewUrl={previewUrl}
         onCapture={onCapture}
         onClear={() => {
@@ -60,7 +67,9 @@ export function PlateScanField({
         }}
       />
       {pending && (
-        <p className="text-xs text-stone-500 dark:text-slate-400">Analyzing photo…</p>
+        <p className="text-xs text-stone-500 dark:text-slate-400">
+          {t("staff.search.plateScan.analyzing")}
+        </p>
       )}
       {hint && <Alert variant="info">{hint}</Alert>}
       <Button
@@ -68,10 +77,10 @@ export function PlateScanField({
         variant="secondary"
         className="w-full text-sm"
         disabled={!value.trim()}
-        onClick={() => setHint("Plate ready — continue or search.")}
+        onClick={() => setHint(t("staff.search.plateScan.plateReadyHint"))}
       >
         <ScanLine className="h-4 w-4 mr-1.5" />
-        Confirm plate
+        {t("staff.search.plateScan.confirmPlate")}
       </Button>
     </div>
   );

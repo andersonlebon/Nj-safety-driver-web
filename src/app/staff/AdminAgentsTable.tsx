@@ -6,6 +6,8 @@ import { ShieldCheck } from "lucide-react";
 import { PaginatedTableFrame } from "@/components/table";
 import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
+import { useI18n } from "@/i18n/context";
+import { staffRoleLabel } from "@/i18n/labels";
 import type { TableQuery } from "@/lib/pagination";
 import type { Database, StaffRole } from "@/lib/types/database";
 import { promoteAgentToAdmin } from "./actions";
@@ -13,12 +15,12 @@ import { promoteAgentToAdmin } from "./actions";
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
 function StaffRoleBadge({ role }: { role: StaffRole }) {
+  const { t } = useI18n();
   const classes: Record<StaffRole, string> = {
     agent: "badge bg-navy-100 text-navy-800 dark:bg-navy-950/40 dark:text-navy-200",
     admin: "badge bg-brand-50 text-brand-800 dark:bg-brand-950/40 dark:text-brand-300",
   };
-  const labels: Record<StaffRole, string> = { agent: "Agent", admin: "Admin" };
-  return <span className={classes[role]}>{labels[role]}</span>;
+  return <span className={classes[role]}>{staffRoleLabel(t, role)}</span>;
 }
 
 function PromoteButton({
@@ -29,10 +31,12 @@ function PromoteButton({
   isSelf: boolean;
 }) {
   const router = useRouter();
+  const { t } = useI18n();
+  const emDash = t("staff.shared.emDash");
   const [pending, startTransition] = useTransition();
 
   if (isSelf) {
-    return <span className="text-xs text-stone-400">—</span>;
+    return <span className="text-xs text-stone-400">{emDash}</span>;
   }
 
   return (
@@ -50,7 +54,7 @@ function PromoteButton({
       }}
     >
       <ShieldCheck className="h-3.5 w-3.5 mr-1" />
-      Promote
+      {t("staff.agents.table.promote")}
     </Button>
   );
 }
@@ -68,28 +72,31 @@ export function AdminAgentsTable({
   agents: (Profile & { staff_role?: StaffRole })[];
   currentUserId: string;
 }) {
+  const { t } = useI18n();
+  const emDash = t("staff.shared.emDash");
+
   return (
     <PaginatedTableFrame
       pathname={pathname}
       query={query}
       totalCount={totalCount}
-      searchPlaceholder="Name, email, phone…"
+      searchPlaceholder={t("staff.agents.table.searchPlaceholder")}
       showDateFilters
       emptyIcon={<ShieldCheck className="h-8 w-8" />}
-      emptyTitle="No staff members yet"
-      emptyDescription="Approved applications and promoted users appear here."
-      unfilteredHint={`${totalCount} staff account${totalCount === 1 ? "" : "s"}`}
+      emptyTitle={t("staff.agents.table.emptyTitle")}
+      emptyDescription={t("staff.agents.table.emptyDescription")}
+      unfilteredHint={t("staff.agents.table.unfilteredHint", { count: totalCount })}
     >
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-left text-stone-500 dark:text-slate-400 border-b border-stone-200 dark:border-slate-800">
             <tr>
-              <th className="py-2 pr-4 font-medium">Name</th>
-              <th className="py-2 pr-4 font-medium">Email</th>
-              <th className="py-2 pr-4 font-medium">Phone</th>
-              <th className="py-2 pr-4 font-medium">Sub-role</th>
-              <th className="py-2 pr-4 font-medium">Joined</th>
-              <th className="py-2 pr-4 font-medium">Actions</th>
+              <th className="py-2 pr-4 font-medium">{t("staff.agents.table.name")}</th>
+              <th className="py-2 pr-4 font-medium">{t("staff.agents.table.email")}</th>
+              <th className="py-2 pr-4 font-medium">{t("staff.agents.table.phone")}</th>
+              <th className="py-2 pr-4 font-medium">{t("staff.agents.table.subRole")}</th>
+              <th className="py-2 pr-4 font-medium">{t("staff.agents.table.joined")}</th>
+              <th className="py-2 pr-4 font-medium">{t("staff.agents.table.actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -101,18 +108,18 @@ export function AdminAgentsTable({
                   className="border-b border-stone-100 dark:border-slate-800 last:border-0"
                 >
                   <td className="py-2 pr-4 font-medium text-stone-900 dark:text-stone-100">
-                    {agent.full_name || "—"}
+                    {agent.full_name || emDash}
                     {agent.id === currentUserId && (
                       <span className="ml-2 text-xs font-normal text-stone-500 dark:text-slate-400">
-                        (you)
+                        {t("staff.agents.table.you")}
                       </span>
                     )}
                   </td>
                   <td className="py-2 pr-4 text-stone-700 dark:text-slate-300">
-                    {agent.email || "—"}
+                    {agent.email || emDash}
                   </td>
                   <td className="py-2 pr-4 text-stone-700 dark:text-slate-300">
-                    {agent.phone || "—"}
+                    {agent.phone || emDash}
                   </td>
                   <td className="py-2 pr-4">
                     <StaffRoleBadge role={staffRole} />
@@ -127,7 +134,9 @@ export function AdminAgentsTable({
                         isSelf={agent.id === currentUserId}
                       />
                     ) : (
-                      <span className="text-xs text-stone-400">Admin</span>
+                      <span className="text-xs text-stone-400">
+                        {t("staff.agents.table.roleAdmin")}
+                      </span>
                     )}
                   </td>
                 </tr>

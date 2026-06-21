@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/Select";
 import { Alert } from "@/components/ui/Alert";
 import { formatCurrency } from "@/lib/utils";
 import { saveInfractionTemplate } from "./actions";
+import { useI18n } from "@/i18n/context";
 import type { Database } from "@/lib/types/database";
 
 type Template = Database["public"]["Tables"]["infraction_templates"]["Row"];
@@ -28,6 +29,7 @@ export function InfractionTemplatesManager({
   templates: Template[];
 }) {
   const router = useRouter();
+  const { t } = useI18n();
   const [form, setForm] = useState(emptyTemplate);
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -49,7 +51,7 @@ export function InfractionTemplatesManager({
         setMessage({ type: "error", text: result.error });
         return;
       }
-      setMessage({ type: "success", text: "Infraction template saved." });
+      setMessage({ type: "success", text: t("staff.templates.manager.successSaved") });
       setForm(emptyTemplate);
       router.refresh();
     });
@@ -96,24 +98,24 @@ export function InfractionTemplatesManager({
       <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-6 gap-3 rounded-lg border border-stone-200 dark:border-slate-800 p-4">
         <input type="hidden" name="id" value={form.id} />
         <Input
-          label="Code"
+          label={t("staff.templates.manager.code")}
           name="code"
           value={form.code}
           onChange={(e) => setForm((prev) => ({ ...prev, code: e.target.value }))}
-          placeholder="auto if empty"
+          placeholder={t("staff.templates.manager.codePlaceholder")}
         />
         <div className="md:col-span-2">
           <Input
-            label="Label"
+            label={t("staff.templates.manager.label")}
             name="label"
             value={form.label}
             onChange={(e) => setForm((prev) => ({ ...prev, label: e.target.value }))}
-            placeholder="Excès de vitesse 60km/h"
+            placeholder={t("staff.templates.manager.labelPlaceholder")}
             required
           />
         </div>
         <Input
-          label="Amount"
+          label={t("staff.templates.manager.amount")}
           name="amount"
           type="number"
           min="0"
@@ -123,7 +125,7 @@ export function InfractionTemplatesManager({
           required
         />
         <Input
-          label="Points"
+          label={t("staff.templates.manager.points")}
           name="points"
           type="number"
           min="0"
@@ -133,15 +135,15 @@ export function InfractionTemplatesManager({
           required
         />
         <Select
-          label="Category"
+          label={t("staff.templates.manager.category")}
           name="category"
           value={form.category}
           onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value }))}
         >
-          <option value="safety">Safety</option>
-          <option value="documents">Documents</option>
-          <option value="parking">Parking</option>
-          <option value="conduct">Conduct</option>
+          <option value="safety">{t("staff.templates.manager.categorySafety")}</option>
+          <option value="documents">{t("staff.templates.manager.categoryDocuments")}</option>
+          <option value="parking">{t("staff.templates.manager.categoryParking")}</option>
+          <option value="conduct">{t("staff.templates.manager.categoryConduct")}</option>
         </Select>
         <input type="hidden" name="active" value={String(form.active)} />
         <div className="md:col-span-6 flex flex-wrap justify-end gap-2">
@@ -152,11 +154,13 @@ export function InfractionTemplatesManager({
               onClick={() => setForm(emptyTemplate)}
               disabled={pending}
             >
-              Cancel edit
+              {t("staff.templates.manager.cancelEdit")}
             </Button>
           )}
           <Button type="submit" loading={pending}>
-            {form.id ? "Update template" : "Create template"}
+            {form.id
+              ? t("staff.templates.manager.update")
+              : t("staff.templates.manager.create")}
           </Button>
         </div>
       </form>
@@ -165,12 +169,12 @@ export function InfractionTemplatesManager({
         <table className="w-full text-sm">
           <thead className="text-left bg-stone-50/60 dark:bg-slate-900/60 text-stone-500 dark:text-slate-400">
             <tr>
-              <th className="py-2 px-3 font-medium">Label</th>
-              <th className="py-2 px-3 font-medium">Amount</th>
-              <th className="py-2 px-3 font-medium">Points</th>
-              <th className="py-2 px-3 font-medium">Category</th>
-              <th className="py-2 px-3 font-medium">Status</th>
-              <th className="py-2 px-3 font-medium text-right">Actions</th>
+              <th className="py-2 px-3 font-medium">{t("staff.templates.manager.headerLabel")}</th>
+              <th className="py-2 px-3 font-medium">{t("staff.templates.manager.headerAmount")}</th>
+              <th className="py-2 px-3 font-medium">{t("staff.templates.manager.headerPoints")}</th>
+              <th className="py-2 px-3 font-medium">{t("staff.templates.manager.headerCategory")}</th>
+              <th className="py-2 px-3 font-medium">{t("staff.templates.manager.headerStatus")}</th>
+              <th className="py-2 px-3 font-medium text-right">{t("staff.templates.manager.headerActions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -187,13 +191,15 @@ export function InfractionTemplatesManager({
                 <td className="py-2 px-3 capitalize">{template.category}</td>
                 <td className="py-2 px-3">
                   <span className={template.active ? "badge-paid" : "badge-unpaid"}>
-                    {template.active ? "Active" : "Inactive"}
+                    {template.active
+                      ? t("staff.templates.manager.statusActive")
+                      : t("staff.templates.manager.statusInactive")}
                   </span>
                 </td>
                 <td className="py-2 px-3">
                   <div className="flex justify-end gap-2">
                     <Button type="button" variant="secondary" onClick={() => edit(template)}>
-                      Edit
+                      {t("staff.templates.manager.edit")}
                     </Button>
                     <Button
                       type="button"
@@ -201,7 +207,9 @@ export function InfractionTemplatesManager({
                       onClick={() => toggleActive(template)}
                       loading={pending}
                     >
-                      {template.active ? "Disable" : "Enable"}
+                      {template.active
+                        ? t("staff.templates.manager.disable")
+                        : t("staff.templates.manager.enable")}
                     </Button>
                   </div>
                 </td>
@@ -213,4 +221,3 @@ export function InfractionTemplatesManager({
     </div>
   );
 }
-

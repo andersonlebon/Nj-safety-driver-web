@@ -1,20 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { Textarea } from "@/components/ui/Textarea";
 import { Alert } from "@/components/ui/Alert";
 import { StepWizard, StepWizardFooter } from "@/components/ui/StepWizard";
 import { PlateScanField } from "@/components/camera/PlateScanField";
 import { COUNTRIES, DEFAULT_COUNTRY } from "@/lib/countries";
 import { isDomesticCountry } from "@/lib/countries";
 import { normalizePlateForCountry } from "@/lib/vehicles";
+import { useI18n } from "@/i18n/context";
 
-const STEPS = ["Country & plate", "Vehicle details", "Status"];
+const COLOR_VALUES = [
+  "Black",
+  "White",
+  "Silver",
+  "Gray",
+  "Red",
+  "Blue",
+  "Green",
+  "Other",
+] as const;
 
 export function VehicleForm({
   ownerId,
@@ -23,7 +32,29 @@ export function VehicleForm({
   ownerId: string;
   onSuccess?: () => void;
 }) {
+  const { t } = useI18n();
   const router = useRouter();
+  const steps = useMemo(
+    () => [
+      t("driver.vehicles.form.stepCountryPlate"),
+      t("driver.vehicles.form.stepDetails"),
+      t("driver.vehicles.form.stepStatus"),
+    ],
+    [t]
+  );
+  const colorLabels = useMemo(
+    () => ({
+      Black: t("driver.vehicles.form.colorBlack"),
+      White: t("driver.vehicles.form.colorWhite"),
+      Silver: t("driver.vehicles.form.colorSilver"),
+      Gray: t("driver.vehicles.form.colorGray"),
+      Red: t("driver.vehicles.form.colorRed"),
+      Blue: t("driver.vehicles.form.colorBlue"),
+      Green: t("driver.vehicles.form.colorGreen"),
+      Other: t("driver.vehicles.form.colorOther"),
+    }),
+    [t]
+  );
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({
     registration_country: DEFAULT_COUNTRY,
@@ -46,9 +77,11 @@ export function VehicleForm({
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
   };
 
+  const plateRequiredError = t("driver.vehicles.form.errorPlateRequired");
+
   const handleSubmit = async () => {
     if (!form.plate_number.trim()) {
-      setError("Plate number is required.");
+      setError(plateRequiredError);
       return;
     }
     setLoading(true);
@@ -95,18 +128,16 @@ export function VehicleForm({
 
   return (
     <div className="space-y-4">
-      <StepWizard steps={STEPS} currentStep={step} onStepChange={setStep} />
+      <StepWizard steps={steps} currentStep={step} onStepChange={setStep} />
       {error && <Alert variant="error">{error}</Alert>}
       {isForeign && (
-        <Alert variant="info">
-          Foreign plate — ensure border documents are uploaded after registration.
-        </Alert>
+        <Alert variant="info">{t("driver.vehicles.form.foreignAlert")}</Alert>
       )}
 
       {step === 0 && (
         <div className="space-y-4">
           <Select
-            label="Registration country"
+            label={t("driver.vehicles.form.registrationCountry")}
             name="registration_country"
             value={form.registration_country}
             onChange={handleChange("registration_country")}
@@ -126,46 +157,84 @@ export function VehicleForm({
 
       {step === 1 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input label="Brand" name="brand" value={form.brand} onChange={handleChange("brand")} />
-          <Input label="Model" name="model" value={form.model} onChange={handleChange("model")} />
-          <Select label="Color" name="color" value={form.color} onChange={handleChange("color")}>
-            <option value="">Select a color</option>
-            {["Black", "White", "Silver", "Gray", "Red", "Blue", "Green", "Other"].map((c) => (
-              <option key={c} value={c}>{c}</option>
+          <Input
+            label={t("driver.vehicles.form.brand")}
+            name="brand"
+            value={form.brand}
+            onChange={handleChange("brand")}
+          />
+          <Input
+            label={t("driver.vehicles.form.model")}
+            name="model"
+            value={form.model}
+            onChange={handleChange("model")}
+          />
+          <Select
+            label={t("driver.vehicles.form.color")}
+            name="color"
+            value={form.color}
+            onChange={handleChange("color")}
+          >
+            <option value="">{t("driver.vehicles.form.selectColor")}</option>
+            {COLOR_VALUES.map((c) => (
+              <option key={c} value={c}>
+                {colorLabels[c]}
+              </option>
             ))}
           </Select>
-          <Input label="Year" type="number" min={1900} max={2100} name="year" value={form.year} onChange={handleChange("year")} />
+          <Input
+            label={t("driver.vehicles.form.year")}
+            type="number"
+            min={1900}
+            max={2100}
+            name="year"
+            value={form.year}
+            onChange={handleChange("year")}
+          />
         </div>
       )}
 
       {step === 2 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Select label="Insurance" name="insurance_status" value={form.insurance_status} onChange={handleChange("insurance_status")}>
-            <option value="false">Not insured</option>
-            <option value="true">Insured</option>
+          <Select
+            label={t("driver.vehicles.form.insurance")}
+            name="insurance_status"
+            value={form.insurance_status}
+            onChange={handleChange("insurance_status")}
+          >
+            <option value="false">{t("driver.vehicles.form.notInsured")}</option>
+            <option value="true">{t("driver.vehicles.form.insured")}</option>
           </Select>
-          <Select label="Technical inspection" name="inspection_status" value={form.inspection_status} onChange={handleChange("inspection_status")}>
-            <option value="false">Not inspected</option>
-            <option value="true">Inspection valid</option>
+          <Select
+            label={t("driver.vehicles.form.inspection")}
+            name="inspection_status"
+            value={form.inspection_status}
+            onChange={handleChange("inspection_status")}
+          >
+            <option value="false">{t("driver.vehicles.form.notInspected")}</option>
+            <option value="true">{t("driver.vehicles.form.inspectionValid")}</option>
           </Select>
         </div>
       )}
 
       <StepWizardFooter
         step={step}
-        totalSteps={STEPS.length}
+        totalSteps={steps.length}
         loading={loading}
-        onBack={() => { setError(null); setStep((s) => Math.max(0, s - 1)); }}
+        onBack={() => {
+          setError(null);
+          setStep((s) => Math.max(0, s - 1));
+        }}
         onNext={() => {
           if (!form.plate_number.trim()) {
-            setError("Plate number is required.");
+            setError(plateRequiredError);
             return;
           }
           setError(null);
-          setStep((s) => Math.min(STEPS.length - 1, s + 1));
+          setStep((s) => Math.min(steps.length - 1, s + 1));
         }}
         onSubmit={handleSubmit}
-        submitLabel="Register vehicle"
+        submitLabel={t("driver.vehicles.form.submit")}
       />
     </div>
   );

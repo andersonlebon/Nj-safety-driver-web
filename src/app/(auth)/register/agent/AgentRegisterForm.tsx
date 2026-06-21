@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Alert } from "@/components/ui/Alert";
+import { useI18n } from "@/i18n/context";
 import { submitAgentApplication } from "./actions";
 
 type Props = {
@@ -14,6 +15,7 @@ type Props = {
 };
 
 export function AgentRegisterForm({ defaultFullName = "", defaultPhone = "" }: Props) {
+  const { t } = useI18n();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -37,43 +39,40 @@ export function AgentRegisterForm({ defaultFullName = "", defaultPhone = "" }: P
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
       {error && <Alert variant="error">{error}</Alert>}
-      <Alert variant="info">
-        Agent accounts require administrator approval before you can access the
-        agent dashboard.
-      </Alert>
+      <Alert variant="info">{t("auth.agentRegister.infoAlert")}</Alert>
       <Input
-        label="Full name"
+        label={t("auth.agentRegister.fullName")}
         name="full_name"
         autoComplete="name"
         defaultValue={defaultFullName}
         required
       />
       <Input
-        label="Phone"
+        label={t("auth.agentRegister.phone")}
         name="phone"
         type="tel"
         autoComplete="tel"
-        placeholder="+241 ..."
+        placeholder={t("auth.agentRegister.phonePlaceholder")}
         defaultValue={defaultPhone}
         required
       />
       <Input
-        label="Badge / employee ID (optional)"
+        label={t("auth.agentRegister.badgeId")}
         name="agent_badge_id"
-        placeholder="Ministry badge number"
+        placeholder={t("auth.agentRegister.badgePlaceholder")}
       />
       <Textarea
-        label="Why do you want agent access?"
+        label={t("auth.agentRegister.noteLabel")}
         name="note"
         rows={3}
-        placeholder="Your role, station, or supervisor contact..."
+        placeholder={t("auth.agentRegister.notePlaceholder")}
       />
       <div className="flex flex-col gap-2 pt-1">
         <Button type="submit" loading={pending} className="w-full">
-          Submit agent application
+          {t("auth.agentRegister.submit")}
         </Button>
         <Link href="/profile" className="btn-secondary w-full text-center">
-          Back to profile
+          {t("auth.agentRegister.backToProfile")}
         </Link>
       </div>
     </form>

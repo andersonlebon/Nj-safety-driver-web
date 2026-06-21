@@ -7,6 +7,7 @@ import {
 } from "@/lib/auth";
 import { setActiveProfileCookie } from "@/lib/auth/profiles";
 import { destinationForProfile } from "@/lib/auth/profile-session";
+import { getTranslations } from "@/i18n/server";
 import { DriverRegisterForm } from "./DriverRegisterForm";
 
 export const metadata = {
@@ -24,6 +25,7 @@ export default async function DriverRegisterPage() {
   const user = await getSessionUser();
   if (!user) redirect("/login?redirect=/register/driver");
 
+  const { t } = await getTranslations();
   const driverWorkspaces = await getDriverWorkspacesForUser(user.id);
   if (driverWorkspaces.length > 0) {
     const profile = driverWorkspaces[0];
@@ -40,12 +42,12 @@ export default async function DriverRegisterPage() {
   return (
     <AuthDialogCard>
       <h1 className="text-xl font-semibold text-stone-900 dark:text-stone-100">
-        Register as a driver
+        {t("auth.driverRegister.pageTitle")}
       </h1>
       <p className="mt-1 text-sm text-stone-600 dark:text-slate-400">
         {defaultFullName
-          ? "Confirm your details to open your driver workspace."
-          : "Set up your driver profile to manage vehicles, documents, and infractions."}
+          ? t("auth.driverRegister.pageSubtitleConfirm")
+          : t("auth.driverRegister.pageSubtitleNew")}
       </p>
       <div className="mt-6">
         <DriverRegisterForm

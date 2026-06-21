@@ -5,11 +5,12 @@ import { AlertTriangle, Car, MapPin, QrCode, Wallet } from "lucide-react";
 import { CountryBadge } from "@/components/vehicles/CountryBadge";
 import { VehicleTrackingTimeline } from "@/components/tracking/VehicleTrackingTimeline";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { VERIFICATION_LABELS } from "@/lib/verification";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { isForeignVehicle } from "@/lib/vehicles";
 import { totalsByPaymentStatus } from "@/components/dashboard/analytics";
 import { TransitIdDocumentGallery } from "@/components/vehicles/TransitIdDocumentGallery";
+import { useI18n } from "@/i18n/context";
+import { verificationStatusLabel } from "@/i18n/labels";
 import type { TrackingEvent } from "@/lib/tracking";
 import type { TransitIdDocRow, TransitIdDocUrls } from "@/lib/transit-id-documents";
 import type {
@@ -60,6 +61,8 @@ export function VehicleDetailContent({
   showIdAuthenticityCheck = false,
   visibleSections,
 }: Props) {
+  const { t } = useI18n();
+  const emptyValue = t("staff.shared.emDash");
   const show = (section: VehicleDetailSection) =>
     !visibleSections || visibleSections.includes(section);
   const status = (vehicle.verification_status ?? "pending_review") as VerificationStatus;
@@ -119,14 +122,16 @@ export function VehicleDetailContent({
             </p>
             <CountryBadge code={vehicle.registration_country} />
             {foreign && (
-              <span className="badge-pending text-[10px]">Foreign / transit</span>
+              <span className="badge-pending text-[10px]">
+                {t("vehicles.detail.foreignTransit")}
+              </span>
             )}
-            <span className={statusClass}>{VERIFICATION_LABELS[status]}</span>
+            <span className={statusClass}>{verificationStatusLabel(t, status)}</span>
           </div>
           <p className="text-sm text-stone-600 dark:text-slate-400">
             {[vehicle.brand, vehicle.model, vehicle.color, vehicle.year]
               .filter(Boolean)
-              .join(" · ") || "No vehicle details"}
+              .join(" · ") || t("vehicles.detail.noVehicleDetails")}
           </p>
           {agentSearchUrl && (
             <Link
@@ -134,7 +139,7 @@ export function VehicleDetailContent({
               className="inline-flex items-center gap-1 text-xs text-brand-700 dark:text-brand-300 hover:underline"
             >
               <QrCode className="h-3.5 w-3.5" />
-              Agent search link
+              {t("vehicles.detail.agentSearchLink")}
             </Link>
           )}
         </div>
@@ -146,45 +151,53 @@ export function VehicleDetailContent({
         id="vehicle-detail-registration"
         className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm rounded-lg border border-stone-200 dark:border-slate-800 p-4 bg-stone-50/50 dark:bg-slate-900/40 scroll-mt-3"
       >
-        <dt className="text-stone-500 dark:text-slate-400">Registered</dt>
+        <dt className="text-stone-500 dark:text-slate-400">{t("vehicles.detail.registered")}</dt>
         <dd>{formatDate(vehicle.created_at)}</dd>
-        <dt className="text-stone-500 dark:text-slate-400">Insurance</dt>
-        <dd>{vehicle.insurance_status ? "Valid" : "Missing"}</dd>
-        <dt className="text-stone-500 dark:text-slate-400">Inspection</dt>
-        <dd>{vehicle.inspection_status ? "Valid" : "Missing"}</dd>
+        <dt className="text-stone-500 dark:text-slate-400">{t("vehicles.detail.insurance")}</dt>
+        <dd>
+          {vehicle.insurance_status
+            ? t("vehicles.detail.insuranceValid")
+            : t("vehicles.detail.insuranceMissing")}
+        </dd>
+        <dt className="text-stone-500 dark:text-slate-400">{t("vehicles.detail.inspection")}</dt>
+        <dd>
+          {vehicle.inspection_status
+            ? t("vehicles.detail.inspectionValid")
+            : t("vehicles.detail.inspectionMissing")}
+        </dd>
         {vehicle.border_checkpoint && (
           <>
-            <dt className="text-stone-500 dark:text-slate-400">Border checkpoint</dt>
+            <dt className="text-stone-500 dark:text-slate-400">{t("vehicles.detail.borderCheckpoint")}</dt>
             <dd>{vehicle.border_checkpoint}</dd>
           </>
         )}
         {vehicle.border_entry_at && (
           <>
-            <dt className="text-stone-500 dark:text-slate-400">Border entry</dt>
+            <dt className="text-stone-500 dark:text-slate-400">{t("vehicles.detail.borderEntry")}</dt>
             <dd>{formatDate(vehicle.border_entry_at)}</dd>
           </>
         )}
         {vehicle.transit_driver_name && (
           <>
-            <dt className="text-stone-500 dark:text-slate-400">Transit driver</dt>
+            <dt className="text-stone-500 dark:text-slate-400">{t("vehicles.detail.transitDriver")}</dt>
             <dd>{vehicle.transit_driver_name}</dd>
           </>
         )}
         {vehicle.transit_driver_phone && (
           <>
-            <dt className="text-stone-500 dark:text-slate-400">Transit phone</dt>
+            <dt className="text-stone-500 dark:text-slate-400">{t("vehicles.detail.transitPhone")}</dt>
             <dd>{vehicle.transit_driver_phone}</dd>
           </>
         )}
         {vehicle.transit_passport_id && (
           <>
-            <dt className="text-stone-500 dark:text-slate-400">Passport / ID no.</dt>
+            <dt className="text-stone-500 dark:text-slate-400">{t("vehicles.detail.passportId")}</dt>
             <dd className="font-mono">{vehicle.transit_passport_id}</dd>
           </>
         )}
         {vehicle.foreign_notes && (
           <>
-            <dt className="text-stone-500 dark:text-slate-400 col-span-2">Notes</dt>
+            <dt className="text-stone-500 dark:text-slate-400 col-span-2">{t("vehicles.detail.notes")}</dt>
             <dd className="col-span-2">{vehicle.foreign_notes}</dd>
           </>
         )}
@@ -204,9 +217,11 @@ export function VehicleDetailContent({
 
       {show("owner") && showOwner && owner && (
         <div id="vehicle-detail-owner" className="text-sm scroll-mt-3">
-          <p className="font-medium text-stone-900 dark:text-stone-100 mb-1">Owner</p>
+          <p className="font-medium text-stone-900 dark:text-stone-100 mb-1">
+            {t("vehicles.detail.owner")}
+          </p>
           <p className="text-stone-600 dark:text-slate-400">
-            {owner.full_name || owner.email || "—"}
+            {owner.full_name || owner.email || emptyValue}
             {owner.phone ? ` · ${owner.phone}` : ""}
           </p>
         </div>
@@ -220,17 +235,19 @@ export function VehicleDetailContent({
         <div className="flex items-center gap-2 mb-3">
           <Wallet className="h-4 w-4 text-stone-500" />
           <p className="text-sm font-semibold text-stone-900 dark:text-stone-100">
-            Fine totals
+            {t("vehicles.detail.fineTotals")}
           </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          <FineTotal label="Paid" value={paymentTotals.paid} />
-          <FineTotal label="Pending" value={paymentTotals.pending} />
-          <FineTotal label="Unpaid" value={paymentTotals.unpaid} emphasis />
+          <FineTotal label={t("vehicles.detail.paid")} value={paymentTotals.paid} />
+          <FineTotal label={t("vehicles.detail.pending")} value={paymentTotals.pending} />
+          <FineTotal label={t("vehicles.detail.unpaid")} value={paymentTotals.unpaid} emphasis />
         </div>
         <p className="text-xs text-stone-500 dark:text-slate-400 mt-2">
-          {unpaid.length} unpaid infraction{unpaid.length !== 1 ? "s" : ""} of{" "}
-          {infractions.length} total
+          {t("vehicles.detail.unpaidSummary", {
+            unpaid: unpaid.length,
+            total: infractions.length,
+          })}
         </p>
       </div>
       )}
@@ -239,7 +256,7 @@ export function VehicleDetailContent({
         <div id="vehicle-detail-infractions" className="scroll-mt-3">
           <p className="text-sm font-semibold text-stone-900 dark:text-stone-100 mb-2 flex items-center gap-1.5">
             <AlertTriangle className="h-4 w-4" />
-            Recent infractions
+            {t("vehicles.detail.recentInfractions")}
           </p>
           <ul className="space-y-2 text-sm max-h-40 overflow-y-auto">
             {infractions.slice(0, 5).map((i) => (
@@ -261,7 +278,7 @@ export function VehicleDetailContent({
         <div id="vehicle-detail-tracking" className="scroll-mt-3">
           <p className="text-sm font-semibold text-stone-900 dark:text-stone-100 mb-2 flex items-center gap-1.5">
             <MapPin className="h-4 w-4" />
-            Tracking
+            {t("vehicles.detail.tracking")}
           </p>
           <VehicleTrackingTimeline events={trackingEvents.slice(0, 8)} />
         </div>

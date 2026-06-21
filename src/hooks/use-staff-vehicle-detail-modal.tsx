@@ -15,6 +15,7 @@ import { DEFAULT_COUNTRY } from "@/lib/countries";
 import { resolveLedgerStatus } from "@/lib/transactions";
 import type { PaymentStatus, TransactionStatus } from "@/lib/types/database";
 import type { VehicleTabId } from "@/app/staff/DriverDetailTabSkeleton";
+import { useI18n } from "@/i18n/context";
 
 type InfractionPick = InfractionDetail & {
   status: PaymentStatus;
@@ -32,6 +33,7 @@ export function useStaffVehicleDetailModal({
   canManageVehicles?: boolean;
   transactionStatusByInfraction?: Record<string, TransactionStatus>;
 }) {
+  const { t } = useI18n();
   const [bundle, setBundle] = useState<StaffVehicleDetailBundle | null>(null);
   const [fallbackInfraction, setFallbackInfraction] = useState<InfractionPick | null>(
     null
@@ -103,8 +105,7 @@ export function useStaffVehicleDetailModal({
             !bundle.vehicle.owner_id &&
             bundle.transitIdDocuments.length === 0 ? (
               <Alert variant="info">
-                No linked driver account. Ask the visitor to register, then search this
-                plate again.
+                {t("infractions.detail.noLinkedDriver")}
               </Alert>
             ) : undefined
           }

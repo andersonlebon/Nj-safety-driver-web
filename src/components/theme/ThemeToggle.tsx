@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/context";
 
 /**
  * A simple 2-state light/dark theme toggle.
@@ -26,6 +27,7 @@ export function ThemeToggle({
   size?: "sm" | "md";
 }) {
   const { resolvedTheme, setTheme } = useTheme();
+  const { t } = useI18n();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -35,7 +37,9 @@ export function ThemeToggle({
     setTheme(isDark ? "light" : "dark");
   };
 
-  const nextLabel = isDark ? "Switch to light mode" : "Switch to dark mode";
+  const nextLabel = isDark
+    ? t("theme.switchToLight")
+    : t("theme.switchToDark");
 
   const sizeCls =
     size === "sm" ? "h-8 w-8" : "h-9 w-9";
@@ -45,8 +49,8 @@ export function ThemeToggle({
       type="button"
       role="switch"
       aria-checked={isDark}
-      aria-label={mounted ? nextLabel : "Toggle theme"}
-      title={mounted ? nextLabel : "Toggle theme"}
+      aria-label={mounted ? nextLabel : t("theme.toggle")}
+      title={mounted ? nextLabel : t("theme.toggle")}
       onClick={toggleTheme}
       className={cn(
         "relative z-20 inline-flex items-center justify-center rounded-lg border transition-colors",
@@ -66,7 +70,9 @@ export function ThemeToggle({
       ) : (
         <Moon className="h-4 w-4" aria-hidden />
       )}
-      <span className="sr-only">{mounted ? nextLabel : "Theme toggle"}</span>
+      <span className="sr-only">
+        {mounted ? nextLabel : t("theme.toggleLabel")}
+      </span>
     </button>
   );
 }

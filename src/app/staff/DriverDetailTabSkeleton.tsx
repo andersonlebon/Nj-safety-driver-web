@@ -1,4 +1,7 @@
+"use client";
+
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/context";
 
 type DriverTabId = "profile" | "documents" | "vehicles" | "comments" | "verify";
 
@@ -15,12 +18,14 @@ function SkeletonBlock({ className }: { className?: string }) {
 }
 
 export function DriverDetailTabSkeleton({ tab }: { tab: DriverTabId }) {
+  const { t } = useI18n();
+
   return (
     <div
       className="animate-pulse space-y-4"
       aria-hidden
       role="status"
-      aria-label="Loading tab content"
+      aria-label={t("staff.drivers.detail.skeletonLoadingAria")}
     >
       {tab === "profile" && (
         <div className="rounded-lg border border-stone-200 dark:border-slate-800 p-4 space-y-4">
@@ -92,12 +97,14 @@ export function DriverDetailTabSkeleton({ tab }: { tab: DriverTabId }) {
 }
 
 export function VehicleDetailTabSkeleton({ tab }: { tab: VehicleTabId }) {
+  const { t } = useI18n();
+
   return (
     <div
       className="animate-pulse space-y-4"
       aria-hidden
       role="status"
-      aria-label="Loading tab content"
+      aria-label={t("staff.drivers.detail.skeletonLoadingAria")}
     >
       {tab === "overview" && (
         <div className="flex gap-3">

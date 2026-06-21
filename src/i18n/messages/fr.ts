@@ -1,4 +1,8 @@
 import type { Messages } from "@/i18n/messages/en";
+import { sharedFr } from "@/i18n/messages/catalog/shared.fr";
+import { staffFr } from "@/i18n/messages/catalog/staff.fr";
+import { driverFr } from "@/i18n/messages/catalog/driver.fr";
+import { landingFr } from "@/i18n/messages/catalog/landing.fr";
 
 export const fr: Messages = {
   app: {
@@ -6,7 +10,7 @@ export const fr: Messages = {
     legacyName: "NJ Safety Driver",
     tagline: "République Gabonaise",
     description:
-      "Plateforme de gestion de la sécurité routière pour chauffeurs, agents et administrateurs.",
+      "Plateforme de gestion de la sécurité routière pour conducteurs et agents de terrain.",
   },
   common: {
     back: "Retour",
@@ -31,6 +35,10 @@ export const fr: Messages = {
     deliveredDate: "Date de délivrance",
     expirationDate: "Date d'expiration",
     files: "fichiers",
+    submit: "Soumettre",
+    pleaseWait: "Veuillez patienter…",
+    formProgress: "Progression du formulaire",
+    loadingPage: "Chargement",
   },
   language: {
     label: "Langue",
@@ -99,6 +107,11 @@ export const fr: Messages = {
     firstTimeSetup: "Configuration initiale",
     bootstrapHint:
       "Aucun administrateur pour l'instant — créez le premier pour démarrer le système.",
+    noSession:
+      "Authentification réussie, mais aucune session n'a été créée. Veuillez réessayer.",
+    profile: sharedFr.authProfile,
+    agentRegister: sharedFr.authAgentRegister,
+    driverRegister: sharedFr.authDriverRegister,
   },
   evidence: {
     unsupportedFileType:
@@ -209,22 +222,38 @@ export const fr: Messages = {
     partialUpload: "{done}/{total} fichiers",
     replaceDocument: "Remplacer",
   },
-  staffAccount: {
-    title: "Compte",
-    description: "Votre profil personnel et vos coordonnées.",
-    fullName: "Nom complet",
-    email: "E-mail",
-    phone: "Téléphone",
-    role: "Rôle",
-    badgeId: "Numéro de badge",
-    agentApplication: "Candidature agent",
-    verification: "Statut de vérification",
-    memberSince: "Membre depuis",
-    address: "Adresse",
-    applicationStatus: {
-      pending: "En attente de validation",
-      approved: "Approuvé",
-      rejected: "Refusé",
+  status: {
+    ...sharedFr.status,
+    transaction: {
+      initialized: sharedFr.status.payment.initialized,
     },
   },
+  tables: {
+    ...sharedFr.tables,
+    clearFiltersHint: sharedFr.tables.filterHint,
+  },
+  errors: {
+    global: sharedFr.errors.global,
+    notFound: sharedFr.errors.notFound,
+    somethingWentWrong: sharedFr.errors.global.somethingWentWrong,
+    connectionIssue: sharedFr.errors.global.connectionIssue,
+    unexpected: sharedFr.errors.global.unexpected,
+    reloadNow: sharedFr.errors.global.reloadNow,
+    tryAgain: sharedFr.errors.global.tryAgain,
+    notFoundTitle: sharedFr.errors.notFound.title,
+    notFoundDescription: sharedFr.errors.notFound.description,
+    goHome: sharedFr.errors.notFound.goHome,
+  },
+  theme: sharedFr.theme,
+  camera: sharedFr.camera,
+  comments: sharedFr.comments,
+  infractions: sharedFr.infractions,
+  vehicles: sharedFr.vehicles,
+  charts: sharedFr.charts,
+  setup: sharedFr.setup,
+  landing: landingFr,
+  staff: staffFr,
+  driver: driverFr,
+  staffVerification: staffFr.verification,
+  staffAccount: staffFr.account,
 };

@@ -1,6 +1,7 @@
 "use client";
 
 import { Input } from "@/components/ui/Input";
+import { useI18n } from "@/i18n/context";
 
 type Props = {
   value: string;
@@ -13,17 +14,19 @@ type Props = {
 export function TableSearch({
   value,
   onChange,
-  placeholder = "Search…",
-  label = "Search",
+  placeholder,
+  label,
   className,
 }: Props) {
+  const { t } = useI18n();
+
   return (
     <Input
-      label={label}
+      label={label ?? t("tables.search")}
       name="table_search"
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
+      placeholder={placeholder ?? t("tables.searchPlaceholder")}
       autoComplete="off"
       className={className}
     />

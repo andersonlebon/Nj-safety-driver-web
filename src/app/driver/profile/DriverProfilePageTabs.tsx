@@ -1,15 +1,10 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/context";
 
 export type DriverProfileTabId = "profile" | "files" | "documents";
-
-const TABS: { id: DriverProfileTabId; label: string; hash: string }[] = [
-  { id: "profile", label: "Personal info", hash: "profile" },
-  { id: "files", label: "Documents", hash: "files" },
-  { id: "documents", label: "Chat with staff", hash: "documents" },
-];
 
 function tabFromHash(hash: string): DriverProfileTabId {
   const value = hash.replace(/^#/, "").trim();
@@ -29,7 +24,18 @@ export function DriverProfilePageTabs({
   documents,
   comments,
 }: Props) {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<DriverProfileTabId>("profile");
+
+  const tabs = useMemo(
+    () =>
+      [
+        { id: "profile" as const, label: t("driver.profile.tabs.personalInfo"), hash: "profile" },
+        { id: "files" as const, label: t("driver.profile.tabs.documents"), hash: "files" },
+        { id: "documents" as const, label: t("driver.profile.tabs.chat"), hash: "documents" },
+      ] as const,
+    [t]
+  );
 
   useEffect(() => {
     const syncFromHash = () => {
@@ -43,7 +49,7 @@ export function DriverProfilePageTabs({
 
   const selectTab = (tab: DriverProfileTabId) => {
     setActiveTab(tab);
-    const hash = TABS.find((item) => item.id === tab)?.hash ?? "profile";
+    const hash = tabs.find((item) => item.id === tab)?.hash ?? "profile";
     const url = `${window.location.pathname}${window.location.search}#${hash}`;
     window.history.replaceState(null, "", url);
   };
@@ -52,10 +58,10 @@ export function DriverProfilePageTabs({
     <div className="space-y-6">
       <div
         role="tablist"
-        aria-label="Profile sections"
+        aria-label={t("driver.profile.tabs.ariaLabel")}
         className="flex flex-wrap gap-2 border-b border-stone-200 dark:border-slate-800 pb-2"
       >
-        {TABS.map((tab) => (
+        {tabs.map((tab) => (
           <button
             key={tab.id}
             type="button"

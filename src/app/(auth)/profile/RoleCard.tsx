@@ -4,9 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { selectActiveProfile } from "@/lib/auth/actions";
-import { staffRoleLabel } from "@/lib/auth/profile-session";
 import { Car, Shield, ShieldCheck, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/context";
+import { staffRoleLabel as i18nStaffRoleLabel } from "@/i18n/labels";
 import type { ProfileRole, StaffRole } from "@/lib/types/database";
 
 type Props = {
@@ -17,21 +18,25 @@ type Props = {
   isActive?: boolean;
 };
 
-function resolveConfig(role: ProfileRole, staffRole?: StaffRole | null) {
+function resolveConfig(
+  role: ProfileRole,
+  staffRole: StaffRole | null | undefined,
+  t: ReturnType<typeof useI18n>["t"]
+) {
   if (role === "driver") {
     return {
-      label: "Driver",
-      description: "Manage your vehicle, documents, and infractions",
+      label: t("auth.profile.driverLabel"),
+      description: t("auth.profile.driverDescription"),
       icon: Car,
     };
   }
   const sr = staffRole ?? "agent";
   return {
-    label: staffRoleLabel(sr),
+    label: i18nStaffRoleLabel(t, sr),
     description:
       sr === "admin"
-        ? "Full system access — manage agents, finance, and all drivers"
-        : "Issue infractions and approve driver profiles",
+        ? t("auth.profile.adminDescription")
+        : t("auth.profile.agentDescription"),
     icon: sr === "admin" ? ShieldCheck : Shield,
   };
 }
@@ -43,10 +48,11 @@ export function ProfileCard({
   redirectTo,
   isActive = false,
 }: Props) {
+  const { t } = useI18n();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const config = resolveConfig(role, staffRole);
+  const config = resolveConfig(role, staffRole, t);
   const Icon = config.icon;
 
   const handleSelect = async () => {
@@ -93,7 +99,7 @@ export function ProfileCard({
               </p>
               {isActive && (
                 <span className="rounded-full bg-brand-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-                  Active
+                  {t("auth.profile.activeBadge")}
                 </span>
               )}
             </div>
@@ -131,8 +137,9 @@ export function ProfileCard({
   );
 }
 
-/** Shown when a staff application is pending approval. */
 export function PendingStaffCard() {
+  const { t } = useI18n();
+
   return (
     <div className="space-y-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-4">
       <div className="flex items-center gap-3">
@@ -141,15 +148,15 @@ export function PendingStaffCard() {
         </span>
         <div className="min-w-0">
           <p className="font-medium text-stone-900 dark:text-stone-100">
-            Field Agent
+            {t("auth.profile.pendingTitle")}
           </p>
           <p className="text-sm text-amber-700 dark:text-amber-400">
-            Application pending administrator approval
+            {t("auth.profile.pendingDescription")}
           </p>
         </div>
       </div>
       <Link href="/" className="btn-secondary w-full text-center">
-        Back to home
+        {t("auth.profile.backToHome")}
       </Link>
     </div>
   );

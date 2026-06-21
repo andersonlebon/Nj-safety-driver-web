@@ -20,7 +20,9 @@ import {
 } from "@/components/tracking/VehicleTrackingTimeline";
 import { VerificationStatusBadge } from "@/app/staff/DriverVerificationPanel";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { VERIFICATION_LABELS } from "@/lib/verification";
+import { getTranslations } from "@/i18n/server";
+import { verificationStatusLabel } from "@/i18n/labels";
+import type { Translator } from "@/i18n/translate";
 import type { TrackingEvent } from "@/lib/tracking";
 import type { Database, VerificationStatus } from "@/lib/types/database";
 
@@ -48,7 +50,7 @@ type Props = {
   vehiclePhotoUrl?: string | null;
 };
 
-export function PlateSearchResults({
+export async function PlateSearchResults({
   plate,
   country,
   vehicle,
@@ -59,6 +61,8 @@ export function PlateSearchResults({
   checkInAction,
   vehiclePhotoUrl = null,
 }: Props) {
+  const { t } = await getTranslations();
+  const emDash = t("staff.shared.emDash");
   const unpaid = infractions.filter((i) => i.status === "unpaid");
   const unpaidTotal = unpaid.reduce((sum, i) => sum + Number(i.fine_amount ?? 0), 0);
   const vehicleStatus = (vehicle?.verification_status ?? "pending_review") as VerificationStatus;
@@ -67,6 +71,7 @@ export function PlateSearchResults({
   return (
     <div className="space-y-6">
       <PlateSearchResultHeader
+        t={t}
         plate={plate}
         country={country}
         registered={registered}
@@ -80,39 +85,47 @@ export function PlateSearchResults({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <KpiCard
-          label="Infractions on plate"
+          label={t("staff.search.results.infractionsOnPlate")}
           value={infractions.length}
           icon={<ClipboardList className="h-4 w-4" />}
           accent="navy"
-          hint={`${country} registration`}
+          hint={t("staff.search.results.registrationHint", { country })}
         />
         <KpiCard
-          label="Unpaid fines"
-          value={unpaid.length === 0 ? "None" : formatCurrency(unpaidTotal)}
+          label={t("staff.search.results.unpaidFines")}
+          value={unpaid.length === 0 ? t("staff.search.results.none") : formatCurrency(unpaidTotal)}
           icon={<Wallet className="h-4 w-4" />}
           accent={unpaid.length > 0 ? "red" : "brand"}
           hint={
             unpaid.length > 0
-              ? `${unpaid.length} open ticket${unpaid.length !== 1 ? "s" : ""}`
-              : "All clear"
+              ? t("staff.search.results.openTicketsHint", { count: unpaid.length })
+              : t("staff.search.results.allClear")
           }
         />
         <KpiCard
-          label="Tracking events"
+          label={t("staff.search.results.trackingEvents")}
           value={trackingEvents.length}
           icon={<MapPin className="h-4 w-4" />}
           accent="stone"
-          hint={lastLocation ? "Last location below" : "No check-ins yet"}
+          hint={
+            lastLocation
+              ? t("staff.search.results.lastLocationBelow")
+              : t("staff.search.results.noCheckInsYet")
+          }
         />
         <KpiCard
-          label="Vehicle record"
-          value={registered ? "Registered" : "Not found"}
+          label={t("staff.search.results.vehicleRecord")}
+          value={
+            registered
+              ? t("staff.search.results.registered")
+              : t("staff.search.results.notFound")
+          }
           icon={registered ? <Car className="h-4 w-4" /> : <Search className="h-4 w-4" />}
           accent={registered ? "brand" : "gold"}
           hint={
             registered
-              ? VERIFICATION_LABELS[vehicleStatus]
-              : "You can still file fines"
+              ? verificationStatusLabel(t, vehicleStatus)
+              : t("staff.search.results.canStillFileFines")
           }
         />
       </div>
@@ -123,12 +136,12 @@ export function PlateSearchResults({
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Car className="h-4 w-4 text-stone-500 dark:text-slate-400" />
-                Vehicle
+                {t("staff.search.results.vehicleTitle")}
               </CardTitle>
               <CardDescription>
                 {registered
-                  ? "Registered vehicle details for this plate and country."
-                  : "No vehicle is linked to this plate in the registry."}
+                  ? t("staff.search.results.vehicleDescriptionRegistered")
+                  : t("staff.search.results.vehicleDescriptionUnregistered")}
               </CardDescription>
             </div>
             {checkInAction}
@@ -136,40 +149,46 @@ export function PlateSearchResults({
           <CardBody className="pt-0">
             {!vehicle ? (
               <div className="rounded-lg border border-amber-200 dark:border-amber-900/60 bg-amber-50/70 dark:bg-amber-950/20 p-4 text-sm text-amber-950 dark:text-amber-100">
-                <p className="font-medium">This plate is not registered</p>
+                <p className="font-medium">{t("staff.search.results.notRegisteredTitle")}</p>
                 <p className="mt-1 text-amber-900/80 dark:text-amber-200/80">
-                  Staff can still log a check-in, review any existing infractions, and
-                  file a new fine against <span className="font-mono font-semibold">{plate}</span>{" "}
-                  (<CountryBadge code={country} />).
+                  {t("staff.search.results.notRegisteredBody", { plate, country })}
                 </p>
               </div>
             ) : (
               <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                <InfoLabel>Plate</InfoLabel>
+                <InfoLabel>{t("staff.search.results.plate")}</InfoLabel>
                 <InfoValue mono>{vehicle.plate_number}</InfoValue>
-                <InfoLabel>Country</InfoLabel>
+                <InfoLabel>{t("staff.search.results.country")}</InfoLabel>
                 <InfoValue>
                   <CountryBadge code={vehicle.registration_country} />
                 </InfoValue>
-                <InfoLabel>Status</InfoLabel>
+                <InfoLabel>{t("staff.search.results.status")}</InfoLabel>
                 <InfoValue>
                   <VerificationStatusBadge status={vehicleStatus} />
                 </InfoValue>
-                <InfoLabel>Brand / model</InfoLabel>
+                <InfoLabel>{t("staff.search.results.brandModel")}</InfoLabel>
                 <InfoValue>
-                  {[vehicle.brand, vehicle.model].filter(Boolean).join(" ") || "—"}
+                  {[vehicle.brand, vehicle.model].filter(Boolean).join(" ") || emDash}
                 </InfoValue>
-                <InfoLabel>Color</InfoLabel>
-                <InfoValue>{vehicle.color || "—"}</InfoValue>
-                <InfoLabel>Year</InfoLabel>
-                <InfoValue>{vehicle.year ?? "—"}</InfoValue>
-                <InfoLabel>Insurance</InfoLabel>
+                <InfoLabel>{t("staff.search.results.color")}</InfoLabel>
+                <InfoValue>{vehicle.color || emDash}</InfoValue>
+                <InfoLabel>{t("staff.search.results.year")}</InfoLabel>
+                <InfoValue>{vehicle.year ?? emDash}</InfoValue>
+                <InfoLabel>{t("staff.search.results.insurance")}</InfoLabel>
                 <InfoValue>
-                  <ComplianceBadge ok={Boolean(vehicle.insurance_status)} label="Insurance" />
+                  <ComplianceBadge
+                    ok={Boolean(vehicle.insurance_status)}
+                    validLabel={t("staff.search.results.insuranceValid")}
+                    missingLabel={t("staff.search.results.insuranceMissing")}
+                  />
                 </InfoValue>
-                <InfoLabel>Inspection</InfoLabel>
+                <InfoLabel>{t("staff.search.results.inspection")}</InfoLabel>
                 <InfoValue>
-                  <ComplianceBadge ok={Boolean(vehicle.inspection_status)} label="Inspection" />
+                  <ComplianceBadge
+                    ok={Boolean(vehicle.inspection_status)}
+                    validLabel={t("staff.search.results.inspectionValid")}
+                    missingLabel={t("staff.search.results.inspectionMissing")}
+                  />
                 </InfoValue>
               </dl>
             )}
@@ -181,14 +200,14 @@ export function PlateSearchResults({
             <div>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-4 w-4 text-stone-500 dark:text-slate-400" />
-                Owner / driver
+                {t("staff.search.results.ownerTitle")}
               </CardTitle>
               <CardDescription>
                 {owner
-                  ? "Contact and ID details for the registered owner."
+                  ? t("staff.search.results.ownerDescriptionWithOwner")
                   : registered
-                    ? "No owner profile is linked to this vehicle."
-                    : "Owner details appear only when a vehicle record exists."}
+                    ? t("staff.search.results.ownerDescriptionNoOwnerRegistered")
+                    : t("staff.search.results.ownerDescriptionNoVehicle")}
               </CardDescription>
             </div>
           </CardHeader>
@@ -196,27 +215,31 @@ export function PlateSearchResults({
             {!owner ? (
               <EmptyState
                 icon={<User className="h-8 w-8" />}
-                title={registered ? "No owner on file" : "Owner unknown"}
+                title={
+                  registered
+                    ? t("staff.search.results.noOwnerTitle")
+                    : t("staff.search.results.ownerUnknownTitle")
+                }
                 description={
                   registered
-                    ? "This vehicle has no linked driver profile."
-                    : "Register the vehicle first to see owner information here."
+                    ? t("staff.search.results.noOwnerDescription")
+                    : t("staff.search.results.ownerUnknownDescription")
                 }
               />
             ) : (
               <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                <InfoLabel>Name</InfoLabel>
-                <InfoValue>{owner.full_name || "—"}</InfoValue>
-                <InfoLabel>Phone</InfoLabel>
-                <InfoValue>{owner.phone || "—"}</InfoValue>
-                <InfoLabel>Email</InfoLabel>
-                <InfoValue>{owner.email || "—"}</InfoValue>
-                <InfoLabel>National ID</InfoLabel>
-                <InfoValue mono>{owner.national_id || "—"}</InfoValue>
-                <InfoLabel>License #</InfoLabel>
-                <InfoValue mono>{owner.driver_license || "—"}</InfoValue>
-                <InfoLabel>Address</InfoLabel>
-                <InfoValue className="col-span-1">{owner.address || "—"}</InfoValue>
+                <InfoLabel>{t("staff.search.results.name")}</InfoLabel>
+                <InfoValue>{owner.full_name || emDash}</InfoValue>
+                <InfoLabel>{t("staff.search.results.phone")}</InfoLabel>
+                <InfoValue>{owner.phone || emDash}</InfoValue>
+                <InfoLabel>{t("staff.search.results.email")}</InfoLabel>
+                <InfoValue>{owner.email || emDash}</InfoValue>
+                <InfoLabel>{t("staff.search.results.nationalId")}</InfoLabel>
+                <InfoValue mono>{owner.national_id || emDash}</InfoValue>
+                <InfoLabel>{t("staff.search.results.license")}</InfoLabel>
+                <InfoValue mono>{owner.driver_license || emDash}</InfoValue>
+                <InfoLabel>{t("staff.search.results.address")}</InfoLabel>
+                <InfoValue className="col-span-1">{owner.address || emDash}</InfoValue>
               </dl>
             )}
           </CardBody>
@@ -236,10 +259,10 @@ export function PlateSearchResults({
             <div>
               <CardTitle className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-stone-500 dark:text-slate-400" />
-                Tracking
+                {t("staff.search.results.trackingTitle")}
               </CardTitle>
               <CardDescription>
-                Check-ins and location history for {plate}.
+                {t("staff.search.results.trackingDescription", { plate })}
               </CardDescription>
             </div>
           </CardHeader>
@@ -253,29 +276,39 @@ export function PlateSearchResults({
             <div>
               <CardTitle className="flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-stone-500 dark:text-slate-400" />
-                Infractions
+                {t("staff.search.results.infractionsTitle")}
               </CardTitle>
               <CardDescription>
-                Fines filed against this plate and country.
+                {t("staff.search.results.infractionsDescription")}
               </CardDescription>
             </div>
           </CardHeader>
           <CardBody className="pt-0">
             {infractions.length === 0 ? (
               <EmptyState
-                title="No infractions"
-                description="No fines have been filed for this plate yet."
+                title={t("staff.search.results.noInfractionsTitle")}
+                description={t("staff.search.results.noInfractionsDescription")}
               />
             ) : (
               <div className="overflow-x-auto -mx-1">
                 <table className="w-full text-sm">
                   <thead className="text-left text-stone-500 dark:text-slate-400 border-b border-stone-200 dark:border-slate-800">
                     <tr>
-                      <th className="py-2 px-1 pr-4 font-medium">Date</th>
-                      <th className="py-2 pr-4 font-medium">Type</th>
-                      <th className="py-2 pr-4 font-medium">Location</th>
-                      <th className="py-2 pr-4 font-medium">Amount</th>
-                      <th className="py-2 pr-4 font-medium">Status</th>
+                      <th className="py-2 px-1 pr-4 font-medium">
+                        {t("staff.search.results.date")}
+                      </th>
+                      <th className="py-2 pr-4 font-medium">
+                        {t("staff.search.results.type")}
+                      </th>
+                      <th className="py-2 pr-4 font-medium">
+                        {t("staff.search.results.location")}
+                      </th>
+                      <th className="py-2 pr-4 font-medium">
+                        {t("staff.search.results.amount")}
+                      </th>
+                      <th className="py-2 pr-4 font-medium">
+                        {t("staff.search.results.status")}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -291,7 +324,7 @@ export function PlateSearchResults({
                           {infraction.infraction_type}
                         </td>
                         <td className="py-2.5 pr-4 text-stone-600 dark:text-slate-400">
-                          {infraction.location || "—"}
+                          {infraction.location || emDash}
                         </td>
                         <td className="py-2.5 pr-4 text-stone-900 dark:text-stone-100 whitespace-nowrap">
                           {formatCurrency(Number(infraction.fine_amount))}
@@ -313,6 +346,7 @@ export function PlateSearchResults({
 }
 
 function PlateSearchResultHeader({
+  t,
   plate,
   country,
   registered,
@@ -323,6 +357,7 @@ function PlateSearchResultHeader({
   lastLocation,
   vehiclePhotoUrl,
 }: {
+  t: Translator;
   plate: string;
   country: string;
   registered: boolean;
@@ -354,7 +389,7 @@ function PlateSearchResultHeader({
         )}
         <div className="min-w-0 flex-1 space-y-3">
           <p className="text-xs font-medium uppercase tracking-wide text-stone-500 dark:text-slate-400">
-            Search result
+            {t("staff.search.results.searchResult")}
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <p className="font-mono text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
@@ -370,12 +405,17 @@ function PlateSearchResultHeader({
                   : "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-200"
               }
             >
-              {registered ? "Registered vehicle" : "Not in registry"}
+              {registered
+                ? t("staff.search.results.registeredVehicle")
+                : t("staff.search.results.notInRegistry")}
             </span>
             {registered && <VerificationStatusBadge status={vehicleStatus} />}
             {unpaidCount > 0 && (
               <span className="badge-unpaid">
-                {unpaidCount} unpaid · {formatCurrency(unpaidTotal)}
+                {t("staff.search.results.unpaidBadge", {
+                  count: unpaidCount,
+                  amount: formatCurrency(unpaidTotal),
+                })}
               </span>
             )}
           </div>
@@ -384,8 +424,7 @@ function PlateSearchResultHeader({
           )}
           {!registered && (
             <p className="text-sm text-stone-600 dark:text-slate-400 max-w-2xl">
-              No vehicle record matches this plate and country. Review tracking and infractions
-              below, or file a new fine if needed.
+              {t("staff.search.results.noRecordDescription")}
             </p>
           )}
         </div>
@@ -430,10 +469,18 @@ function InfoValue({
   );
 }
 
-function ComplianceBadge({ ok, label }: { ok: boolean; label: string }) {
+function ComplianceBadge({
+  ok,
+  validLabel,
+  missingLabel,
+}: {
+  ok: boolean;
+  validLabel: string;
+  missingLabel: string;
+}) {
   return (
     <span className={ok ? "badge-paid" : "badge-unpaid"}>
-      {ok ? `${label} valid` : `${label} missing`}
+      {ok ? validLabel : missingLabel}
     </span>
   );
 }

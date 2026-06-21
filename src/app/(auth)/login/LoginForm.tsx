@@ -49,7 +49,7 @@ export function LoginForm({ title, hint }: Props) {
 
     const user = data.session?.user ?? data.user;
     if (!user) {
-      setError("Authentication succeeded but no session was created. Please try again.");
+      setError(t("auth.noSession"));
       setLoading(false);
       return;
     }

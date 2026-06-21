@@ -3,16 +3,18 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
-import { useRouter } from "next/navigation";
+import { defaultLocale, type Locale } from "@/i18n/config";
 import {
-  defaultLocale,
-  LOCALE_COOKIE,
-  type Locale,
-} from "@/i18n/config";
+  activateLocale,
+  persistLocale,
+  readStoredLocale,
+} from "@/i18n/locale-storage";
 import { messages } from "@/i18n/messages";
 import { createTranslator, type Translator } from "@/i18n/translate";
 
@@ -24,10 +26,6 @@ type I18nContextValue = {
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
-function writeLocaleCookie(locale: Locale) {
-  document.cookie = `${LOCALE_COOKIE}=${locale}; path=/; max-age=31536000; SameSite=Lax`;
-}
-
 export function I18nProvider({
   initialLocale = defaultLocale,
   children,
@@ -35,8 +33,22 @@ export function I18nProvider({
   initialLocale?: Locale;
   children: ReactNode;
 }) {
-  const router = useRouter();
+  const syncedRef = useRef(false);
   const [locale, setLocaleState] = useState<Locale>(initialLocale);
+
+  useEffect(() => {
+    if (syncedRef.current) return;
+    syncedRef.current = true;
+
+    const stored = readStoredLocale();
+    if (stored && stored !== initialLocale) {
+      persistLocale(stored);
+      window.location.reload();
+      return;
+    }
+
+    persistLocale(initialLocale);
+  }, [initialLocale]);
 
   const value = useMemo<I18nContextValue>(() => {
     const dictionary = messages[locale];
@@ -44,13 +56,11 @@ export function I18nProvider({
       locale,
       setLocale: (nextLocale: Locale) => {
         if (nextLocale === locale) return;
-        writeLocaleCookie(nextLocale);
-        setLocaleState(nextLocale);
-        router.refresh();
+        activateLocale(nextLocale);
       },
       t: createTranslator(dictionary),
     };
-  }, [locale, router]);
+  }, [locale]);
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }

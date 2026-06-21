@@ -13,7 +13,7 @@ import {
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import type { NavItem } from "@/components/dashboard/Sidebar";
 import { requireStaffProfile } from "@/lib/auth";
-import { staffRoleLabel } from "@/lib/auth/profile-session";
+import { staffRoleLabel } from "@/i18n/labels";
 import { getProfileSwitcherMode } from "@/lib/auth/user-menu-profile";
 import { loadProfilePhotoUrl } from "@/lib/queries/profile-photo";
 import { createClient } from "@/lib/supabase/server";
@@ -93,7 +93,7 @@ export default async function StaffLayout({
     icon: <User className="h-4 w-4" />,
   };
 
-  const roleLabel = staffRoleLabel(staffProfile.staff_role);
+  const roleLabel = staffRoleLabel(t, staffProfile.staff_role);
 
   return (
     <DashboardShell

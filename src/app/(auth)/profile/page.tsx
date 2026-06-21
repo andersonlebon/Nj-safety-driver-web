@@ -5,10 +5,11 @@ import { getSessionUser, getProfiles, getActiveProfileId, getDriverWorkspacesFor
 import { getProfileWithStaff } from "@/lib/auth/profiles";
 import { AuthDialogCard } from "@/components/ui/AuthDialogCard";
 import { ProfileCard, PendingStaffCard } from "./RoleCard";
+import { getTranslations } from "@/i18n/server";
 
 export const dynamic = "force-dynamic";
 
-function RegisterDriverCard() {
+function RegisterDriverCard({ t }: { t: Awaited<ReturnType<typeof getTranslations>>["t"] }) {
   return (
     <Link
       href="/register/driver"
@@ -19,17 +20,17 @@ function RegisterDriverCard() {
       </span>
       <div className="min-w-0">
         <p className="font-medium text-stone-900 dark:text-stone-100">
-          Register as Driver
+          {t("auth.profile.registerDriverTitle")}
         </p>
         <p className="text-sm text-stone-500 dark:text-slate-400">
-          Manage your vehicle, documents, and infractions
+          {t("auth.profile.registerDriverDescription")}
         </p>
       </div>
     </Link>
   );
 }
 
-function RegisterStaffCard() {
+function RegisterStaffCard({ t }: { t: Awaited<ReturnType<typeof getTranslations>>["t"] }) {
   return (
     <Link
       href="/register/agent"
@@ -40,10 +41,10 @@ function RegisterStaffCard() {
       </span>
       <div className="min-w-0">
         <p className="font-medium text-stone-900 dark:text-stone-100">
-          Apply as Field Agent
+          {t("auth.profile.registerStaffTitle")}
         </p>
         <p className="text-sm text-stone-500 dark:text-slate-400">
-          Issue infractions and manage driver compliance
+          {t("auth.profile.registerStaffDescription")}
         </p>
       </div>
     </Link>
@@ -58,6 +59,7 @@ export default async function ProfilePage({
   const user = await getSessionUser();
   if (!user) redirect("/login");
 
+  const { t } = await getTranslations();
   const profiles = await getProfiles();
   const driverWorkspaces = await getDriverWorkspacesForUser(user.id);
   const activeProfileId = await getActiveProfileId();
@@ -67,7 +69,6 @@ export default async function ProfilePage({
 
   const staffProfiles = profiles.filter((p) => p.role === "staff");
 
-  // Load staff sub-rows to know agent vs admin and application_status
   const staffWithSub = await Promise.all(
     staffProfiles.map((p) => getProfileWithStaff(p.id))
   );
@@ -88,10 +89,12 @@ export default async function ProfilePage({
   return (
     <AuthDialogCard>
       <h1 className="text-xl font-semibold text-stone-900 dark:text-stone-100">
-        {selectableCount > 1 ? "Choose how to continue" : "Your account"}
+        {selectableCount > 1
+          ? t("auth.profile.titleMulti")
+          : t("auth.profile.titleSingle")}
       </h1>
       <p className="mt-1 text-sm text-stone-500 dark:text-slate-400">
-        Signed in as {displayName}
+        {t("auth.profile.signedInAs", { name: displayName ?? "" })}
       </p>
 
       {searchParams.error && (
@@ -101,7 +104,6 @@ export default async function ProfilePage({
       )}
 
       <div className="mt-6 space-y-3">
-        {/* Driver profiles */}
         {driverWorkspaces.map((p) => (
           <ProfileCard
             key={p.id}
@@ -111,9 +113,8 @@ export default async function ProfilePage({
             isActive={activeProfileId === p.id}
           />
         ))}
-        {!hasDriverProfile && <RegisterDriverCard />}
+        {!hasDriverProfile && <RegisterDriverCard t={t} />}
 
-        {/* Staff profiles */}
         {staffWithSub.map((p) => {
           if (!p) return null;
           const sp = p.staffProfile;
@@ -124,7 +125,7 @@ export default async function ProfilePage({
             sp.staff_role === "agent" && sp.application_status === "rejected";
 
           if (isPending) return <PendingStaffCard key={p.id} />;
-          if (isRejected) return null; // Don't show rejected applications
+          if (isRejected) return null;
 
           return (
             <ProfileCard
@@ -137,7 +138,7 @@ export default async function ProfilePage({
             />
           );
         })}
-        {!hasStaffProfile && <RegisterStaffCard />}
+        {!hasStaffProfile && <RegisterStaffCard t={t} />}
       </div>
 
       <form
@@ -149,7 +150,7 @@ export default async function ProfilePage({
           type="submit"
           className="text-sm text-stone-500 dark:text-slate-400 hover:text-stone-700 dark:hover:text-slate-200"
         >
-          Sign out
+          {t("auth.profile.signOut")}
         </button>
       </form>
     </AuthDialogCard>

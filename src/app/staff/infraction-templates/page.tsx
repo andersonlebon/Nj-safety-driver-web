@@ -5,10 +5,12 @@ import { Card, CardBody } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { INFRACTION_TEMPLATES } from "@/lib/infraction-templates";
 import { InfractionTemplatesManager } from "../InfractionTemplatesManager";
+import { getTranslations } from "@/i18n/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminInfractionTemplatesPage() {
+  const { t } = await getTranslations();
   const supabase = createClient();
   const { data } = await supabase
     .from("infraction_templates")
@@ -33,16 +35,16 @@ export default async function AdminInfractionTemplatesPage() {
   return (
     <div>
       <PageHeader
-        title="Infraction templates"
-        description="Create and standardize predefined infractions. Agents can only select active templates."
+        title={t("staff.templates.page.title")}
+        description={t("staff.templates.page.description")}
       />
       <Card>
         <CardBody>
           {templates.length === 0 ? (
             <EmptyState
               icon={<ListChecks className="h-8 w-8" />}
-              title="No templates"
-              description="Create the first predefined infraction."
+              title={t("staff.templates.page.emptyTitle")}
+              description={t("staff.templates.page.emptyDescription")}
             />
           ) : (
             <InfractionTemplatesManager templates={templates} />

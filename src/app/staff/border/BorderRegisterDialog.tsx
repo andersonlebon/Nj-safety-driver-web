@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FormDialog } from "@/components/ui/FormDialog";
 import { StepWizard, StepWizardFooter } from "@/components/ui/StepWizard";
@@ -10,8 +10,7 @@ import { Alert } from "@/components/ui/Alert";
 import { BORDER_CHECKPOINTS, type BorderCheckpoint } from "@/lib/countries";
 import { registerBorderVehicle } from "@/app/staff/actions";
 import { friendlyError } from "@/lib/errors";
-
-const STEPS = ["Vehicle & direction", "Checkpoint", "Notes"];
+import { useI18n } from "@/i18n/context";
 
 export type BorderVehicleOption = {
   id: string;
@@ -41,6 +40,15 @@ export function BorderRegisterDialog({
   vehicles: BorderVehicleOption[];
 }) {
   const router = useRouter();
+  const { t } = useI18n();
+  const steps = useMemo(
+    () => [
+      t("staff.border.register.stepVehicleDirection"),
+      t("staff.border.register.stepCheckpoint"),
+      t("staff.border.register.stepNotes"),
+    ],
+    [t]
+  );
   const [step, setStep] = useState(0);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -86,26 +94,23 @@ export function BorderRegisterDialog({
 
   return (
     <FormDialog
-      triggerLabel="Log border crossing"
-      title="Border crossing"
-      description="Register vehicle entry/exit against an existing driver and vehicle."
+      triggerLabel={t("staff.border.register.trigger")}
+      title={t("staff.border.register.title")}
+      description={t("staff.border.register.description")}
       modalClassName="max-w-2xl"
     >
       {({ close }) => (
         <div>
           <Alert variant="info" className="mb-4">
-            Select an existing driver and vehicle already registered in the system.
-            Foreign drivers follow the same registration flow — create the driver
-            account first, add their vehicle, then log the border crossing here.
-            Do not create a new driver from this screen.
+            {t("staff.border.register.infoAlert")}
           </Alert>
-          <StepWizard steps={STEPS} currentStep={step} onStepChange={setStep} />
+          <StepWizard steps={steps} currentStep={step} onStepChange={setStep} />
           {error && <Alert variant="error" className="mb-4">{error}</Alert>}
 
           {step === 0 && (
             <div className="space-y-4">
               <Select
-                label="Registered vehicle"
+                label={t("staff.border.register.registeredVehicle")}
                 value={form.vehicle_id}
                 onChange={(e) =>
                   setForm((p) => ({
@@ -116,26 +121,34 @@ export function BorderRegisterDialog({
                 disabled={vehicles.length === 0}
               >
                 {vehicles.length === 0 ? (
-                  <option value="">No registered vehicles available</option>
+                  <option value="">{t("staff.border.register.noVehiclesOption")}</option>
                 ) : (
                   vehicles.map((vehicle) => (
                     <option key={vehicle.id} value={vehicle.id}>
-                      {vehicle.plate_number} ({vehicle.registration_country}) —{" "}
-                      {vehicle.owner_name || vehicle.owner_email || "Driver"}
+                      {t("staff.border.register.vehicleOptionFormat", {
+                        plate: vehicle.plate_number,
+                        country: vehicle.registration_country,
+                        driver:
+                          vehicle.owner_name ||
+                          vehicle.owner_email ||
+                          t("staff.border.register.driverFallback"),
+                      })}
                     </option>
                   ))
                 )}
               </Select>
               {selectedVehicle && (
                 <p className="text-xs text-stone-500 dark:text-slate-400">
-                  Selected driver:{" "}
-                  {selectedVehicle.owner_name ||
-                    selectedVehicle.owner_email ||
-                    "registered account"}
+                  {t("staff.border.register.selectedDriver", {
+                    name:
+                      selectedVehicle.owner_name ||
+                      selectedVehicle.owner_email ||
+                      t("staff.border.register.registeredAccountFallback"),
+                  })}
                 </p>
               )}
               <Select
-                label="Direction"
+                label={t("staff.border.register.direction")}
                 value={form.border_direction}
                 onChange={(e) =>
                   setForm((p) => ({
@@ -144,8 +157,8 @@ export function BorderRegisterDialog({
                   }))
                 }
               >
-                <option value="entry">Entry into Gabon</option>
-                <option value="exit">Exit from Gabon</option>
+                <option value="entry">{t("staff.border.register.directionEntry")}</option>
+                <option value="exit">{t("staff.border.register.directionExit")}</option>
               </Select>
             </div>
           )}
@@ -153,7 +166,7 @@ export function BorderRegisterDialog({
           {step === 1 && (
             <div className="space-y-4">
               <Select
-                label="Border checkpoint"
+                label={t("staff.border.register.borderCheckpoint")}
                 value={form.border_checkpoint}
                 onChange={(e) =>
                   setForm((p) => ({
@@ -174,7 +187,7 @@ export function BorderRegisterDialog({
           {step === 2 && (
             <div className="space-y-4">
               <Textarea
-                label="Notes"
+                label={t("staff.border.register.notes")}
                 value={form.foreign_notes}
                 onChange={(e) => setForm((p) => ({ ...p, foreign_notes: e.target.value }))}
                 rows={2}
@@ -184,20 +197,20 @@ export function BorderRegisterDialog({
 
           <StepWizardFooter
             step={step}
-            totalSteps={STEPS.length}
+            totalSteps={steps.length}
             loading={pending}
             onBack={() => setStep((s) => Math.max(0, s - 1))}
             onCancel={close}
             onNext={() => {
               if (step === 0 && !form.vehicle_id) {
-                setError("Select an existing registered vehicle.");
+                setError(t("staff.border.register.validationSelectVehicle"));
                 return;
               }
               setError(null);
               setStep((s) => s + 1);
             }}
             onSubmit={() => submit(close)}
-            submitLabel="Log crossing"
+            submitLabel={t("staff.border.register.submit")}
           />
         </div>
       )}

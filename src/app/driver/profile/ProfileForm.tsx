@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Alert } from "@/components/ui/Alert";
 import { Select } from "@/components/ui/Select";
 import { COUNTRIES, DEFAULT_COUNTRY } from "@/lib/countries";
+import { useI18n } from "@/i18n/context";
 import type { Database } from "@/lib/types/database";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
@@ -21,6 +22,7 @@ export function ProfileForm({
   profile: Profile;
   onSuccess?: () => void;
 }) {
+  const { t } = useI18n();
   const router = useRouter();
   const [form, setForm] = useState({
     full_name: profile.full_name ?? "",
@@ -67,7 +69,7 @@ export function ProfileForm({
       return;
     }
 
-    setSuccess("Profile updated successfully.");
+    setSuccess(t("driver.profile.form.success"));
     setLoading(false);
     router.refresh();
     onSuccess?.();
@@ -80,31 +82,31 @@ export function ProfileForm({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Input
-          label="Full name"
+          label={t("driver.profile.form.fullName")}
           name="full_name"
           value={form.full_name}
           onChange={handleChange("full_name")}
         />
         <Input
-          label="Phone number"
+          label={t("driver.profile.form.phone")}
           name="phone"
           value={form.phone}
           onChange={handleChange("phone")}
         />
         <Input
-          label="National ID number"
+          label={t("driver.profile.form.nationalId")}
           name="national_id"
           value={form.national_id}
           onChange={handleChange("national_id")}
         />
         <Input
-          label="Driver license number"
+          label={t("driver.profile.form.driverLicense")}
           name="driver_license"
           value={form.driver_license}
           onChange={handleChange("driver_license")}
         />
         <Select
-          label="Nationality"
+          label={t("driver.profile.form.nationality")}
           name="nationality_country"
           value={form.nationality_country}
           onChange={handleChange("nationality_country")}
@@ -117,14 +119,14 @@ export function ProfileForm({
         </Select>
       </div>
       <Textarea
-        label="Address"
+        label={t("driver.profile.form.address")}
         name="address"
         value={form.address}
         onChange={handleChange("address")}
       />
       <div>
         <Button type="submit" loading={loading}>
-          Save changes
+          {t("driver.profile.form.save")}
         </Button>
       </div>
     </form>

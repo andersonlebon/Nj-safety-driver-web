@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { hasActiveTableFilters, type TableQuery } from "@/lib/pagination";
+import { useI18n } from "@/i18n/context";
 import { TableFilterBar } from "./TableFilterBar";
 import { TablePagination } from "./TablePagination";
 import { TableEmptyState } from "./TableEmptyState";
@@ -32,12 +33,14 @@ export function PaginatedTableFrame({
   statusLabel,
   searchPlaceholder,
   showDateFilters = true,
-  emptyTitle = "No rows",
+  emptyTitle,
   emptyDescription,
   emptyIcon,
   unfilteredHint,
   children,
 }: Props) {
+  const { t } = useI18n();
+  const resolvedEmptyTitle = emptyTitle ?? t("tables.noRows");
   const totalPages = Math.max(1, Math.ceil(Math.max(totalCount, 0) / query.pageSize));
 
   return (
@@ -57,7 +60,7 @@ export function PaginatedTableFrame({
       {totalCount === 0 ? (
         <TableEmptyState
           icon={emptyIcon}
-          title={emptyTitle}
+          title={resolvedEmptyTitle}
           description={emptyDescription}
           filtered={hasActiveTableFilters(query)}
           searchTerm={query.q}

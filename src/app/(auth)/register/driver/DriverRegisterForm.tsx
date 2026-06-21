@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
+import { useI18n } from "@/i18n/context";
 import { registerAsDriver } from "./actions";
 
 type Props = {
@@ -12,6 +13,7 @@ type Props = {
 };
 
 export function DriverRegisterForm({ defaultFullName = "", defaultPhone = "" }: Props) {
+  const { t } = useI18n();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -34,22 +36,24 @@ export function DriverRegisterForm({ defaultFullName = "", defaultPhone = "" }: 
     <form className="space-y-4" onSubmit={handleSubmit}>
       {error && <Alert variant="error">{error}</Alert>}
       <Input
-        label="Full name"
+        label={t("auth.driverRegister.fullName")}
         name="full_name"
         autoComplete="name"
         defaultValue={defaultFullName}
         required
       />
       <Input
-        label="Phone (optional)"
+        label={t("auth.driverRegister.phoneOptional")}
         name="phone"
         type="tel"
         autoComplete="tel"
-        placeholder="+241 ..."
+        placeholder={t("auth.driverRegister.phonePlaceholder")}
         defaultValue={defaultPhone}
       />
       <Button type="submit" loading={pending} className="w-full">
-        {defaultFullName ? "Continue as driver" : "Create driver profile"}
+        {defaultFullName
+          ? t("auth.driverRegister.submitContinue")
+          : t("auth.driverRegister.submitCreate")}
       </Button>
     </form>
   );

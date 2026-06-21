@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
 import { getSessionUser, getProfiles } from "@/lib/auth";
 import { getProfileWithStaff } from "@/lib/auth/profiles";
+import { getTranslations } from "@/i18n/server";
 
 export const metadata = {
   title: "Application pending | NJ Safety Driver",
@@ -17,10 +18,10 @@ export default async function AgentPendingPage() {
     redirect("/login?redirect=/register/agent/pending");
   }
 
+  const { t } = await getTranslations();
   const profiles = await getProfiles();
   const staffProfiles = profiles.filter((p) => p.role === "staff");
 
-  // Check if any staff profile is already active (approved agent or admin)
   for (const sp of staffProfiles) {
     const withSub = await getProfileWithStaff(sp.id);
     const sub = withSub?.staffProfile;
@@ -30,7 +31,6 @@ export default async function AgentPendingPage() {
     }
   }
 
-  // Find the pending application
   const pendingProfile = staffProfiles[0]
     ? await getProfileWithStaff(staffProfiles[0].id)
     : null;
@@ -43,13 +43,13 @@ export default async function AgentPendingPage() {
       <Card>
         <CardBody className="text-center space-y-4">
           <Alert variant="error">
-            Your agent application was not approved.
+            {t("auth.agentRegister.rejectedTitle")}
             {pendingProfile?.admin_message && (
               <span className="block mt-2">{pendingProfile.admin_message}</span>
             )}
           </Alert>
           <Link href="/" className="btn-secondary inline-block">
-            Back to home
+            {t("auth.agentRegister.backToHome")}
           </Link>
         </CardBody>
       </Card>
@@ -67,22 +67,20 @@ export default async function AgentPendingPage() {
           <Clock className="h-7 w-7" />
         </div>
         <h1 className="text-xl font-semibold text-stone-900 dark:text-stone-100">
-          Application under review
+          {t("auth.agentRegister.pendingTitle")}
         </h1>
         <p className="text-sm text-stone-600 dark:text-slate-400 max-w-md mx-auto">
-          Thank you for applying. An administrator will review your request and
-          approve your agent account. You will receive access to the staff
-          dashboard once approved.
+          {t("auth.agentRegister.pendingDescription")}
         </p>
         <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
           <form action="/signout" method="POST">
             <Button type="submit" variant="secondary">
-              Sign out
+              {t("auth.agentRegister.signOut")}
             </Button>
           </form>
           <Link href="/">
             <Button type="button" variant="secondary">
-              Back to home
+              {t("auth.agentRegister.backToHome")}
             </Button>
           </Link>
         </div>

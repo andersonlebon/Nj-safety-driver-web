@@ -28,6 +28,7 @@ import {
   DriverVerificationPanel,
   VerificationStatusBadge,
 } from "./DriverVerificationPanel";
+import { useI18n } from "@/i18n/context";
 import type { Database } from "@/lib/types/database";
 
 type Driver = Database["public"]["Tables"]["profiles"]["Row"];
@@ -38,13 +39,6 @@ type DriverVehicle = Pick<
 >;
 
 type TabId = "profile" | "documents" | "vehicles" | "comments" | "verify";
-
-const BASE_TABS: { id: TabId; label: string }[] = [
-  { id: "profile", label: "Profile" },
-  { id: "documents", label: "Documents" },
-  { id: "vehicles", label: "Vehicles" },
-  { id: "comments", label: "Comments" },
-];
 
 type Props = {
   driver: Driver;
@@ -64,6 +58,14 @@ export function DriverDetailModal({
   canManageDrivers,
 }: Props) {
   const router = useRouter();
+  const { t } = useI18n();
+  const emDash = t("staff.shared.emDash");
+  const baseTabs: { id: TabId; label: string }[] = [
+    { id: "profile", label: t("staff.drivers.detail.tabProfile") },
+    { id: "documents", label: t("staff.drivers.detail.tabDocuments") },
+    { id: "vehicles", label: t("staff.drivers.detail.tabVehicles") },
+    { id: "comments", label: t("staff.drivers.detail.tabComments") },
+  ];
   const [activeTab, setActiveTab] = useState<TabId>("profile");
   const [tabLoading, setTabLoading] = useState(false);
   const [approvePending, startApprove] = useTransition();
@@ -76,8 +78,8 @@ export function DriverDetailModal({
   } | null>(null);
 
   const tabs = canManageDrivers
-    ? [...BASE_TABS, { id: "verify" as const, label: "Verify" }]
-    : BASE_TABS;
+    ? [...baseTabs, { id: "verify" as const, label: t("staff.drivers.detail.tabVerify") }]
+    : baseTabs;
 
   const canApprove = driver.verification_status !== "active";
   const canReject = driver.verification_status !== "rejected";
@@ -122,7 +124,7 @@ export function DriverDetailModal({
     if (!trimmed) {
       setActionFeedback({
         variant: "error",
-        message: "Explain why the account is being rejected.",
+        message: t("staff.drivers.detail.rejectValidation"),
       });
       return;
     }
@@ -145,8 +147,8 @@ export function DriverDetailModal({
       <Modal
         open={open}
         onClose={onClose}
-        title={driver.full_name || driver.email || "Driver details"}
-        description="Review profile, uploaded documents, and verification — actions stay pinned at the bottom."
+        title={driver.full_name || driver.email || t("staff.drivers.detail.titleFallback")}
+        description={t("staff.drivers.detail.description")}
         className="max-w-4xl"
         footer={
           <div className="flex flex-col gap-3">
@@ -160,7 +162,7 @@ export function DriverDetailModal({
                 onClick={onClose}
                 className="w-full sm:w-auto"
               >
-                Close
+                {t("staff.drivers.detail.close")}
               </Button>
               <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:justify-end">
                 {canReject && (
@@ -174,7 +176,7 @@ export function DriverDetailModal({
                     className="w-full sm:w-auto"
                   >
                     <Lock className="h-4 w-4 mr-1.5" />
-                    Reject / lock
+                    {t("staff.drivers.detail.rejectLock")}
                   </Button>
                 )}
                 {canApprove && (
@@ -185,7 +187,7 @@ export function DriverDetailModal({
                     className="w-full sm:w-auto"
                   >
                     <Check className="h-4 w-4 mr-1.5" />
-                    Approve driver
+                    {t("staff.drivers.detail.approveDriver")}
                   </Button>
                 )}
                 {canManageDrivers && (
@@ -206,7 +208,7 @@ export function DriverDetailModal({
         <div className={cn("flex flex-col", DETAIL_MODAL_TAB_PANEL_CLASS)}>
           <div
             role="tablist"
-            aria-label="Driver details"
+            aria-label={t("staff.drivers.detail.tabsAriaLabel")}
             className="mb-4 flex shrink-0 flex-wrap gap-2 border-b border-stone-200 dark:border-slate-800 pb-2"
           >
             {tabs.map((tab) => (
@@ -239,17 +241,17 @@ export function DriverDetailModal({
               <DriverDetailTabSkeleton tab={activeTab} />
             ) : (
               <>
-                {activeTab === "profile" && <ProfileTab driver={driver} />}
+                {activeTab === "profile" && <ProfileTab driver={driver} emDash={emDash} t={t} />}
                 {activeTab === "documents" && (
                   <DriverDocumentsTabs ownerId={driver.id} vehicles={vehicles} />
                 )}
-                {activeTab === "vehicles" && <VehiclesTab vehicles={vehicles} />}
+                {activeTab === "vehicles" && <VehiclesTab vehicles={vehicles} t={t} emDash={emDash} />}
                 {activeTab === "comments" && (
                   <DriverProfileComments
                     driverProfileId={driver.id}
                     viewer={{
                       role: "staff",
-                      displayName: staffName || "Staff member",
+                      displayName: staffName || t("staff.shared.staffMemberFallback"),
                     }}
                     loadComments={getDriverProfileCommentsForStaff}
                     sendComment={postDriverProfileCommentAsStaff}
@@ -260,8 +262,7 @@ export function DriverDetailModal({
                 {activeTab === "verify" && canManageDrivers && (
                   <div className="space-y-4">
                     <p className="text-sm text-stone-600 dark:text-slate-400">
-                      Compare documents with the profile, then approve or reject the
-                      driver. Quick actions are also available in the footer.
+                      {t("staff.drivers.detail.verifyTabHint")}
                     </p>
                     <DriverVerificationPanel
                       userId={driver.id}
@@ -280,16 +281,16 @@ export function DriverDetailModal({
       <Modal
         open={rejectOpen}
         onClose={() => setRejectOpen(false)}
-        title="Reject and lock driver account"
-        description="The driver will see your message on their dashboard and cannot use the account until reviewed again."
+        title={t("staff.drivers.detail.rejectModalTitle")}
+        description={t("staff.drivers.detail.rejectModalDescription")}
       >
         <div className="space-y-4">
           <Textarea
-            label="Reason for rejection"
+            label={t("staff.drivers.detail.rejectReasonLabel")}
             value={rejectMessage}
             onChange={(e) => setRejectMessage(e.target.value)}
             rows={4}
-            placeholder="Example: National ID photos are unreadable — please re-upload."
+            placeholder={t("staff.drivers.detail.rejectReasonPlaceholder")}
           />
           <div className="flex flex-wrap justify-end gap-2">
             <Button
@@ -297,7 +298,7 @@ export function DriverDetailModal({
               variant="secondary"
               onClick={() => setRejectOpen(false)}
             >
-              Cancel
+              {t("staff.drivers.detail.rejectCancel")}
             </Button>
             <Button
               type="button"
@@ -307,7 +308,7 @@ export function DriverDetailModal({
               onClick={handleReject}
             >
               <Lock className="h-4 w-4 mr-1.5" />
-              Reject / lock account
+              {t("staff.drivers.detail.rejectSubmit")}
             </Button>
           </div>
         </div>
@@ -316,38 +317,46 @@ export function DriverDetailModal({
   );
 }
 
-function ProfileTab({ driver }: { driver: Driver }) {
+function ProfileTab({
+  driver,
+  emDash,
+  t,
+}: {
+  driver: Driver;
+  emDash: string;
+  t: ReturnType<typeof useI18n>["t"];
+}) {
   return (
     <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm rounded-lg border border-stone-200 dark:border-slate-800 p-4 bg-stone-50/50 dark:bg-slate-900/40">
-      <dt className="text-stone-500 dark:text-slate-400">Email</dt>
+      <dt className="text-stone-500 dark:text-slate-400">{t("staff.drivers.detail.email")}</dt>
       <dd className="font-medium text-stone-900 dark:text-stone-100 break-all">
-        {driver.email || "—"}
+        {driver.email || emDash}
       </dd>
-      <dt className="text-stone-500 dark:text-slate-400">Phone</dt>
+      <dt className="text-stone-500 dark:text-slate-400">{t("staff.drivers.detail.phone")}</dt>
       <dd className="font-medium text-stone-900 dark:text-stone-100">
-        {driver.phone || "—"}
+        {driver.phone || emDash}
       </dd>
-      <dt className="text-stone-500 dark:text-slate-400">Nationality</dt>
+      <dt className="text-stone-500 dark:text-slate-400">{t("staff.drivers.detail.nationality")}</dt>
       <dd>
         <CountryBadge code={driver.nationality_country ?? "GA"} />
       </dd>
-      <dt className="text-stone-500 dark:text-slate-400">National ID</dt>
+      <dt className="text-stone-500 dark:text-slate-400">{t("staff.drivers.detail.nationalId")}</dt>
       <dd className="font-medium text-stone-900 dark:text-stone-100">
-        {driver.national_id || "—"}
+        {driver.national_id || emDash}
       </dd>
-      <dt className="text-stone-500 dark:text-slate-400">License #</dt>
+      <dt className="text-stone-500 dark:text-slate-400">{t("staff.drivers.detail.license")}</dt>
       <dd className="font-medium text-stone-900 dark:text-stone-100">
-        {driver.driver_license || "—"}
+        {driver.driver_license || emDash}
       </dd>
-      <dt className="text-stone-500 dark:text-slate-400">Address</dt>
+      <dt className="text-stone-500 dark:text-slate-400">{t("staff.drivers.detail.address")}</dt>
       <dd className="font-medium text-stone-900 dark:text-stone-100 col-span-2">
-        {driver.address || "—"}
+        {driver.address || emDash}
       </dd>
-      <dt className="text-stone-500 dark:text-slate-400">Joined</dt>
+      <dt className="text-stone-500 dark:text-slate-400">{t("staff.drivers.detail.joined")}</dt>
       <dd className="font-medium text-stone-900 dark:text-stone-100">
         {formatDate(driver.created_at)}
       </dd>
-      <dt className="text-stone-500 dark:text-slate-400">Verification</dt>
+      <dt className="text-stone-500 dark:text-slate-400">{t("staff.drivers.detail.verification")}</dt>
       <dd>
         <VerificationStatusBadge
           status={driver.verification_status ?? "pending_documents"}
@@ -356,7 +365,7 @@ function ProfileTab({ driver }: { driver: Driver }) {
       {driver.admin_message && (
         <>
           <dt className="text-stone-500 dark:text-slate-400 col-span-2">
-            Last staff message
+            {t("staff.drivers.detail.lastStaffMessage")}
           </dt>
           <dd className="col-span-2 text-stone-700 dark:text-slate-300 italic">
             {driver.admin_message}
@@ -367,11 +376,19 @@ function ProfileTab({ driver }: { driver: Driver }) {
   );
 }
 
-function VehiclesTab({ vehicles }: { vehicles: DriverVehicle[] }) {
+function VehiclesTab({
+  vehicles,
+  t,
+  emDash,
+}: {
+  vehicles: DriverVehicle[];
+  t: ReturnType<typeof useI18n>["t"];
+  emDash: string;
+}) {
   if (vehicles.length === 0) {
     return (
       <p className="rounded-lg border border-dashed border-stone-200 dark:border-slate-700 p-4 text-sm text-stone-500 dark:text-slate-400">
-        No vehicles registered for this driver.
+        {t("staff.drivers.detail.vehiclesEmpty")}
       </p>
     );
   }
@@ -381,11 +398,11 @@ function VehiclesTab({ vehicles }: { vehicles: DriverVehicle[] }) {
       <table className="w-full text-sm">
         <thead className="text-left bg-stone-50/60 dark:bg-slate-900/60 text-stone-500 dark:text-slate-400">
           <tr>
-            <th className="py-2 px-3 font-medium">Plate</th>
-            <th className="py-2 px-3 font-medium">Country</th>
-            <th className="py-2 px-3 font-medium">Vehicle</th>
-            <th className="py-2 px-3 font-medium">Verification</th>
-            <th className="py-2 px-3 font-medium text-right">Actions</th>
+            <th className="py-2 px-3 font-medium">{t("staff.drivers.detail.vehiclePlate")}</th>
+            <th className="py-2 px-3 font-medium">{t("staff.drivers.detail.vehicleCountry")}</th>
+            <th className="py-2 px-3 font-medium">{t("staff.drivers.detail.vehicle")}</th>
+            <th className="py-2 px-3 font-medium">{t("staff.drivers.detail.vehicleVerification")}</th>
+            <th className="py-2 px-3 font-medium text-right">{t("staff.drivers.detail.vehicleActions")}</th>
           </tr>
         </thead>
         <tbody>
@@ -401,7 +418,7 @@ function VehiclesTab({ vehicles }: { vehicles: DriverVehicle[] }) {
                 <CountryBadge code={vehicle.registration_country} />
               </td>
               <td className="py-2 px-3 text-stone-700 dark:text-slate-300">
-                {[vehicle.brand, vehicle.model].filter(Boolean).join(" ") || "—"}
+                {[vehicle.brand, vehicle.model].filter(Boolean).join(" ") || emDash}
               </td>
               <td className="py-2 px-3">
                 <VerificationStatusBadge
@@ -417,7 +434,7 @@ function VehiclesTab({ vehicles }: { vehicles: DriverVehicle[] }) {
                       className="text-xs py-1.5 px-3"
                     >
                       <ShieldCheck className="h-3.5 w-3.5 mr-1" />
-                      Verify vehicle
+                      {t("staff.drivers.detail.verifyVehicle")}
                     </Button>
                   </Link>
                 </div>

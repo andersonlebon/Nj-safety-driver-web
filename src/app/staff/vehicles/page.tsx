@@ -7,6 +7,7 @@ import { Alert } from "@/components/ui/Alert";
 import { parseTableQuery } from "@/lib/pagination";
 import { AdminVehiclesTable } from "@/app/staff/AdminVehiclesTable";
 import { loadVehicleDirectoryPaginated } from "@/lib/queries/vehicles";
+import { getTranslations } from "@/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -23,12 +24,13 @@ export default async function AgentVehiclesPage({
   const openVehicleId = Array.isArray(openVehicleRaw)
     ? openVehicleRaw[0]
     : openVehicleRaw;
+  const { t } = await getTranslations();
 
   return (
     <div>
       <PageHeader
-        title="Vehicles"
-        description="View registered vehicles, plates, driver ownership, documents, and tracking context."
+        title={t("staff.vehicles.page.title")}
+        description={t("staff.vehicles.page.description")}
       />
       {pageData.error && (
         <div className="mb-4">

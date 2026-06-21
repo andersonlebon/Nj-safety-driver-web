@@ -5,6 +5,7 @@ import { User } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { CountryBadge } from "@/components/vehicles/CountryBadge";
 import { VerificationStatusBadge } from "@/app/staff/DriverVerificationPanel";
+import { useI18n } from "@/i18n/context";
 import type { VehicleOwnerProfile } from "@/lib/vehicle-owner-profile";
 import type { Database } from "@/lib/types/database";
 
@@ -16,6 +17,8 @@ type Props = {
 };
 
 export function VehicleOwnerPanel({ vehicle, owner }: Props) {
+  const { t } = useI18n();
+  const emDash = t("staff.shared.emDash");
   const isRegisteredDriver = Boolean(owner?.id);
   const isTransit =
     !isRegisteredDriver &&
@@ -28,7 +31,7 @@ export function VehicleOwnerPanel({ vehicle, owner }: Props) {
   if (!isRegisteredDriver && !isTransit) {
     return (
       <p className="rounded-lg border border-dashed border-stone-200 dark:border-slate-700 p-4 text-sm text-stone-500 dark:text-slate-400">
-        No owner or transit driver is linked to this vehicle.
+        {t("staff.vehicles.ownerPanel.empty")}
       </p>
     );
   }
@@ -38,49 +41,51 @@ export function VehicleOwnerPanel({ vehicle, owner }: Props) {
       <div className="flex items-center gap-2">
         <User className="h-4 w-4 text-brand-600 dark:text-brand-400" />
         <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
-          {isRegisteredDriver ? "Registered driver" : "Transit visitor"}
+          {isRegisteredDriver
+            ? t("staff.vehicles.ownerPanel.registeredDriver")
+            : t("staff.vehicles.ownerPanel.transitVisitor")}
         </h3>
       </div>
 
       {isRegisteredDriver && owner ? (
         <>
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 text-sm rounded-lg border border-stone-200 dark:border-slate-800 p-4 bg-stone-50/50 dark:bg-slate-900/40">
-            <dt className="text-stone-500 dark:text-slate-400">Full name</dt>
+            <dt className="text-stone-500 dark:text-slate-400">{t("staff.vehicles.ownerPanel.fullName")}</dt>
             <dd className="font-medium text-stone-900 dark:text-stone-100">
-              {owner.full_name || "—"}
+              {owner.full_name || emDash}
             </dd>
-            <dt className="text-stone-500 dark:text-slate-400">Email</dt>
+            <dt className="text-stone-500 dark:text-slate-400">{t("staff.vehicles.ownerPanel.email")}</dt>
             <dd className="font-medium text-stone-900 dark:text-stone-100 break-all">
-              {owner.email || "—"}
+              {owner.email || emDash}
             </dd>
-            <dt className="text-stone-500 dark:text-slate-400">Phone</dt>
+            <dt className="text-stone-500 dark:text-slate-400">{t("staff.vehicles.ownerPanel.phone")}</dt>
             <dd className="font-medium text-stone-900 dark:text-stone-100">
-              {owner.phone || "—"}
+              {owner.phone || emDash}
             </dd>
-            <dt className="text-stone-500 dark:text-slate-400">Nationality</dt>
+            <dt className="text-stone-500 dark:text-slate-400">{t("staff.vehicles.ownerPanel.nationality")}</dt>
             <dd>
               <CountryBadge code={owner.nationality_country ?? "GA"} />
             </dd>
-            <dt className="text-stone-500 dark:text-slate-400">National ID</dt>
+            <dt className="text-stone-500 dark:text-slate-400">{t("staff.vehicles.ownerPanel.nationalId")}</dt>
             <dd className="font-medium text-stone-900 dark:text-stone-100">
-              {owner.national_id || "—"}
+              {owner.national_id || emDash}
             </dd>
-            <dt className="text-stone-500 dark:text-slate-400">Driver license</dt>
+            <dt className="text-stone-500 dark:text-slate-400">{t("staff.vehicles.ownerPanel.driverLicense")}</dt>
             <dd className="font-medium text-stone-900 dark:text-stone-100">
-              {owner.driver_license || "—"}
+              {owner.driver_license || emDash}
             </dd>
             <dt className="text-stone-500 dark:text-slate-400 sm:col-span-2">
-              Address
+              {t("staff.vehicles.ownerPanel.address")}
             </dt>
             <dd className="font-medium text-stone-900 dark:text-stone-100 sm:col-span-2">
-              {owner.address || "—"}
+              {owner.address || emDash}
             </dd>
-            <dt className="text-stone-500 dark:text-slate-400">Account status</dt>
+            <dt className="text-stone-500 dark:text-slate-400">{t("staff.vehicles.ownerPanel.accountStatus")}</dt>
             <dd>
               {owner.verification_status ? (
                 <VerificationStatusBadge status={owner.verification_status} />
               ) : (
-                "—"
+                emDash
               )}
             </dd>
           </dl>
@@ -88,28 +93,28 @@ export function VehicleOwnerPanel({ vehicle, owner }: Props) {
           <div className="flex flex-wrap gap-2">
             <Link href={`/staff/drivers?q=${encodeURIComponent(owner.email ?? owner.full_name ?? "")}`}>
               <Button type="button" variant="secondary" className="text-sm py-2 px-3">
-                View in drivers list
+                {t("staff.vehicles.ownerPanel.viewInDriversList")}
               </Button>
             </Link>
           </div>
         </>
       ) : (
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 text-sm rounded-lg border border-stone-200 dark:border-slate-800 p-4 bg-stone-50/50 dark:bg-slate-900/40">
-          <dt className="text-stone-500 dark:text-slate-400">Name</dt>
+          <dt className="text-stone-500 dark:text-slate-400">{t("staff.vehicles.ownerPanel.name")}</dt>
           <dd className="font-medium text-stone-900 dark:text-stone-100">
-            {vehicle.transit_driver_name || "—"}
+            {vehicle.transit_driver_name || emDash}
           </dd>
-          <dt className="text-stone-500 dark:text-slate-400">Phone</dt>
+          <dt className="text-stone-500 dark:text-slate-400">{t("staff.vehicles.ownerPanel.phone")}</dt>
           <dd className="font-medium text-stone-900 dark:text-stone-100">
-            {vehicle.transit_driver_phone || "—"}
+            {vehicle.transit_driver_phone || emDash}
           </dd>
-          <dt className="text-stone-500 dark:text-slate-400">Passport / ID no.</dt>
+          <dt className="text-stone-500 dark:text-slate-400">{t("staff.vehicles.ownerPanel.passportId")}</dt>
           <dd className="font-medium font-mono text-stone-900 dark:text-stone-100">
-            {vehicle.transit_passport_id || "—"}
+            {vehicle.transit_passport_id || emDash}
           </dd>
           {vehicle.border_checkpoint && (
             <>
-              <dt className="text-stone-500 dark:text-slate-400">Border checkpoint</dt>
+              <dt className="text-stone-500 dark:text-slate-400">{t("staff.vehicles.ownerPanel.borderCheckpoint")}</dt>
               <dd className="font-medium text-stone-900 dark:text-stone-100">
                 {vehicle.border_checkpoint}
               </dd>

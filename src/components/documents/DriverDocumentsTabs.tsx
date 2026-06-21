@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { StaffDocumentsLoader } from "@/components/documents/StaffDocumentsLoader";
+import { useI18n } from "@/i18n/context";
 
 type VehicleTab = {
   id: string;
@@ -18,6 +19,7 @@ export function DriverDocumentsTabs({
   ownerId: string;
   vehicles: VehicleTab[];
 }) {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<"driver" | string>("driver");
 
   const activeVehicle = vehicles.find((vehicle) => vehicle.id === activeTab);
@@ -35,7 +37,7 @@ export function DriverDocumentsTabs({
               : "bg-stone-100 text-stone-700 dark:bg-slate-800 dark:text-slate-300"
           )}
         >
-          Driver
+          {t("staff.drivers.detail.documentsDriver")}
         </button>
         {vehicles.map((vehicle) => (
           <button
@@ -57,14 +59,16 @@ export function DriverDocumentsTabs({
       {activeTab === "driver" ? (
         <StaffDocumentsLoader
           ownerId={ownerId}
-          title="Driver documents"
+          title={t("staff.drivers.detail.documentsDriverTitle")}
           scope="driver"
         />
       ) : activeVehicle ? (
         <StaffDocumentsLoader
           ownerId={ownerId}
           vehicleId={activeVehicle.id}
-          title={`Vehicle ${activeVehicle.plate_number} documents`}
+          title={t("staff.drivers.detail.documentsVehicleTitle", {
+            plate: activeVehicle.plate_number,
+          })}
           scope="vehicle"
         />
       ) : null}

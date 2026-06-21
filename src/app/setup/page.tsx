@@ -5,6 +5,7 @@ import { Card, CardBody } from "@/components/ui/Card";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfiles } from "@/lib/auth";
 import { adminInstallationExists } from "@/lib/auth/bootstrap-admin";
+import { getTranslations } from "@/i18n/server";
 import { SetupForm } from "./SetupForm";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,7 @@ export default async function SetupPage() {
     redirect("/staff");
   }
 
+  const { t } = await getTranslations();
   const admin = createAdminClient();
   const locked = await adminInstallationExists(admin);
 
@@ -28,7 +30,7 @@ export default async function SetupPage() {
             <ShieldCheck className="h-5 w-5" />
           </span>
           <span className="font-semibold text-stone-900 dark:text-stone-100">
-            NJ Safety Driver
+            {t("setup.brandName")}
           </span>
         </Link>
       </div>
@@ -41,35 +43,30 @@ export default async function SetupPage() {
                 <CheckCircle2 className="h-6 w-6" />
               </div>
               <h1 className="mt-4 text-xl font-semibold text-stone-900 dark:text-stone-100">
-                Setup already complete
+                {t("setup.lockedTitle")}
               </h1>
               <p className="mt-2 text-sm text-stone-600 dark:text-slate-400">
-                An administrator account exists for this installation, so the
-                one-time setup route is locked.
+                {t("setup.lockedDescription")}
               </p>
               <div className="mt-6">
                 <Link
                   href="/login"
                   className="btn-primary w-full inline-flex justify-center"
                 >
-                  Go to sign-in
+                  {t("setup.goToSignIn")}
                 </Link>
               </div>
             </div>
           ) : (
             <>
               <h1 className="text-xl font-semibold text-stone-900 dark:text-stone-100">
-                Create the first administrator
+                {t("setup.title")}
               </h1>
               <p className="mt-1 text-sm text-stone-600 dark:text-slate-400">
-                This one-time form bootstraps the very first admin for your
-                NJ Safety Driver installation. Once you submit, this route
-                permanently locks and any further admins must be promoted from
-                the admin dashboard.
+                {t("setup.description")}
               </p>
               <p className="mt-2 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
-                Only <strong>{ALLOWED_SETUP_EMAIL}</strong> is authorised to
-                complete this setup.
+                {t("setup.authorizedEmailHint", { email: ALLOWED_SETUP_EMAIL })}
               </p>
               <div className="mt-6">
                 <SetupForm />

@@ -23,6 +23,7 @@ import {
   DETAIL_MODAL_TAB_SWITCH_MS,
 } from "./detail-modal-layout";
 import { VehicleDetailTabSkeleton, type VehicleTabId } from "./DriverDetailTabSkeleton";
+import { useI18n } from "@/i18n/context";
 import type { TrackingEvent } from "@/lib/tracking";
 import type { TransitIdDocRow, TransitIdDocUrls } from "@/lib/transit-id-documents";
 import type { VehicleOwnerProfile } from "@/lib/vehicle-owner-profile";
@@ -68,6 +69,7 @@ export function VehicleDetailModal({
   readOnly = false,
 }: Props) {
   const router = useRouter();
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<VehicleTabId>(initialTab);
   const [tabLoading, setTabLoading] = useState(false);
   const [approvePending, startApprove] = useTransition();
@@ -89,14 +91,18 @@ export function VehicleDetailModal({
   );
 
   const tabs = useMemo(() => {
-    const list: { id: VehicleTabId; label: string }[] = [{ id: "overview", label: "Overview" }];
-    if (showId) list.push({ id: "id", label: "ID docs" });
-    if (showOwner) list.push({ id: "owner", label: "Owner" });
-    list.push({ id: "documents", label: "Documents" });
-    list.push({ id: "fines", label: "Fines" });
-    if (canManageVehicles && !readOnly) list.push({ id: "verify", label: "Verify" });
+    const list: { id: VehicleTabId; label: string }[] = [
+      { id: "overview", label: t("vehicles.detail.sections.overview") },
+    ];
+    if (showId) list.push({ id: "id", label: t("vehicles.detail.sections.idDocs") });
+    if (showOwner) list.push({ id: "owner", label: t("vehicles.detail.sections.owner") });
+    list.push({ id: "documents", label: t("vehicles.detail.sections.documents") });
+    list.push({ id: "fines", label: t("vehicles.detail.sections.fines") });
+    if (canManageVehicles && !readOnly) {
+      list.push({ id: "verify", label: t("vehicles.detail.sections.verify") });
+    }
     return list;
-  }, [canManageVehicles, readOnly, showId, showOwner]);
+  }, [canManageVehicles, readOnly, showId, showOwner, t]);
 
   const status = (vehicle.verification_status ?? "pending_review") as VerificationStatus;
   const showVerificationActions = canManageVehicles && !readOnly;
@@ -137,7 +143,7 @@ export function VehicleDetailModal({
   };
 
   const handleReject = () => {
-    if (!confirm("Reject and lock this vehicle? The owner may need staff review to use it again.")) {
+    if (!confirm(t("vehicles.detail.rejectConfirm"))) {
       return;
     }
     setActionFeedback(null);
@@ -181,8 +187,8 @@ export function VehicleDetailModal({
       title={vehicle.plate_number}
       description={
         readOnly
-          ? "Review vehicle and infraction details."
-          : "Review vehicle details, documents, and verification — actions stay pinned at the bottom."
+          ? t("vehicles.detail.staffModalDescriptionReadOnly")
+          : t("vehicles.detail.staffModalDescription")
       }
       className="max-w-4xl"
       footer={
@@ -197,7 +203,7 @@ export function VehicleDetailModal({
               onClick={onClose}
               className="w-full sm:w-auto"
             >
-              Close
+              {t("vehicles.detail.close")}
             </Button>
             <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:justify-end">
               {canReject && (
@@ -209,7 +215,7 @@ export function VehicleDetailModal({
                   className="w-full sm:w-auto"
                 >
                   <Lock className="h-4 w-4 mr-1.5" />
-                  Reject / lock
+                  {t("vehicles.detail.rejectLock")}
                 </Button>
               )}
               {canApprove && (
@@ -220,7 +226,7 @@ export function VehicleDetailModal({
                   className="w-full sm:w-auto"
                 >
                   <Check className="h-4 w-4 mr-1.5" />
-                  Approve vehicle
+                  {t("vehicles.detail.approveVehicle")}
                 </Button>
               )}
             </div>
@@ -231,7 +237,7 @@ export function VehicleDetailModal({
       <div className={cn("flex flex-col", DETAIL_MODAL_TAB_PANEL_CLASS)}>
         <div
           role="tablist"
-          aria-label="Vehicle details"
+          aria-label={t("vehicles.detail.sections.overview")}
           className="mb-4 flex shrink-0 flex-wrap gap-2 border-b border-stone-200 dark:border-slate-800 pb-2"
         >
           {tabs.map((tab) => (
@@ -263,7 +269,7 @@ export function VehicleDetailModal({
                   <StaffDocumentsLoader
                     ownerId={undefined}
                     vehicleId={vehicle.id}
-                    title="Vehicle documents"
+                    title={t("vehicles.detail.vehicleDocumentsTitle")}
                     scope="vehicle"
                   />
                   {borderTransitHint}
@@ -271,8 +277,7 @@ export function VehicleDetailModal({
               ) : activeTab === "verify" && showVerificationActions ? (
                 <div className="space-y-4">
                   <p className="text-sm text-stone-600 dark:text-slate-400">
-                    Confirm registration papers and photos match this plate before
-                    approving. Quick actions are also in the footer.
+                    {t("vehicles.detail.verifyTabHint")}
                   </p>
                   <VehicleVerificationActions vehicleId={vehicle.id} status={status} />
                 </div>

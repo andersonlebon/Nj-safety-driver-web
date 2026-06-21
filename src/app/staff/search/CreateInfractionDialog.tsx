@@ -28,8 +28,8 @@ import {
   type InfractionTemplate,
 } from "@/lib/infraction-templates";
 import { fileInfraction } from "@/app/staff/actions";
+import { useI18n } from "@/i18n/context";
 
-const DETAIL_STEPS = ["Violation", "Evidence", "Review"];
 type TemplateOption = Pick<
   InfractionTemplate,
   "code" | "label" | "amount" | "points" | "category"
@@ -47,19 +47,25 @@ export function CreateInfractionDialog({
   country?: string;
   vehicleId?: string | null;
   driverId?: string | null;
-  /** When true, first step asks for plate + country (for infractions list page). */
   includePlateStep?: boolean;
   templates?: readonly TemplateOption[];
 }) {
   const router = useRouter();
+  const { t } = useI18n();
+  const emDash = t("staff.shared.emDash");
   const templateOptions = useMemo(
     () => mergeInfractionTemplateOptions(templates),
     [templates]
   );
   const defaultTemplate = templateOptions[0] ?? INFRACTION_TEMPLATES[0];
+  const detailStepLabels = [
+    t("staff.search.fileInfraction.stepViolation"),
+    t("staff.search.fileInfraction.stepEvidence"),
+    t("staff.search.fileInfraction.stepReview"),
+  ];
   const steps = includePlateStep
-    ? ["Plate", ...DETAIL_STEPS]
-    : DETAIL_STEPS;
+    ? [t("staff.search.fileInfraction.stepPlate"), ...detailStepLabels]
+    : detailStepLabels;
 
   const [step, setStep] = useState(0);
   const [plateInput, setPlateInput] = useState(fixedPlate ?? "");
@@ -122,7 +128,7 @@ export function CreateInfractionDialog({
   const resolvePlate = async () => {
     const q = normalizePlateForCountry(plateInput, countryInput);
     if (!q) {
-      setError("Enter a valid plate number.");
+      setError(t("staff.search.fileInfraction.errorValidPlate"));
       return false;
     }
     const supabase = createClient();
@@ -139,19 +145,21 @@ export function CreateInfractionDialog({
 
   const validateStep = (): string | null => {
     if (includePlateStep && step === 0) {
-      if (!plateInput.trim()) return "Plate is required.";
+      if (!plateInput.trim()) return t("staff.search.fileInfraction.errorPlateRequired");
       return null;
     }
     if (detailStep === 0) {
-      if (!form.infraction_type.trim()) return "Infraction type is required.";
-      if (!form.fine_amount) return "Enter a fine amount.";
+      if (!form.infraction_type.trim()) {
+        return t("staff.search.fileInfraction.errorTypeRequired");
+      }
+      if (!form.fine_amount) return t("staff.search.fileInfraction.errorAmountRequired");
     }
     return null;
   };
 
   const submit = async (close: () => void) => {
     if (!plate) {
-      setError("Plate is required.");
+      setError(t("staff.search.fileInfraction.errorPlateRequired"));
       return;
     }
     setLoading(true);
@@ -196,7 +204,7 @@ export function CreateInfractionDialog({
     }
 
     setLoading(false);
-    setSuccess("Infraction filed successfully.");
+    setSuccess(t("staff.search.fileInfraction.success"));
     setStep(0);
     setPlateInput("");
     setForm({
@@ -214,18 +222,22 @@ export function CreateInfractionDialog({
     }, 1200);
   };
 
-  const titlePlate = plate || "new plate";
+  const titlePlate = plate || t("staff.search.fileInfraction.newPlateFallback");
 
   return (
     <FormDialog
       triggerLabel={
         <>
           <FileWarning className="h-4 w-4 mr-1.5" />
-          File infraction
+          {t("staff.search.fileInfraction.trigger")}
         </>
       }
-      title={includePlateStep ? "File infraction" : `New infraction — ${titlePlate}`}
-      description="Four quick steps: plate, violation, optional photo, confirm."
+      title={
+        includePlateStep
+          ? t("staff.search.fileInfraction.titleGeneric")
+          : t("staff.search.fileInfraction.titleWithPlate", { plate: titlePlate })
+      }
+      description={t("staff.search.fileInfraction.description")}
       modalClassName="max-w-xl"
     >
       {({ close }) => (
@@ -237,7 +249,7 @@ export function CreateInfractionDialog({
           {includePlateStep && step === 0 && (
             <div className="space-y-4 mt-4">
               <Select
-                label="Plate country"
+                label={t("staff.search.fileInfraction.plateCountry")}
                 value={countryInput}
                 onChange={(e) => setCountryInput(e.target.value)}
               >
@@ -254,49 +266,50 @@ export function CreateInfractionDialog({
           {detailStep === 0 && (!includePlateStep || step > 0) && (
             <div className="space-y-4 mt-4">
               <Select
-                label="Infraction template"
+                label={t("staff.search.fileInfraction.infractionTemplate")}
                 name="infraction_template_code"
                 value={form.infraction_template_code}
                 onChange={handleTemplateChange}
               >
                 {templateOptions.map((template) => (
                   <option key={template.code} value={template.code}>
-                    {template.label} — {formatCurrency(template.amount)}
+                    {t("staff.search.fileInfraction.templateOptionFormat", {
+                      label: template.label,
+                      amount: formatCurrency(template.amount),
+                    })}
                   </option>
                 ))}
                 <option value={CUSTOM_INFRACTION_TEMPLATE_CODE}>
-                  Custom type (not in list yet)
+                  {t("staff.search.fileInfraction.customTemplateOption")}
                 </option>
               </Select>
               <Input
-                label="Infraction type"
+                label={t("staff.search.fileInfraction.infractionType")}
                 name="infraction_type"
                 value={form.infraction_type}
                 onChange={handleChange("infraction_type")}
-                placeholder="e.g. Speeding, Illegal parking"
+                placeholder={t("staff.search.fileInfraction.infractionTypePlaceholder")}
                 required
               />
               <p className="text-xs text-stone-500 dark:text-slate-400">
-                Templates from admin settings appear above. Built-in types stay available
-                until they are added to the library. The type you enter is stored on the
-                infraction record.
+                {t("staff.search.fileInfraction.templateHint")}
               </p>
               <Textarea
-                label="Description"
+                label={t("staff.search.fileInfraction.descriptionLabel")}
                 name="description"
                 value={form.description}
                 onChange={handleChange("description")}
-                placeholder="Add details about the infraction"
+                placeholder={t("staff.search.fileInfraction.descriptionPlaceholder")}
               />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input
-                  label="Location"
+                  label={t("staff.search.fileInfraction.location")}
                   name="location"
                   value={form.location}
                   onChange={handleChange("location")}
                 />
                 <Input
-                  label="Fine amount"
+                  label={t("staff.search.fileInfraction.fineAmount")}
                   type="number"
                   min="0"
                   step="0.01"
@@ -314,8 +327,8 @@ export function CreateInfractionDialog({
           {detailStep === 1 && (
             <div className="mt-4">
               <EvidenceSlot
-                title="Evidence photo"
-                description="Optional — photo of the violation or vehicle."
+                title={t("staff.search.fileInfraction.evidenceTitle")}
+                description={t("staff.search.fileInfraction.evidenceDescription")}
                 accept={PHOTO_ACCEPT}
                 value={evidence}
                 onChange={setEvidence}
@@ -327,26 +340,36 @@ export function CreateInfractionDialog({
                 className="mt-3 w-full text-sm"
                 onClick={() => setStep((s) => s + 1)}
               >
-                Skip photo
+                {t("staff.search.fileInfraction.skipPhoto")}
               </Button>
             </div>
           )}
 
           {detailStep === 2 && (
             <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm rounded-lg border border-stone-200 dark:border-slate-800 p-4 bg-stone-50/50 dark:bg-slate-900/50">
-              <dt className="text-stone-500 dark:text-slate-400">Plate</dt>
+              <dt className="text-stone-500 dark:text-slate-400">
+                {t("staff.search.fileInfraction.reviewPlate")}
+              </dt>
               <dd className="font-medium">{plate}</dd>
-              <dt className="text-stone-500 dark:text-slate-400">Type</dt>
+              <dt className="text-stone-500 dark:text-slate-400">
+                {t("staff.search.fileInfraction.reviewType")}
+              </dt>
               <dd className="font-medium">{form.infraction_type}</dd>
-              <dt className="text-stone-500 dark:text-slate-400">Location</dt>
-              <dd className="font-medium">{form.location || "—"}</dd>
-              <dt className="text-stone-500 dark:text-slate-400">Fine</dt>
+              <dt className="text-stone-500 dark:text-slate-400">
+                {t("staff.search.fileInfraction.reviewLocation")}
+              </dt>
+              <dd className="font-medium">{form.location || emDash}</dd>
+              <dt className="text-stone-500 dark:text-slate-400">
+                {t("staff.search.fileInfraction.reviewFine")}
+              </dt>
               <dd className="font-medium">
                 {formatCurrency(Number(form.fine_amount || 0))}
               </dd>
-              <dt className="text-stone-500 dark:text-slate-400">Evidence</dt>
+              <dt className="text-stone-500 dark:text-slate-400">
+                {t("staff.search.fileInfraction.reviewEvidence")}
+              </dt>
               <dd className="font-medium">
-                {evidence.file ? evidence.file.name : "None"}
+                {evidence.file ? evidence.file.name : t("staff.search.fileInfraction.reviewNone")}
               </dd>
             </dl>
           )}
@@ -359,7 +382,7 @@ export function CreateInfractionDialog({
               setError(null);
               setStep((s) => Math.max(0, s - 1));
             }}
-              onCancel={close}
+            onCancel={close}
             onNext={async () => {
               const err = validateStep();
               if (err) {
@@ -374,7 +397,7 @@ export function CreateInfractionDialog({
               setStep((s) => Math.min(steps.length - 1, s + 1));
             }}
             onSubmit={() => submit(close)}
-            submitLabel="File infraction"
+            submitLabel={t("staff.search.fileInfraction.submit")}
           />
         </div>
       )}

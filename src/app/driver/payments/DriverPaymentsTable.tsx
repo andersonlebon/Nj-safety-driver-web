@@ -1,19 +1,15 @@
 "use client";
 
+import { useMemo } from "react";
 import { Wallet } from "lucide-react";
 import { PaginatedTableFrame } from "@/components/table";
 import { InfractionStatusBadge } from "@/components/ui/InfractionStatusBadge";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { useI18n } from "@/i18n/context";
 import type { TableQuery } from "@/lib/pagination";
 import type { Database, TransactionStatus } from "@/lib/types/database";
 
 type Infraction = Database["public"]["Tables"]["infractions"]["Row"];
-
-const STATUS_FILTER_OPTIONS = [
-  { value: "paid", label: "Paid" },
-  { value: "unpaid", label: "Unpaid" },
-  { value: "pending", label: "Pending" },
-];
 
 type LedgerRow = {
   infraction: Infraction;
@@ -32,27 +28,37 @@ export function DriverPaymentsTable({
   totalCount: number;
   rows: LedgerRow[];
 }) {
+  const { t } = useI18n();
+  const statusFilterOptions = useMemo(
+    () => [
+      { value: "paid", label: t("driver.payments.filterPaid") },
+      { value: "unpaid", label: t("driver.payments.filterUnpaid") },
+      { value: "pending", label: t("driver.payments.filterPending") },
+    ],
+    [t]
+  );
+
   return (
     <PaginatedTableFrame
       pathname={pathname}
       query={query}
       totalCount={totalCount}
-      statusOptions={STATUS_FILTER_OPTIONS}
-      searchPlaceholder="Plate, type…"
+      statusOptions={statusFilterOptions}
+      searchPlaceholder={t("driver.payments.searchPlaceholder")}
       emptyIcon={<Wallet className="h-8 w-8" />}
-      emptyTitle="Nothing to pay"
-      emptyDescription="No infractions on record."
-      unfilteredHint={`${totalCount} ledger row${totalCount === 1 ? "" : "s"}`}
+      emptyTitle={t("driver.payments.emptyTitle")}
+      emptyDescription={t("driver.payments.emptyDescription")}
+      unfilteredHint={t("driver.payments.summary", { count: totalCount })}
     >
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-left text-slate-500 border-b border-slate-200">
             <tr>
-              <th className="py-2 pr-4 font-medium">Date</th>
-              <th className="py-2 pr-4 font-medium">Plate</th>
-              <th className="py-2 pr-4 font-medium">Type</th>
-              <th className="py-2 pr-4 font-medium">Amount</th>
-              <th className="py-2 pr-4 font-medium">Status</th>
+              <th className="py-2 pr-4 font-medium">{t("driver.payments.date")}</th>
+              <th className="py-2 pr-4 font-medium">{t("driver.payments.plate")}</th>
+              <th className="py-2 pr-4 font-medium">{t("driver.payments.type")}</th>
+              <th className="py-2 pr-4 font-medium">{t("driver.payments.amount")}</th>
+              <th className="py-2 pr-4 font-medium">{t("driver.payments.status")}</th>
             </tr>
           </thead>
           <tbody>

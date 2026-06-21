@@ -4,6 +4,7 @@ import { InfractionStatusBadge } from "@/components/ui/InfractionStatusBadge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { resolveLedgerStatus } from "@/lib/transactions";
 import { useStaffVehicleDetailModal } from "@/hooks/use-staff-vehicle-detail-modal";
+import { useI18n } from "@/i18n/context";
 import type { InfractionDetail } from "@/components/infractions/InfractionDetailModal";
 import type { PaymentStatus, TransactionStatus } from "@/lib/types/database";
 
@@ -21,6 +22,7 @@ export function AgentRecentInfractionsTable({
   transactionStatusByInfraction: Record<string, TransactionStatus>;
   canManageVehicles?: boolean;
 }) {
+  const { t } = useI18n();
   const { openFromInfraction, modal } = useStaffVehicleDetailModal({
     canManageVehicles,
     transactionStatusByInfraction,
@@ -32,11 +34,11 @@ export function AgentRecentInfractionsTable({
         <table className="w-full text-sm">
           <thead className="text-left text-stone-500 dark:text-slate-400 border-b border-stone-200 dark:border-slate-800">
             <tr>
-              <th className="py-2 pr-4 font-medium">Date</th>
-              <th className="py-2 pr-4 font-medium">Plate</th>
-              <th className="py-2 pr-4 font-medium">Type</th>
-              <th className="py-2 pr-4 font-medium">Amount</th>
-              <th className="py-2 pr-4 font-medium">Status</th>
+              <th className="py-2 pr-4 font-medium">{t("staff.overview.agent.date")}</th>
+              <th className="py-2 pr-4 font-medium">{t("staff.overview.agent.plate")}</th>
+              <th className="py-2 pr-4 font-medium">{t("staff.overview.agent.type")}</th>
+              <th className="py-2 pr-4 font-medium">{t("staff.overview.agent.amount")}</th>
+              <th className="py-2 pr-4 font-medium">{t("staff.overview.agent.status")}</th>
             </tr>
           </thead>
           <tbody>

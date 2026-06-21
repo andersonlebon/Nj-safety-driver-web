@@ -8,9 +8,11 @@ import { AddVehicleDialog } from "./AddVehicleDialog";
 import { VehicleList } from "./VehicleList";
 import { signDocumentPaths } from "@/lib/storage-urls";
 import { loadDriverVehicleLastLocations } from "@/lib/queries/vehicles";
+import { getTranslations } from "@/i18n/server";
 
 export default async function DriverVehiclesPage() {
   const { profile } = await requireDriverProfile();
+  const { t } = await getTranslations();
   const supabase = createClient();
 
   const { data: vehicles } = await supabase
@@ -48,21 +50,21 @@ export default async function DriverVehiclesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Vehicles"
-        description="Register and manage your vehicles."
+        title={t("driver.vehicles.title")}
+        description={t("driver.vehicles.description")}
         actions={<AddVehicleDialog ownerId={profile.id} />}
       />
 
       <Card>
         <CardBody>
           <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100 mb-4">
-            Your vehicles
+            {t("driver.vehicles.listHeading")}
           </h3>
           {!vehicles || vehicles.length === 0 ? (
             <EmptyState
               icon={<Car className="h-8 w-8" />}
-              title="No vehicles registered"
-              description='Click "Add vehicle" to register your first car.'
+              title={t("driver.vehicles.emptyTitle")}
+              description={t("driver.vehicles.emptyDescription")}
             />
           ) : (
             <VehicleList

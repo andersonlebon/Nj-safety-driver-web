@@ -12,6 +12,7 @@ import { InfractionStatusBadge } from "@/components/ui/InfractionStatusBadge";
 import { CountryBadge } from "@/components/vehicles/CountryBadge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { DEFAULT_COUNTRY } from "@/lib/countries";
+import { useI18n } from "@/i18n/context";
 import type { Database, PaymentStatus, TransactionStatus } from "@/lib/types/database";
 
 export type InfractionDetail = Pick<
@@ -81,6 +82,8 @@ export function InfractionDetailModal({
   onClose,
   ledgerStatus,
 }: Props) {
+  const { t } = useI18n();
+  const emptyValue = t("infractions.detail.emptyValue");
   const [error, setError] = useState<string | null>(null);
   const [evidenceLoading, setEvidenceLoading] = useState(false);
 
@@ -110,16 +113,16 @@ export function InfractionDetailModal({
       open={open}
       onClose={onClose}
       title={infraction.infraction_type}
-      description={`Infraction on plate ${infraction.plate_number}`}
+      description={t("infractions.detail.description", { plate: infraction.plate_number })}
       className="max-w-lg"
       footer={
         <div className="flex flex-col-reverse sm:flex-row sm:items-center gap-2 sm:justify-between">
           <Button type="button" variant="secondary" onClick={onClose} className="w-full sm:w-auto">
-            Close
+            {t("infractions.detail.close")}
           </Button>
           <Link href={searchHref} className="btn-primary w-full sm:w-auto justify-center">
             <Search className="h-4 w-4" />
-            Open plate search
+            {t("infractions.detail.openPlateSearch")}
           </Link>
         </div>
       }
@@ -127,40 +130,40 @@ export function InfractionDetailModal({
       {error && <Alert variant="error">{error}</Alert>}
 
       <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 text-sm">
-        <DetailLabel>Plate</DetailLabel>
+        <DetailLabel>{t("infractions.detail.plate")}</DetailLabel>
         <DetailValue>
           <span className="font-mono">{infraction.plate_number}</span>
         </DetailValue>
 
-        <DetailLabel>Country</DetailLabel>
+        <DetailLabel>{t("infractions.detail.country")}</DetailLabel>
         <DetailValue>
           <CountryBadge code={country} />
         </DetailValue>
 
-        <DetailLabel>Type</DetailLabel>
+        <DetailLabel>{t("infractions.detail.type")}</DetailLabel>
         <DetailValue>{infraction.infraction_type}</DetailValue>
 
-        <DetailLabel>Status</DetailLabel>
+        <DetailLabel>{t("infractions.detail.status")}</DetailLabel>
         <DetailValue>
           <InfractionStatusBadge status={ledgerStatus} />
         </DetailValue>
 
-        <DetailLabel>Fine amount</DetailLabel>
+        <DetailLabel>{t("infractions.detail.fineAmount")}</DetailLabel>
         <DetailValue>{formatCurrency(Number(infraction.fine_amount))}</DetailValue>
 
-        <DetailLabel>Location</DetailLabel>
-        <DetailValue>{infraction.location || "—"}</DetailValue>
+        <DetailLabel>{t("infractions.detail.location")}</DetailLabel>
+        <DetailValue>{infraction.location || emptyValue}</DetailValue>
 
-        <DetailLabel className="sm:col-span-1">Description</DetailLabel>
-        <DetailValue className="sm:col-span-1">{infraction.description || "—"}</DetailValue>
+        <DetailLabel className="sm:col-span-1">{t("infractions.detail.descriptionLabel")}</DetailLabel>
+        <DetailValue className="sm:col-span-1">{infraction.description || emptyValue}</DetailValue>
 
-        <DetailLabel>Filed on</DetailLabel>
+        <DetailLabel>{t("infractions.detail.filedOn")}</DetailLabel>
         <DetailValue>{formatDate(infraction.created_at)}</DetailValue>
 
-        <DetailLabel>Last updated</DetailLabel>
+        <DetailLabel>{t("infractions.detail.lastUpdated")}</DetailLabel>
         <DetailValue>{formatDate(infraction.updated_at)}</DetailValue>
 
-        <DetailLabel>Evidence</DetailLabel>
+        <DetailLabel>{t("infractions.detail.evidence")}</DetailLabel>
         <DetailValue>
           {infraction.evidence_path ? (
             <Button
@@ -170,10 +173,10 @@ export function InfractionDetailModal({
               onClick={viewEvidence}
             >
               <Eye className="h-4 w-4" />
-              View evidence
+              {t("infractions.detail.viewEvidence")}
             </Button>
           ) : (
-            "None"
+            t("infractions.detail.evidenceNone")
           )}
         </DetailValue>
       </dl>

@@ -10,6 +10,7 @@ import { formatDate } from "@/lib/utils";
 import { CountryBadge } from "@/components/vehicles/CountryBadge";
 import { BorderRegisterDialog, type BorderVehicleOption } from "./BorderRegisterDialog";
 import { assessTransitIdAuthenticity, TRANSIT_ID_DOC_TYPE } from "@/lib/transit-id-documents";
+import { getTranslations } from "@/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,9 @@ type BorderTransitRow = {
 };
 
 export default async function AgentBorderPage() {
-  const profile = await requireStaffProfile();
+  await requireStaffProfile();
+  const { t } = await getTranslations();
+  const emDash = t("staff.shared.emDash");
 
   let transit: BorderTransitRow[] = [];
   let vehicleOptions: BorderVehicleOption[] = [];
@@ -105,14 +108,14 @@ export default async function AgentBorderPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Border crossings"
-        description="Log vehicle entry/exit at any border using an existing registered vehicle."
+        title={t("staff.border.page.title")}
+        description={t("staff.border.page.description")}
         actions={<BorderRegisterDialog vehicles={vehicleOptions} />}
       />
 
       {loadError && (
         <Alert variant="error">
-          Could not load border registrations. {loadError}
+          {t("staff.border.page.loadError", { error: loadError })}
         </Alert>
       )}
 
@@ -121,20 +124,20 @@ export default async function AgentBorderPage() {
           {!loadError && transit.length === 0 ? (
             <EmptyState
               icon={<Globe className="h-8 w-8" />}
-              title="No border registrations yet"
-              description='Use "Register border crossing" when a foreign vehicle enters a checkpoint.'
+              title={t("staff.border.page.emptyTitle")}
+              description={t("staff.border.page.emptyDescription")}
             />
           ) : !loadError ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-left text-stone-500 dark:text-slate-400 border-b border-stone-200 dark:border-slate-800">
                   <tr>
-                    <th className="py-2 pr-4 font-medium">Plate</th>
-                    <th className="py-2 pr-4 font-medium">Country</th>
-                    <th className="py-2 pr-4 font-medium">Driver</th>
-                    <th className="py-2 pr-4 font-medium">Checkpoint</th>
-                    <th className="py-2 pr-4 font-medium">Entry</th>
-                    <th className="py-2 pr-4 font-medium">ID docs</th>
+                    <th className="py-2 pr-4 font-medium">{t("staff.border.page.plate")}</th>
+                    <th className="py-2 pr-4 font-medium">{t("staff.border.page.country")}</th>
+                    <th className="py-2 pr-4 font-medium">{t("staff.border.page.driver")}</th>
+                    <th className="py-2 pr-4 font-medium">{t("staff.border.page.checkpoint")}</th>
+                    <th className="py-2 pr-4 font-medium">{t("staff.border.page.entry")}</th>
+                    <th className="py-2 pr-4 font-medium">{t("staff.border.page.idDocs")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -155,14 +158,14 @@ export default async function AgentBorderPage() {
                         {v.owner_id
                           ? ownerMap[v.owner_id]?.full_name ||
                             ownerMap[v.owner_id]?.email ||
-                            "Registered driver"
-                          : v.transit_driver_name || "—"}
+                            t("staff.border.page.registeredDriverFallback")
+                          : v.transit_driver_name || emDash}
                       </td>
                       <td className="py-2 pr-4">
-                        {v.border_checkpoint || "—"}
+                        {v.border_checkpoint || emDash}
                       </td>
                       <td className="py-2 pr-4">
-                        {v.border_entry_at ? formatDate(v.border_entry_at) : "—"}
+                        {v.border_entry_at ? formatDate(v.border_entry_at) : emDash}
                       </td>
                       <td className="py-2 pr-4">
                         <span
@@ -172,7 +175,9 @@ export default async function AgentBorderPage() {
                               : "text-amber-700 dark:text-amber-400 text-xs"
                           }
                         >
-                          {idOk ? "Front & back" : "Incomplete"}
+                          {idOk
+                            ? t("staff.border.page.idDocsComplete")
+                            : t("staff.border.page.idDocsIncomplete")}
                         </span>
                       </td>
                     </tr>

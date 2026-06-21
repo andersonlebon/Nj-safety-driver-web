@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Car, Eye } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { PaginatedTableFrame } from "@/components/table";
@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/Button";
 import { CountryBadge } from "@/components/vehicles/CountryBadge";
 import { VehicleDetailModal } from "./VehicleDetailModal";
 import { formatDate } from "@/lib/utils";
+import { useI18n } from "@/i18n/context";
+import { verificationStatusLabel } from "@/i18n/labels";
 import type { TableQuery } from "@/lib/pagination";
-import { VERIFICATION_LABELS } from "@/lib/verification";
 import { isForeignVehicle } from "@/lib/vehicles";
 import type { TrackingEvent } from "@/lib/tracking";
 import type { TransitIdDocRow, TransitIdDocUrls } from "@/lib/transit-id-documents";
@@ -24,12 +25,6 @@ import type { Database, TransactionStatus, VerificationStatus } from "@/lib/type
 
 type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
 type Infraction = Database["public"]["Tables"]["infractions"]["Row"];
-
-const VERIFICATION_FILTER_OPTIONS = [
-  { value: "active", label: "Active" },
-  { value: "pending_review", label: "Pending review" },
-  { value: "rejected", label: "Rejected" },
-];
 
 export function AdminVehiclesTable({
   pathname,
@@ -54,6 +49,16 @@ export function AdminVehiclesTable({
   canManageVehicles?: boolean;
   initialOpenVehicleId?: string;
 }) {
+  const { t } = useI18n();
+  const emDash = t("staff.shared.emDash");
+  const verificationFilterOptions = useMemo(
+    () => [
+      { value: "active", label: t("staff.vehicles.table.filterActive") },
+      { value: "pending_review", label: t("staff.vehicles.table.filterPendingReview") },
+      { value: "rejected", label: t("staff.vehicles.table.filterRejected") },
+    ],
+    [t]
+  );
   const [selected, setSelected] = useState<Vehicle | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [infractions, setInfractions] = useState<Infraction[]>([]);
@@ -169,27 +174,27 @@ export function AdminVehiclesTable({
         query={query}
         totalCount={totalCount}
         preserveParams={preserveParams}
-        statusOptions={showStatusFilter ? VERIFICATION_FILTER_OPTIONS : undefined}
-        statusLabel="Verification"
-        searchPlaceholder="Plate, brand, model…"
+        statusOptions={showStatusFilter ? verificationFilterOptions : undefined}
+        statusLabel={t("staff.vehicles.table.statusLabel")}
+        searchPlaceholder={t("staff.vehicles.table.searchPlaceholder")}
         emptyIcon={<Car className="h-8 w-8" />}
-        emptyTitle="No vehicles"
-        unfilteredHint={`${totalCount} vehicle${totalCount === 1 ? "" : "s"}`}
+        emptyTitle={t("staff.vehicles.table.emptyTitle")}
+        unfilteredHint={t("staff.vehicles.table.unfilteredHint", { count: totalCount })}
       >
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-stone-500 dark:text-slate-400 border-b border-stone-200 dark:border-slate-800">
               <tr>
-                <th className="py-2 pr-4 font-medium">Photo</th>
-                <th className="py-2 pr-4 font-medium">Plate</th>
-                <th className="py-2 pr-4 font-medium">Country</th>
-                <th className="py-2 pr-4 font-medium">Vehicle</th>
-                <th className="py-2 pr-4 font-medium">Owner</th>
-                <th className="py-2 pr-4 font-medium">Insurance</th>
-                <th className="py-2 pr-4 font-medium">Inspection</th>
-                <th className="py-2 pr-4 font-medium">Registered</th>
-                <th className="py-2 pr-4 font-medium">Status</th>
-                <th className="py-2 pr-4 font-medium w-28">Actions</th>
+                <th className="py-2 pr-4 font-medium">{t("staff.vehicles.table.photo")}</th>
+                <th className="py-2 pr-4 font-medium">{t("staff.vehicles.table.plate")}</th>
+                <th className="py-2 pr-4 font-medium">{t("staff.vehicles.table.country")}</th>
+                <th className="py-2 pr-4 font-medium">{t("staff.vehicles.table.vehicle")}</th>
+                <th className="py-2 pr-4 font-medium">{t("staff.vehicles.table.owner")}</th>
+                <th className="py-2 pr-4 font-medium">{t("staff.vehicles.table.insurance")}</th>
+                <th className="py-2 pr-4 font-medium">{t("staff.vehicles.table.inspection")}</th>
+                <th className="py-2 pr-4 font-medium">{t("staff.vehicles.table.registered")}</th>
+                <th className="py-2 pr-4 font-medium">{t("staff.vehicles.table.status")}</th>
+                <th className="py-2 pr-4 font-medium w-28">{t("staff.vehicles.table.actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -236,20 +241,20 @@ export function AdminVehiclesTable({
                     <CountryBadge code={v.registration_country} />
                     {foreign && (
                       <span className="ml-1 badge-pending text-[10px]">
-                        Transit
+                        {t("staff.vehicles.table.transitBadge")}
                       </span>
                     )}
                   </td>
                   <td className="py-2 pr-4 text-stone-700 dark:text-slate-300">
                     {[v.brand, v.model, v.color, v.year]
                       .filter(Boolean)
-                      .join(" • ") || "—"}
+                      .join(" • ") || emDash}
                   </td>
                   <td className="py-2 pr-4 text-stone-700 dark:text-slate-300">
                     {owner?.full_name ||
                       owner?.email ||
                       v.transit_driver_name ||
-                      "—"}
+                      emDash}
                   </td>
                   <td className="py-2 pr-4">
                     <span
@@ -257,7 +262,9 @@ export function AdminVehiclesTable({
                         v.insurance_status ? "badge-paid" : "badge-unpaid"
                       }
                     >
-                      {v.insurance_status ? "Valid" : "Missing"}
+                      {v.insurance_status
+                        ? t("staff.vehicles.table.insuranceValid")
+                        : t("staff.vehicles.table.insuranceMissing")}
                     </span>
                   </td>
                   <td className="py-2 pr-4">
@@ -266,7 +273,9 @@ export function AdminVehiclesTable({
                         v.inspection_status ? "badge-paid" : "badge-unpaid"
                       }
                     >
-                      {v.inspection_status ? "Valid" : "Missing"}
+                      {v.inspection_status
+                        ? t("staff.vehicles.table.inspectionValid")
+                        : t("staff.vehicles.table.inspectionMissing")}
                     </span>
                   </td>
                   <td className="py-2 pr-4 text-stone-700 dark:text-slate-300">
@@ -274,7 +283,7 @@ export function AdminVehiclesTable({
                   </td>
                   <td className="py-2 pr-4">
                     <span className={statusClass}>
-                      {VERIFICATION_LABELS[status]}
+                      {verificationStatusLabel(t, status)}
                     </span>
                   </td>
                   <td className="py-2 pr-4" onClick={(e) => e.stopPropagation()}>
@@ -284,7 +293,7 @@ export function AdminVehiclesTable({
                       onClick={() => open(v)}
                     >
                       <Eye className="h-3.5 w-3.5 mr-1" />
-                      View details
+                      {t("staff.vehicles.table.viewDetails")}
                     </Button>
                   </td>
                 </tr>
@@ -314,9 +323,7 @@ export function AdminVehiclesTable({
             !selected.owner_id &&
             transitIdDocuments.length === 0 ? (
               <Alert variant="info">
-                No linked driver account — ask the visitor to register at{" "}
-                <strong>/register</strong> with nationality and vehicle country,
-                then re-search this plate.
+                {t("staff.vehicles.table.borderTransitHint")}
               </Alert>
             ) : undefined
           }

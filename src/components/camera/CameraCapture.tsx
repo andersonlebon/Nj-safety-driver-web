@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/context";
 
 type Props = {
   onCapture: (file: File, previewUrl: string) => void;
@@ -18,10 +19,12 @@ export function CameraCapture({
   onCapture,
   onClear,
   previewUrl,
-  label = "Take photo",
+  label,
   facingMode = "environment",
   className,
 }: Props) {
+  const { t } = useI18n();
+  const resolvedLabel = label ?? t("camera.takePhoto");
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [active, setActive] = useState(false);
@@ -29,7 +32,7 @@ export function CameraCapture({
   const [error, setError] = useState<string | null>(null);
 
   const stop = useCallback(() => {
-    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
     setActive(false);
   }, []);
@@ -41,7 +44,7 @@ export function CameraCapture({
     setStarting(true);
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
-        setError("Camera is not supported in this browser. Enter details manually.");
+        setError(t("camera.unsupported"));
         return;
       }
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -61,9 +64,7 @@ export function CameraCapture({
     } catch (err) {
       const name = err instanceof DOMException ? err.name : "CameraError";
       setError(
-        name === "NotAllowedError"
-          ? "Camera permission was denied. Allow camera access in your browser settings, then retry."
-          : "Camera is unavailable or already in use. Close other camera apps and retry, or enter details manually."
+        name === "NotAllowedError" ? t("camera.permission") : t("camera.unavailable")
       );
       console.warn("Camera startup failed", err);
     } finally {
@@ -100,13 +101,17 @@ export function CameraCapture({
       {previewUrl && !active ? (
         <div className="relative rounded-lg overflow-hidden border border-stone-200 dark:border-slate-700 aspect-video">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={previewUrl} alt="Capture preview" className="h-full w-full object-cover" />
+          <img
+            src={previewUrl}
+            alt={t("camera.capturePreview")}
+            className="h-full w-full object-cover"
+          />
           {onClear && (
             <button
               type="button"
               onClick={onClear}
               className="absolute top-2 right-2 rounded-full bg-black/50 p-1.5 text-white"
-              aria-label="Remove photo"
+              aria-label={t("camera.removePhoto")}
             >
               <X className="h-4 w-4" />
             </button>
@@ -117,10 +122,10 @@ export function CameraCapture({
           <video ref={videoRef} className="h-full w-full object-cover" playsInline muted />
           <div className="absolute bottom-2 left-2 right-2 flex gap-2">
             <Button type="button" className="flex-1 text-sm" onClick={capture}>
-              Capture
+              {t("camera.capture")}
             </Button>
             <Button type="button" variant="secondary" onClick={stop}>
-              Cancel
+              {t("camera.cancel")}
             </Button>
           </div>
         </div>
@@ -135,14 +140,14 @@ export function CameraCapture({
           loading={starting}
         >
           <Camera className="h-4 w-4 mr-1.5" />
-          {starting ? "Starting camera..." : label}
+          {starting ? t("camera.starting") : resolvedLabel}
         </Button>
       )}
 
       {previewUrl && !active && (
         <Button type="button" variant="secondary" className="w-full text-sm" onClick={start}>
           <RotateCcw className="h-4 w-4 mr-1.5" />
-          Retake photo
+          {t("camera.retake")}
         </Button>
       )}
 

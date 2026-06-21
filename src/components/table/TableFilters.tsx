@@ -3,6 +3,7 @@
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/context";
 
 export type TableFilterOption = { value: string; label: string };
 
@@ -24,7 +25,7 @@ export function TableFilters({
   statusValue,
   onStatusChange,
   statusOptions = [],
-  statusLabel = "Status",
+  statusLabel,
   dateFrom,
   dateTo,
   onDateFromChange,
@@ -33,17 +34,19 @@ export function TableFilters({
   showStatus = true,
   className,
 }: Props) {
+  const { t } = useI18n();
+
   return (
     <>
       {showStatus && statusOptions.length > 0 && (
         <Select
-          label={statusLabel}
+          label={statusLabel ?? t("tables.status")}
           name="table_status_filter"
           value={statusValue}
           onChange={(e) => onStatusChange(e.target.value)}
           className={cn("min-w-0", className)}
         >
-          <option value="">All statuses</option>
+          <option value="">{t("tables.allStatuses")}</option>
           {statusOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
@@ -54,7 +57,7 @@ export function TableFilters({
       {showDateFilters && (
         <>
           <Input
-            label="From"
+            label={t("tables.from")}
             name="table_date_from"
             type="date"
             value={dateFrom}
@@ -62,7 +65,7 @@ export function TableFilters({
             className={cn("min-w-0", className)}
           />
           <Input
-            label="To"
+            label={t("tables.to")}
             name="table_date_to"
             type="date"
             value={dateTo}

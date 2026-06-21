@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { Modal } from "@/components/ui/Modal";
 import { approveAgentApplication, rejectAgentApplication } from "@/app/staff/actions";
+import { useI18n } from "@/i18n/context";
 
 type Applicant = {
   staff_profile_id: string;
@@ -29,6 +30,7 @@ export function AgentApplicationReview({ applicants }: { applicants: Applicant[]
 }
 
 function ApplicantRow({ applicant }: { applicant: Applicant }) {
+  const { t } = useI18n();
   const [pending, startTransition] = useTransition();
   const [rejectOpen, setRejectOpen] = useState(false);
   const [message, setMessage] = useState("");
@@ -69,14 +71,14 @@ function ApplicantRow({ applicant }: { applicant: Applicant }) {
         )}
         {applicant.badge_id && (
           <p className="text-xs text-stone-500 dark:text-slate-400 mt-1">
-            Badge: {applicant.badge_id}
+            {t("staff.agents.pending.badgeLabel", { badgeId: applicant.badge_id })}
           </p>
         )}
       </div>
       <div className="flex gap-2 shrink-0">
         <Button type="button" loading={pending} onClick={approve} className="text-sm py-2 px-3">
           <Check className="h-4 w-4 mr-1" />
-          Approve
+          {t("staff.agents.pending.approve")}
         </Button>
         <Button
           type="button"
@@ -86,29 +88,29 @@ function ApplicantRow({ applicant }: { applicant: Applicant }) {
           className="text-sm py-2 px-3"
         >
           <X className="h-4 w-4 mr-1" />
-          Reject
+          {t("staff.agents.pending.reject")}
         </Button>
       </div>
 
       <Modal
         open={rejectOpen}
         onClose={() => setRejectOpen(false)}
-        title="Reject application"
-        description="Optional message shown to the applicant."
+        title={t("staff.agents.rejectModal.title")}
+        description={t("staff.agents.rejectModal.description")}
       >
         <div className="space-y-4">
           <Textarea
-            label="Reason (optional)"
+            label={t("staff.agents.rejectModal.reasonOptional")}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             rows={3}
           />
           <div className="flex justify-end gap-2">
             <Button type="button" variant="secondary" onClick={() => setRejectOpen(false)}>
-              Cancel
+              {t("staff.agents.rejectModal.cancel")}
             </Button>
             <Button type="button" variant="danger" loading={pending} onClick={reject}>
-              Reject application
+              {t("staff.agents.rejectModal.submit")}
             </Button>
           </div>
         </div>

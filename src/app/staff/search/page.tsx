@@ -11,6 +11,7 @@ import { SearchPlateDialog } from "./SearchPlateDialog";
 import { CreateInfractionDialog } from "./CreateInfractionDialog";
 import { PlateSearchResults } from "./PlateSearchResults";
 import { requireStaffProfile } from "@/lib/auth";
+import { getTranslations } from "@/i18n/server";
 
 export default async function StaffSearchPage({
   searchParams,
@@ -22,6 +23,7 @@ export default async function StaffSearchPage({
   const plate = rawPlate ? normalizePlateForCountry(rawPlate, country) : null;
 
   await requireStaffProfile();
+  const { t } = await getTranslations();
   const supabase = createClient();
 
   const [
@@ -110,8 +112,8 @@ export default async function StaffSearchPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Plate search"
-        description="Look up a vehicle by plate number to view details, fines, tracking, and file infractions."
+        title={t("staff.search.page.title")}
+        description={t("staff.search.page.description")}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <SearchPlateDialog initialPlate={rawPlate} initialCountry={country} />
@@ -131,8 +133,8 @@ export default async function StaffSearchPage({
       {!plate && (
         <EmptyState
           icon={<Search className="h-8 w-8" />}
-          title="Search for a plate"
-          description='Click "Search plate" above to look up a vehicle and its history.'
+          title={t("staff.search.empty.title")}
+          description={t("staff.search.empty.description")}
         />
       )}
 

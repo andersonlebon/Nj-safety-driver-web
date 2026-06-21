@@ -2,6 +2,7 @@
 
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/context";
 
 type Props = {
   steps: string[];
@@ -16,9 +17,11 @@ export function StepWizard({
   onStepChange,
   className,
 }: Props) {
+  const { t } = useI18n();
+
   return (
     <nav
-      aria-label="Form progress"
+      aria-label={t("common.formProgress")}
       className={cn("mb-6", className)}
     >
       <ol className="flex items-center gap-1 sm:gap-2">
@@ -90,8 +93,8 @@ export function StepWizardFooter({
   onNext,
   onSubmit,
   loading,
-  nextLabel = "Continue",
-  submitLabel = "Submit",
+  nextLabel,
+  submitLabel,
 }: {
   step: number;
   totalSteps: number;
@@ -103,7 +106,10 @@ export function StepWizardFooter({
   nextLabel?: string;
   submitLabel?: string;
 }) {
+  const { t } = useI18n();
   const isLast = step >= totalSteps - 1;
+  const resolvedNextLabel = nextLabel ?? t("common.continue");
+  const resolvedSubmitLabel = submitLabel ?? t("common.submit");
 
   return (
     <div className="flex justify-between gap-3 pt-2 border-t border-stone-200 dark:border-slate-800 mt-4">
@@ -113,7 +119,7 @@ export function StepWizardFooter({
         disabled={(step === 0 && !onCancel) || loading}
         className="text-sm font-medium text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-stone-200 disabled:opacity-40"
       >
-        {step === 0 ? "Cancel" : "Back"}
+        {step === 0 ? t("common.cancel") : t("common.back")}
       </button>
       {isLast ? (
         <button
@@ -122,7 +128,7 @@ export function StepWizardFooter({
           disabled={loading}
           className="btn-primary text-sm py-2 px-4"
         >
-          {loading ? "Please wait…" : submitLabel}
+          {loading ? t("common.pleaseWait") : resolvedSubmitLabel}
         </button>
       ) : (
         <button
@@ -131,7 +137,7 @@ export function StepWizardFooter({
           disabled={loading}
           className="btn-primary text-sm py-2 px-4"
         >
-          {nextLabel}
+          {resolvedNextLabel}
         </button>
       )}
     </div>

@@ -4,8 +4,9 @@ import { useTransition } from "react";
 import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { updateVehicleVerification } from "@/app/staff/actions";
+import { useI18n } from "@/i18n/context";
+import { verificationStatusLabel } from "@/i18n/labels";
 import type { VerificationStatus } from "@/lib/types/database";
-import { VERIFICATION_LABELS } from "@/lib/verification";
 
 export function VehicleVerificationActions({
   vehicleId,
@@ -14,6 +15,7 @@ export function VehicleVerificationActions({
   vehicleId: string;
   status: VerificationStatus;
 }) {
+  const { t } = useI18n();
   const [pending, startTransition] = useTransition();
 
   const run = (next: "active" | "rejected" | "pending_review") => {
@@ -27,7 +29,7 @@ export function VehicleVerificationActions({
   return (
     <div className="flex items-center gap-1">
       <span className={`mr-2 ${status === "active" ? "badge-paid" : status === "rejected" ? "badge-unpaid" : "badge-pending"}`}>
-        {VERIFICATION_LABELS[status]}
+        {verificationStatusLabel(t, status)}
       </span>
       {status !== "active" && (
         <Button
@@ -36,7 +38,7 @@ export function VehicleVerificationActions({
           className="text-xs py-1 px-2"
           loading={pending}
           onClick={() => run("active")}
-          title="Approve vehicle"
+          title={t("vehicles.detail.verificationApproveTitle")}
         >
           <Check className="h-3.5 w-3.5" />
         </Button>
@@ -48,7 +50,7 @@ export function VehicleVerificationActions({
           className="text-xs py-1 px-2"
           loading={pending}
           onClick={() => run("rejected")}
-          title="Reject vehicle"
+          title={t("vehicles.detail.verificationRejectTitle")}
         >
           <X className="h-3.5 w-3.5" />
         </Button>

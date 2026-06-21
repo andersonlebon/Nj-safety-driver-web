@@ -8,8 +8,9 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Modal } from "@/components/ui/Modal";
 import { Alert } from "@/components/ui/Alert";
 import { updateDriverVerification } from "@/app/staff/actions";
+import { useI18n } from "@/i18n/context";
+import { verificationStatusLabel } from "@/i18n/labels";
 import type { VerificationStatus } from "@/lib/types/database";
-import { VERIFICATION_LABELS } from "@/lib/verification";
 
 type Props = {
   userId: string;
@@ -32,6 +33,7 @@ export function DriverVerificationPanel({
   compact = false,
 }: Props) {
   const router = useRouter();
+  const { t } = useI18n();
   const [pending, startTransition] = useTransition();
   const [messageOpen, setMessageOpen] = useState(false);
   const [message, setMessage] = useState(adminMessage ?? "");
@@ -43,7 +45,7 @@ export function DriverVerificationPanel({
   const run = (
     next: "active" | "rejected" | "pending_review",
     msg?: string | null,
-    successMessage = "Driver verification updated."
+    successMessage = t("staffVerification.updated")
   ) => {
     setFeedback(null);
     startTransition(async () => {
@@ -68,7 +70,7 @@ export function DriverVerificationPanel({
             onClick={() => run("active")}
           >
             <Check className="h-4 w-4 mr-1.5" />
-            Approve driver
+            {t("staffVerification.approveDriver")}
           </Button>
         )}
         {!hideReject && (
@@ -79,7 +81,7 @@ export function DriverVerificationPanel({
             onClick={() => setMessageOpen(true)}
           >
             <X className="h-4 w-4 mr-1.5" />
-            Reject / message
+            {t("staffVerification.rejectMessage")}
           </Button>
         )}
         <Button
@@ -91,7 +93,7 @@ export function DriverVerificationPanel({
           }}
         >
           <MessageSquare className="h-4 w-4 mr-1.5" />
-          Send message
+          {t("staffVerification.sendMessage")}
         </Button>
       </div>
       {feedback && !compact && (
@@ -101,17 +103,17 @@ export function DriverVerificationPanel({
       <Modal
         open={messageOpen}
         onClose={() => setMessageOpen(false)}
-        title="Message to driver"
-        description="The driver will see this as a required action on their dashboard."
+        title={t("staffVerification.messageToDriver")}
+        description={t("staffVerification.messageDescription")}
       >
         <div className="space-y-4">
           {feedback && <Alert variant={feedback.variant}>{feedback.message}</Alert>}
           <Textarea
-            label="Instructions"
+            label={t("staffVerification.instructions")}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             rows={4}
-            placeholder="Example: Please renew your driver's license — the photo is blurry."
+            placeholder={t("staffVerification.instructionsPlaceholder")}
           />
           <div className="flex flex-wrap gap-2 justify-end">
             <Button
@@ -119,7 +121,7 @@ export function DriverVerificationPanel({
               variant="secondary"
               onClick={() => setMessageOpen(false)}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               type="button"
@@ -127,10 +129,14 @@ export function DriverVerificationPanel({
               loading={pending}
               disabled={!message.trim()}
               onClick={() => {
-                run("pending_review", message, "Message sent to driver.");
+                run(
+                  "pending_review",
+                  message,
+                  t("staffVerification.messageSent")
+                );
               }}
             >
-              Send message
+              {t("staffVerification.sendMessage")}
             </Button>
             <Button
               type="button"
@@ -138,10 +144,14 @@ export function DriverVerificationPanel({
               loading={pending}
               disabled={!message.trim()}
               onClick={() => {
-                run("rejected", message, "Driver rejected and message sent.");
+                run(
+                  "rejected",
+                  message,
+                  t("staffVerification.rejectedAndSent")
+                );
               }}
             >
-              Reject account
+              {t("staffVerification.rejectAccount")}
             </Button>
           </div>
         </div>
@@ -155,6 +165,7 @@ export function VerificationStatusBadge({
 }: {
   status: VerificationStatus;
 }) {
+  const { t } = useI18n();
   const cls =
     status === "active"
       ? "badge-paid"
@@ -163,5 +174,7 @@ export function VerificationStatusBadge({
         : status === "pending_review"
           ? "badge-pending"
           : "badge-pending";
-  return <span className={cls}>{VERIFICATION_LABELS[status]}</span>;
+  return (
+    <span className={cls}>{verificationStatusLabel(t, status)}</span>
+  );
 }

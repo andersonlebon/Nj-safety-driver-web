@@ -14,8 +14,8 @@ function applicationStatusLabel(
   status: AgentApplicationStatus | null | undefined,
   t: Awaited<ReturnType<typeof getTranslations>>["t"]
 ) {
-  if (!status) return "—";
-  const key = `staffAccount.applicationStatus.${status}` as const;
+  if (!status) return t("staff.shared.emDash");
+  const key = `staff.account.applicationStatus.${status}` as const;
   return t(key);
 }
 
@@ -30,8 +30,8 @@ export default async function StaffAccountPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={t("staffAccount.title")}
-        description={t("staffAccount.description")}
+        title={t("staff.account.title")}
+        description={t("staff.account.description")}
       />
 
       <Card>
@@ -49,7 +49,7 @@ export default async function StaffAccountPage() {
           <dl className="grid grid-cols-1 gap-x-6 gap-y-4 text-sm sm:grid-cols-2">
             <div>
               <dt className="text-stone-500 dark:text-slate-400">
-                {t("staffAccount.fullName")}
+                {t("staff.account.fullName")}
               </dt>
               <dd className="mt-0.5 font-medium text-stone-900 dark:text-stone-100">
                 {profile.full_name || "—"}
@@ -57,7 +57,7 @@ export default async function StaffAccountPage() {
             </div>
             <div>
               <dt className="text-stone-500 dark:text-slate-400">
-                {t("staffAccount.email")}
+                {t("staff.account.email")}
               </dt>
               <dd className="mt-0.5 font-medium text-stone-900 dark:text-stone-100">
                 {profile.email || "—"}
@@ -65,7 +65,7 @@ export default async function StaffAccountPage() {
             </div>
             <div>
               <dt className="text-stone-500 dark:text-slate-400">
-                {t("staffAccount.phone")}
+                {t("staff.account.phone")}
               </dt>
               <dd className="mt-0.5 font-medium text-stone-900 dark:text-stone-100">
                 {profile.phone || "—"}
@@ -73,7 +73,7 @@ export default async function StaffAccountPage() {
             </div>
             <div>
               <dt className="text-stone-500 dark:text-slate-400">
-                {t("staffAccount.role")}
+                {t("staff.account.role")}
               </dt>
               <dd className="mt-0.5 font-medium text-stone-900 dark:text-stone-100">
                 {roleLabel}
@@ -81,7 +81,7 @@ export default async function StaffAccountPage() {
             </div>
             <div>
               <dt className="text-stone-500 dark:text-slate-400">
-                {t("staffAccount.badgeId")}
+                {t("staff.account.badgeId")}
               </dt>
               <dd className="mt-0.5 font-medium text-stone-900 dark:text-stone-100">
                 {staffProfile.badge_id || "—"}
@@ -90,7 +90,7 @@ export default async function StaffAccountPage() {
             {staffProfile.staff_role === "agent" && (
               <div>
                 <dt className="text-stone-500 dark:text-slate-400">
-                  {t("staffAccount.agentApplication")}
+                  {t("staff.account.agentApplication")}
                 </dt>
                 <dd className="mt-0.5 font-medium text-stone-900 dark:text-stone-100">
                   {applicationStatusLabel(staffProfile.application_status, t)}
@@ -99,7 +99,7 @@ export default async function StaffAccountPage() {
             )}
             <div>
               <dt className="text-stone-500 dark:text-slate-400">
-                {t("staffAccount.verification")}
+                {t("staff.account.verification")}
               </dt>
               <dd className="mt-1">
                 <VerificationStatusBadge status={profile.verification_status} />
@@ -107,7 +107,7 @@ export default async function StaffAccountPage() {
             </div>
             <div>
               <dt className="text-stone-500 dark:text-slate-400">
-                {t("staffAccount.memberSince")}
+                {t("staff.account.memberSince")}
               </dt>
               <dd className="mt-0.5 font-medium text-stone-900 dark:text-stone-100">
                 {formatDate(profile.created_at)}
@@ -116,7 +116,7 @@ export default async function StaffAccountPage() {
             {profile.address && (
               <div className="sm:col-span-2">
                 <dt className="text-stone-500 dark:text-slate-400">
-                  {t("staffAccount.address")}
+                  {t("staff.account.address")}
                 </dt>
                 <dd className="mt-0.5 font-medium text-stone-900 dark:text-stone-100">
                   {profile.address}

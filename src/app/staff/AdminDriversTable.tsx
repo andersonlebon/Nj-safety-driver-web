@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Eye, Users } from "lucide-react";
 import { PaginatedTableFrame } from "@/components/table";
 import { Button } from "@/components/ui/Button";
 import { CountryBadge } from "@/components/vehicles/CountryBadge";
 import { formatDate } from "@/lib/utils";
+import { useI18n } from "@/i18n/context";
 import type { TableQuery } from "@/lib/pagination";
 import { DriverDetailModal } from "./DriverDetailModal";
 import { VerificationStatusBadge } from "./DriverVerificationPanel";
@@ -17,13 +18,6 @@ type DriverVehicle = Pick<
   Database["public"]["Tables"]["vehicles"]["Row"],
   "id" | "plate_number" | "registration_country" | "brand" | "model" | "verification_status"
 >;
-
-const VERIFICATION_FILTER_OPTIONS = [
-  { value: "active", label: "Active" },
-  { value: "pending_review", label: "Pending review" },
-  { value: "pending_documents", label: "Pending documents" },
-  { value: "rejected", label: "Rejected" },
-];
 
 export function AdminDriversTable({
   pathname,
@@ -48,6 +42,17 @@ export function AdminDriversTable({
   vehiclesByDriver?: Record<string, DriverVehicle[]>;
   canManageDrivers?: boolean;
 }) {
+  const { t } = useI18n();
+  const emDash = t("staff.shared.emDash");
+  const verificationFilterOptions = useMemo(
+    () => [
+      { value: "active", label: t("staff.drivers.table.filterActive") },
+      { value: "pending_review", label: t("staff.drivers.table.filterPendingReview") },
+      { value: "pending_documents", label: t("staff.drivers.table.filterPendingDocuments") },
+      { value: "rejected", label: t("staff.drivers.table.filterRejected") },
+    ],
+    [t]
+  );
   const [selected, setSelected] = useState<Driver | null>(null);
 
   const open = (driver: Driver) => setSelected(driver);
@@ -60,25 +65,25 @@ export function AdminDriversTable({
         query={query}
         totalCount={totalCount}
         preserveParams={preserveParams}
-        statusOptions={VERIFICATION_FILTER_OPTIONS}
-        statusLabel="Verification"
-        searchPlaceholder="Name, email, phone, license…"
+        statusOptions={verificationFilterOptions}
+        statusLabel={t("staff.drivers.table.statusLabel")}
+        searchPlaceholder={t("staff.drivers.table.searchPlaceholder")}
         emptyIcon={<Users className="h-8 w-8" />}
-        emptyTitle="No drivers"
-        unfilteredHint={`${totalCount} driver${totalCount === 1 ? "" : "s"}`}
+        emptyTitle={t("staff.drivers.table.emptyTitle")}
+        unfilteredHint={t("staff.drivers.table.unfilteredHint", { count: totalCount })}
       >
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-stone-500 dark:text-slate-400 border-b border-stone-200 dark:border-slate-800">
               <tr>
-                <th className="py-2 pr-4 font-medium">Name</th>
-                <th className="py-2 pr-4 font-medium">Email</th>
-                <th className="py-2 pr-4 font-medium">Phone</th>
-                <th className="py-2 pr-4 font-medium">Nationality</th>
-                <th className="py-2 pr-4 font-medium">License #</th>
-                <th className="py-2 pr-4 font-medium">Joined</th>
-                <th className="py-2 pr-4 font-medium">Verification</th>
-                <th className="py-2 pr-4 font-medium w-28">Actions</th>
+                <th className="py-2 pr-4 font-medium">{t("staff.drivers.table.name")}</th>
+                <th className="py-2 pr-4 font-medium">{t("staff.drivers.table.email")}</th>
+                <th className="py-2 pr-4 font-medium">{t("staff.drivers.table.phone")}</th>
+                <th className="py-2 pr-4 font-medium">{t("staff.drivers.table.nationality")}</th>
+                <th className="py-2 pr-4 font-medium">{t("staff.drivers.table.license")}</th>
+                <th className="py-2 pr-4 font-medium">{t("staff.drivers.table.joined")}</th>
+                <th className="py-2 pr-4 font-medium">{t("staff.drivers.table.verification")}</th>
+                <th className="py-2 pr-4 font-medium w-28">{t("staff.drivers.table.actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -89,19 +94,19 @@ export function AdminDriversTable({
                   onClick={() => open(d)}
                 >
                   <td className="py-2 pr-4 font-medium text-stone-900 dark:text-stone-100">
-                    {d.full_name || "—"}
+                    {d.full_name || emDash}
                   </td>
                   <td className="py-2 pr-4 text-stone-700 dark:text-slate-300">
-                    {d.email || "—"}
+                    {d.email || emDash}
                   </td>
                   <td className="py-2 pr-4 text-stone-700 dark:text-slate-300">
-                    {d.phone || "—"}
+                    {d.phone || emDash}
                   </td>
                   <td className="py-2 pr-4">
                     <CountryBadge code={d.nationality_country ?? "GA"} />
                   </td>
                   <td className="py-2 pr-4 text-stone-700 dark:text-slate-300">
-                    {d.driver_license || "—"}
+                    {d.driver_license || emDash}
                   </td>
                   <td className="py-2 pr-4 text-stone-700 dark:text-slate-300">
                     {formatDate(d.created_at)}
@@ -118,7 +123,7 @@ export function AdminDriversTable({
                       onClick={() => open(d)}
                     >
                       <Eye className="h-3.5 w-3.5 mr-1" />
-                      View details
+                      {t("staff.drivers.table.viewDetails")}
                     </Button>
                   </td>
                 </tr>

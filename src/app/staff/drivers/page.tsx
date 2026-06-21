@@ -6,6 +6,7 @@ import { Card, CardBody } from "@/components/ui/Card";
 import { parseTableQuery } from "@/lib/pagination";
 import { AdminDriversTable } from "@/app/staff/AdminDriversTable";
 import { loadDriverDirectoryPaginated } from "@/lib/queries/drivers";
+import { getTranslations } from "@/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -18,12 +19,13 @@ export default async function AgentDriversPage({
   const supabase = createClient();
   const tableQuery = parseTableQuery(searchParams);
   const pageData = await loadDriverDirectoryPaginated(supabase, tableQuery);
+  const { t } = await getTranslations();
 
   return (
     <div>
       <PageHeader
-        title="Drivers"
-        description="View driver profiles, documents, and registered vehicle plates."
+        title={t("staff.drivers.page.title")}
+        description={t("staff.drivers.page.description")}
       />
       <Card>
         <CardBody>
@@ -33,7 +35,7 @@ export default async function AgentDriversPage({
             totalCount={pageData.totalCount}
             drivers={pageData.rows}
             staffId={me.id}
-            staffName={me.full_name ?? me.email ?? "Staff member"}
+            staffName={me.full_name ?? me.email ?? t("staff.shared.staffMemberFallback")}
             staffRole={staffProfile.staff_role}
             vehiclesByDriver={pageData.vehiclesByDriver}
             canManageDrivers={false}

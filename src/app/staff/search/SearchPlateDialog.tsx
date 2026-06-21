@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { PlateScanField } from "@/components/camera/PlateScanField";
 import { COUNTRIES, DEFAULT_COUNTRY } from "@/lib/countries";
 import { normalizePlateForCountry } from "@/lib/vehicles";
+import { useI18n } from "@/i18n/context";
 
 export function SearchPlateDialog({
   initialPlate,
@@ -18,6 +19,7 @@ export function SearchPlateDialog({
   initialCountry?: string;
 }) {
   const router = useRouter();
+  const { t } = useI18n();
   const [plate, setPlate] = useState(initialPlate ?? "");
   const [country, setCountry] = useState(initialCountry ?? DEFAULT_COUNTRY);
 
@@ -35,11 +37,11 @@ export function SearchPlateDialog({
       triggerLabel={
         <>
           <Search className="h-4 w-4 mr-1.5" />
-          Scan / search plate
+          {t("staff.search.dialog.trigger")}
         </>
       }
-      title="Plate search & scan"
-      description="Use the camera to capture a plate, then check fines and vehicle history."
+      title={t("staff.search.dialog.title")}
+      description={t("staff.search.dialog.description")}
       modalClassName="max-w-md"
     >
       {({ close }) => (
@@ -51,7 +53,7 @@ export function SearchPlateDialog({
           }}
         >
           <Select
-            label="Plate country"
+            label={t("staff.search.dialog.plateCountry")}
             value={country}
             onChange={(e) => setCountry(e.target.value)}
           >
@@ -63,7 +65,7 @@ export function SearchPlateDialog({
           </Select>
           <PlateScanField value={plate} onChange={setPlate} />
           <Button type="submit" className="w-full">
-            Search & check fines
+            {t("staff.search.dialog.submit")}
           </Button>
         </form>
       )}

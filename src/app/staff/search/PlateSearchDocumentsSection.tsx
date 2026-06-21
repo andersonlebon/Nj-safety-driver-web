@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp, Shield } from "lucide-react";
 import { Card, CardBody, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { StaffDocumentsLoader } from "@/components/documents/StaffDocumentsLoader";
+import { useI18n } from "@/i18n/context";
 
 type Props = {
   ownerId?: string | null;
@@ -12,6 +13,7 @@ type Props = {
 };
 
 export function PlateSearchDocumentsSection({ ownerId, vehicleId }: Props) {
+  const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
 
   if (!ownerId && !vehicleId) {
@@ -24,11 +26,10 @@ export function PlateSearchDocumentsSection({ ownerId, vehicleId }: Props) {
         <div className="min-w-0 flex-1">
           <CardTitle className="flex items-center gap-2">
             <Shield className="h-4 w-4 text-stone-500 dark:text-slate-400" />
-            Documents
+            {t("staff.search.results.documentsTitle")}
           </CardTitle>
           <CardDescription>
-            Driver ID and vehicle registration files on file.
-            {!expanded ? " Expand to view all uploads." : null}
+            {t("staff.search.results.documentsDescriptionCollapsed")}
           </CardDescription>
         </div>
         <Button
@@ -41,12 +42,12 @@ export function PlateSearchDocumentsSection({ ownerId, vehicleId }: Props) {
         >
           {expanded ? (
             <>
-              Collapse
+              {t("staff.search.results.collapse")}
               <ChevronUp className="h-4 w-4" />
             </>
           ) : (
             <>
-              Expand
+              {t("staff.search.results.expand")}
               <ChevronDown className="h-4 w-4" />
             </>
           )}
@@ -57,7 +58,7 @@ export function PlateSearchDocumentsSection({ ownerId, vehicleId }: Props) {
           <StaffDocumentsLoader
             ownerId={ownerId}
             vehicleId={vehicleId}
-            title="Driver and vehicle files"
+            title={t("staff.search.results.loaderTitle")}
             sectionId="plate-search-documents"
           />
         </CardBody>

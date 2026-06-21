@@ -9,12 +9,15 @@ import { VehicleDetailContent } from "@/components/vehicles/VehicleDetailContent
 import { signDocumentPaths } from "@/lib/storage-urls";
 import type { TrackingEvent } from "@/lib/tracking";
 
+import { getTranslations } from "@/i18n/server";
+
 export default async function DriverVehicleDetailPage({
   params,
 }: {
   params: { id: string };
 }) {
   const { profile } = await requireDriverProfile();
+  const { t } = await getTranslations();
   const supabase = createClient();
 
   const { data: vehicle } = await supabase
@@ -72,14 +75,14 @@ export default async function DriverVehicleDetailPage({
     <div className="space-y-6">
       <PageHeader
         title={vehicle.plate_number}
-        description="Vehicle registration, fines, and tracking history."
+        description={t("driver.vehicles.detail.description")}
         actions={
           <Link
             href="/driver/vehicles"
             className="inline-flex items-center gap-1.5 text-sm text-brand-700 dark:text-brand-300 hover:underline"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to vehicles
+            {t("driver.vehicles.detail.backLink")}
           </Link>
         }
       />

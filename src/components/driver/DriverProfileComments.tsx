@@ -12,6 +12,7 @@ import {
 } from "@/lib/driver-profile-comments";
 import { formatDateTime } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/context";
 
 type Viewer = {
   role: "staff" | "driver";
@@ -47,6 +48,7 @@ export function DriverProfileComments({
   embedded = false,
   fillHeight = false,
 }: Props) {
+  const { t } = useI18n();
   const [comments, setComments] = useState<DriverProfileComment[]>([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +70,7 @@ export function DriverProfileComments({
     e.preventDefault();
     const trimmed = message.trim();
     if (!trimmed) {
-      setError("Write a comment before sending.");
+      setError(t("driver.profile.chat.errorEmpty"));
       return;
     }
 
@@ -96,7 +98,7 @@ export function DriverProfileComments({
         <div className="flex items-center gap-2 mb-4">
           <MessageSquare className="h-4 w-4 text-brand-600 dark:text-brand-400" />
           <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
-            Chat with staff
+            {t("driver.profile.chat.title")}
           </h3>
         </div>
       )}
@@ -114,7 +116,7 @@ export function DriverProfileComments({
           )}
         >
           {loading ? (
-            <div className="animate-pulse space-y-3" aria-label="Loading comments">
+            <div className="animate-pulse space-y-3" aria-label={t("driver.profile.chat.loadingAria")}>
               <div className="flex gap-3">
                 <div className="h-9 w-9 shrink-0 rounded-full bg-stone-200 dark:bg-slate-800" />
                 <div className="h-14 flex-1 max-w-[70%] rounded-xl bg-stone-100 dark:bg-slate-800/70" />
@@ -126,13 +128,14 @@ export function DriverProfileComments({
             </div>
           ) : comments.length === 0 ? (
             <p className="text-sm text-stone-500 dark:text-slate-400">
-              No comments yet. Start the conversation with the driver here.
+              {t("driver.profile.chat.empty")}
             </p>
           ) : (
             comments.map((comment, index) => {
               const isStaffMessage = Boolean(comment.staffName);
               const label = commentSenderLabel(comment, viewer);
-              const displayLabel = label === "me" ? "You" : label;
+              const displayLabel =
+                label === "me" ? t("driver.profile.chat.senderYou") : label;
               const alignEnd = commentAlignEnd(comment, viewer);
 
               return (
@@ -197,17 +200,17 @@ export function DriverProfileComments({
         >
           {error && <Alert variant="error">{error}</Alert>}
           <Textarea
-            label="Add a comment"
+            label={t("driver.profile.chat.formLabel")}
             name="profile_comment"
             rows={3}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder="Ask for missing documents, clarify details, or leave a note for the driver…"
+            placeholder={t("driver.profile.chat.formPlaceholder")}
           />
           <div className="flex justify-end">
             <Button type="submit" loading={pending} className="text-sm py-2 px-3">
               <Send className="h-4 w-4 mr-1.5" />
-              Send comment
+              {t("driver.profile.chat.formSend")}
             </Button>
           </div>
         </form>

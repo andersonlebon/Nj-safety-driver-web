@@ -17,6 +17,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { requireStaffProfile } from "@/lib/auth";
 import { loadTransactionsForInfractionIds } from "@/lib/queries/infractions";
 import { AgentRecentInfractionsTable } from "./AgentRecentInfractionsTable";
+import { getTranslations } from "@/i18n/server";
 import type { PaymentStatus } from "@/lib/types/database";
 
 type InfractionRow = {
@@ -38,6 +39,7 @@ type InfractionRow = {
 
 export async function AgentOverviewPage() {
   const { profile } = await requireStaffProfile();
+  const { t } = await getTranslations();
   const supabase = createClient();
 
   const [
@@ -68,26 +70,26 @@ export async function AgentOverviewPage() {
   return (
     <div>
       <PageHeader
-        title="Agent overview"
-        description="Quickly find vehicles and review your issuing activity."
+        title={t("staff.overview.agent.title")}
+        description={t("staff.overview.agent.description")}
         actions={
           <Link href="/staff/search" className="btn-primary">
             <Search className="h-4 w-4" />
-            Plate search
+            {t("staff.overview.agent.plateSearchAction")}
           </Link>
         }
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <KpiCard
-          label="Total infractions"
+          label={t("staff.overview.agent.totalInfractions")}
           value={totalInfractions ?? 0}
           icon={<AlertTriangle className="h-4 w-4" />}
           accent="navy"
-          hint="System-wide"
+          hint={t("staff.overview.agent.systemWideHint")}
         />
         <KpiCard
-          label="Issued by you"
+          label={t("staff.overview.agent.issuedByYou")}
           value={mine.length}
           icon={<FileCheck className="h-4 w-4" />}
           accent="brand"
@@ -100,21 +102,29 @@ export async function AgentOverviewPage() {
             <CardTitle>
               <span className="inline-flex items-center gap-2">
                 <BarChart3 className="h-4 w-4 text-brand-700 dark:text-brand-400" />
-                Your activity — last 8 weeks
+                {t("staff.overview.agent.activityTitle")}
               </span>
             </CardTitle>
             <span className="text-xs text-stone-500 dark:text-slate-400">
-              {weekly.reduce((s, w) => s + w.value, 0)} infractions
+              {t("staff.overview.agent.infractionsCount", {
+                count: weekly.reduce((s, w) => s + w.value, 0),
+              })}
             </span>
           </CardHeader>
           <CardBody>
             <BarChartCard
               data={weekly}
-              series={[{ key: "value", label: "Infractions", color: chartColors.brand }]}
+              series={[
+                {
+                  key: "value",
+                  label: t("staff.overview.agent.seriesInfractions"),
+                  color: chartColors.brand,
+                },
+              ]}
               valueFormat="number"
               tickFormat="week"
               labelFormat="date"
-              ariaLabel="Infractions issued by you per week, last 8 weeks"
+              ariaLabel={t("staff.overview.agent.ariaWeeklyActivity")}
             />
           </CardBody>
         </Card>
@@ -124,25 +134,33 @@ export async function AgentOverviewPage() {
             <CardTitle>
               <span className="inline-flex items-center gap-2">
                 <ListOrdered className="h-4 w-4 text-navy-700 dark:text-navy-300" />
-                Top 5 infraction types
+                {t("staff.overview.agent.topTypesTitle")}
               </span>
             </CardTitle>
-            <span className="text-xs text-stone-500 dark:text-slate-400">All-time</span>
+            <span className="text-xs text-stone-500 dark:text-slate-400">
+              {t("staff.overview.agent.allTime")}
+            </span>
           </CardHeader>
           <CardBody>
             {topTypes.length === 0 ? (
               <EmptyState
-                title="Nothing to show yet"
-                description="Start issuing infractions to populate this chart."
+                title={t("staff.overview.agent.emptyTitle")}
+                description={t("staff.overview.agent.emptyDescription")}
               />
             ) : (
               <BarChartCard
                 data={topTypes}
-                series={[{ key: "value", label: "Count", color: chartColors.navy }]}
+                series={[
+                  {
+                    key: "value",
+                    label: t("staff.overview.agent.seriesCount"),
+                    color: chartColors.navy,
+                  },
+                ]}
                 layout="horizontal"
                 valueFormat="number"
                 tickFormat="raw"
-                ariaLabel="Top 5 infraction types you have issued"
+                ariaLabel={t("staff.overview.agent.ariaTopTypes")}
               />
             )}
           </CardBody>
@@ -152,19 +170,19 @@ export async function AgentOverviewPage() {
       <div className="mt-4">
         <Card>
           <CardHeader>
-            <CardTitle>Recent infractions</CardTitle>
+            <CardTitle>{t("staff.overview.agent.recentInfractionsTitle")}</CardTitle>
             <Link
               href="/staff/infractions"
               className="text-sm font-medium text-brand-700 dark:text-brand-400 hover:underline"
             >
-              View all
+              {t("staff.overview.agent.viewAll")}
             </Link>
           </CardHeader>
           <CardBody>
             {recent.length === 0 ? (
               <EmptyState
-                title="No infractions yet"
-                description="Use the plate search to look up a vehicle and create one."
+                title={t("staff.overview.agent.noInfractionsTitle")}
+                description={t("staff.overview.agent.noInfractionsDescription")}
               />
             ) : (
               <AgentRecentInfractionsTable

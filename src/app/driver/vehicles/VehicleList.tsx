@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
 import { CountryBadge } from "@/components/vehicles/CountryBadge";
 import { VehicleDetailModal } from "@/components/vehicles/VehicleDetailModal";
-import { VERIFICATION_LABELS } from "@/lib/verification";
+import { useI18n } from "@/i18n/context";
+import { verificationStatusLabel } from "@/i18n/labels";
 import type { TrackingEvent } from "@/lib/tracking";
 import type { Database } from "@/lib/types/database";
 
@@ -26,6 +27,7 @@ export function VehicleList({
   photoUrls: Record<string, string>;
   lastLocations?: Record<string, { location: string; at: string }>;
 }) {
+  const { t } = useI18n();
   const router = useRouter();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -72,7 +74,7 @@ export function VehicleList({
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm("Delete this vehicle? This cannot be undone.")) return;
+    if (!confirm(t("driver.vehicles.card.confirmDelete"))) return;
     setDeletingId(id);
     setError(null);
     const supabase = createClient();
@@ -126,7 +128,7 @@ export function VehicleList({
                   </div>
                 )}
                 <span className={`absolute top-2 right-2 ${statusClass}`}>
-                  {VERIFICATION_LABELS[status]}
+                  {verificationStatusLabel(t, status)}
                 </span>
               </div>
               <div className="p-4 space-y-2">
@@ -139,11 +141,11 @@ export function VehicleList({
                 <p className="text-sm text-stone-600 dark:text-slate-400">
                   {[v.brand, v.model, v.color, v.year]
                     .filter(Boolean)
-                    .join(" • ") || "—"}
+                    .join(" • ") || t("driver.infractions.emptyValue")}
                 </p>
                 {lastLocations?.[v.id] && (
                   <p className="text-xs text-stone-500 dark:text-slate-400 flex items-start gap-1">
-                    <span className="shrink-0">Last seen:</span>
+                    <span className="shrink-0">{t("driver.vehicles.card.lastSeen")}</span>
                     <span>{lastLocations[v.id].location}</span>
                   </p>
                 )}
@@ -153,14 +155,14 @@ export function VehicleList({
                       v.insurance_status ? "badge-paid" : "badge-unpaid"
                     }
                   >
-                    Insurance
+                    {t("driver.vehicles.card.insurance")}
                   </span>
                   <span
                     className={
                       v.inspection_status ? "badge-paid" : "badge-unpaid"
                     }
                   >
-                    Inspection
+                    {t("driver.vehicles.card.inspection")}
                   </span>
                 </div>
                 <div className="pt-2 flex justify-between items-center">
@@ -169,7 +171,7 @@ export function VehicleList({
                     onClick={(e) => e.stopPropagation()}
                     className="text-xs text-brand-700 dark:text-brand-300 hover:underline inline-flex items-center gap-1"
                   >
-                    Full page
+                    {t("driver.vehicles.card.fullPage")}
                     <ExternalLink className="h-3 w-3" />
                   </Link>
                   <Button
@@ -177,7 +179,7 @@ export function VehicleList({
                     type="button"
                     onClick={(e) => handleDelete(v.id, e)}
                     loading={deletingId === v.id}
-                    aria-label="Delete vehicle"
+                    aria-label={t("driver.vehicles.card.deleteAria")}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

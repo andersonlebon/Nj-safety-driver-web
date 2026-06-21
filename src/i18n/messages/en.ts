@@ -1,10 +1,15 @@
+import { sharedEn } from "@/i18n/messages/catalog/shared.en";
+import { staffEn } from "@/i18n/messages/catalog/staff.en";
+import { driverEn } from "@/i18n/messages/catalog/driver.en";
+import { landingEn } from "@/i18n/messages/catalog/landing.en";
+
 export const en = {
   app: {
     name: "NJ-Drive",
     legacyName: "NJ Safety Driver",
     tagline: "République Gabonaise",
     description:
-      "Road safety management platform for drivers, agents, and administrators.",
+      "Road safety management platform for drivers and field agents.",
   },
   common: {
     back: "Back",
@@ -29,6 +34,10 @@ export const en = {
     deliveredDate: "Delivered date",
     expirationDate: "Expiration date",
     files: "files",
+    submit: "Submit",
+    pleaseWait: "Please wait…",
+    formProgress: "Form progress",
+    loadingPage: "Loading",
   },
   language: {
     label: "Language",
@@ -96,6 +105,11 @@ export const en = {
     firstTimeSetup: "First-time setup",
     bootstrapHint:
       "No administrator yet — create the first one to bootstrap the system.",
+    noSession:
+      "Authentication succeeded but no session was created. Please try again.",
+    profile: sharedEn.authProfile,
+    agentRegister: sharedEn.authAgentRegister,
+    driverRegister: sharedEn.authDriverRegister,
   },
   evidence: {
     unsupportedFileType:
@@ -201,24 +215,40 @@ export const en = {
     partialUpload: "{done}/{total} files",
     replaceDocument: "Replace",
   },
-  staffAccount: {
-    title: "Account",
-    description: "Your staff profile and contact details.",
-    fullName: "Full name",
-    email: "Email",
-    phone: "Phone",
-    role: "Role",
-    badgeId: "Badge ID",
-    agentApplication: "Agent application",
-    verification: "Verification status",
-    memberSince: "Member since",
-    address: "Address",
-    applicationStatus: {
-      pending: "Pending review",
-      approved: "Approved",
-      rejected: "Rejected",
+  status: {
+    ...sharedEn.status,
+    transaction: {
+      initialized: sharedEn.status.payment.initialized,
     },
   },
+  tables: {
+    ...sharedEn.tables,
+    clearFiltersHint: sharedEn.tables.filterHint,
+  },
+  errors: {
+    global: sharedEn.errors.global,
+    notFound: sharedEn.errors.notFound,
+    somethingWentWrong: sharedEn.errors.global.somethingWentWrong,
+    connectionIssue: sharedEn.errors.global.connectionIssue,
+    unexpected: sharedEn.errors.global.unexpected,
+    reloadNow: sharedEn.errors.global.reloadNow,
+    tryAgain: sharedEn.errors.global.tryAgain,
+    notFoundTitle: sharedEn.errors.notFound.title,
+    notFoundDescription: sharedEn.errors.notFound.description,
+    goHome: sharedEn.errors.notFound.goHome,
+  },
+  theme: sharedEn.theme,
+  camera: sharedEn.camera,
+  comments: sharedEn.comments,
+  infractions: sharedEn.infractions,
+  vehicles: sharedEn.vehicles,
+  charts: sharedEn.charts,
+  setup: sharedEn.setup,
+  landing: landingEn,
+  staff: staffEn,
+  driver: driverEn,
+  staffVerification: staffEn.verification,
+  staffAccount: staffEn.account,
 } as const;
 
 type DeepStringRecord<T> = {
