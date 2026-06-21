@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FileWarning } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -22,11 +22,12 @@ import { formatCurrency } from "@/lib/utils";
 import { COUNTRIES, DEFAULT_COUNTRY } from "@/lib/countries";
 import { normalizePlateForCountry } from "@/lib/vehicles";
 import {
+  CUSTOM_INFRACTION_TEMPLATE_CODE,
   INFRACTION_TEMPLATES,
+  mergeInfractionTemplateOptions,
   type InfractionTemplate,
 } from "@/lib/infraction-templates";
 import { fileInfraction } from "@/app/staff/actions";
-import type { PaymentStatus } from "@/lib/types/database";
 
 const DETAIL_STEPS = ["Violation", "Evidence", "Review"];
 type TemplateOption = Pick<
@@ -51,7 +52,11 @@ export function CreateInfractionDialog({
   templates?: readonly TemplateOption[];
 }) {
   const router = useRouter();
-  const defaultTemplate = templates[0] ?? INFRACTION_TEMPLATES[0];
+  const templateOptions = useMemo(
+    () => mergeInfractionTemplateOptions(templates),
+    [templates]
+  );
+  const defaultTemplate = templateOptions[0] ?? INFRACTION_TEMPLATES[0];
   const steps = includePlateStep
     ? ["Plate", ...DETAIL_STEPS]
     : DETAIL_STEPS;
@@ -78,7 +83,6 @@ export function CreateInfractionDialog({
     description: "",
     location: "",
     fine_amount: String(defaultTemplate.amount),
-    status: "unpaid" as PaymentStatus,
   });
   const [evidence, setEvidence] = useState<EvidenceSlotValue>({
     file: null,
@@ -97,9 +101,16 @@ export function CreateInfractionDialog({
   };
 
   const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const code = e.target.value;
+    if (code === CUSTOM_INFRACTION_TEMPLATE_CODE) {
+      setForm((prev) => ({
+        ...prev,
+        infraction_template_code: code,
+      }));
+      return;
+    }
     const template =
-      templates.find((option) => option.code === e.target.value) ??
-      defaultTemplate;
+      templateOptions.find((option) => option.code === code) ?? defaultTemplate;
     setForm((prev) => ({
       ...prev,
       infraction_template_code: template.code,
@@ -131,8 +142,9 @@ export function CreateInfractionDialog({
       if (!plateInput.trim()) return "Plate is required.";
       return null;
     }
-    if (detailStep === 0 && !form.fine_amount) {
-      return "Select an infraction template.";
+    if (detailStep === 0) {
+      if (!form.infraction_type.trim()) return "Infraction type is required.";
+      if (!form.fine_amount) return "Enter a fine amount.";
     }
     return null;
   };
@@ -173,7 +185,7 @@ export function CreateInfractionDialog({
       description: form.description,
       location: form.location,
       fine_amount: form.fine_amount,
-      status: form.status,
+      status: "unpaid",
       evidence_path: evidencePath,
     });
 
@@ -193,7 +205,6 @@ export function CreateInfractionDialog({
       description: "",
       location: "",
       fine_amount: String(defaultTemplate.amount),
-      status: "unpaid",
     });
     setEvidence({ file: null, previewUrl: null });
     router.refresh();
@@ -243,19 +254,32 @@ export function CreateInfractionDialog({
           {detailStep === 0 && (!includePlateStep || step > 0) && (
             <div className="space-y-4 mt-4">
               <Select
-                label="Infraction type"
+                label="Infraction template"
                 name="infraction_template_code"
                 value={form.infraction_template_code}
                 onChange={handleTemplateChange}
               >
-                {templates.map((template) => (
+                {templateOptions.map((template) => (
                   <option key={template.code} value={template.code}>
                     {template.label} — {formatCurrency(template.amount)}
                   </option>
                 ))}
+                <option value={CUSTOM_INFRACTION_TEMPLATE_CODE}>
+                  Custom type (not in list yet)
+                </option>
               </Select>
+              <Input
+                label="Infraction type"
+                name="infraction_type"
+                value={form.infraction_type}
+                onChange={handleChange("infraction_type")}
+                placeholder="e.g. Speeding, Illegal parking"
+                required
+              />
               <p className="text-xs text-stone-500 dark:text-slate-400">
-                Amounts and points are managed by the prebuilt infraction library.
+                Templates from admin settings appear above. Built-in types stay available
+                until they are added to the library. The type you enter is stored on the
+                infraction record.
               </p>
               <Textarea
                 label="Description"
@@ -278,20 +302,12 @@ export function CreateInfractionDialog({
                   step="0.01"
                   name="fine_amount"
                   value={form.fine_amount}
-                  readOnly
+                  readOnly={
+                    form.infraction_template_code !== CUSTOM_INFRACTION_TEMPLATE_CODE
+                  }
                   required
                 />
               </div>
-              <Select
-                label="Payment status"
-                name="status"
-                value={form.status}
-                onChange={handleChange("status")}
-              >
-                <option value="unpaid">Unpaid</option>
-                <option value="pending">Pending</option>
-                <option value="paid">Paid</option>
-              </Select>
             </div>
           )}
 

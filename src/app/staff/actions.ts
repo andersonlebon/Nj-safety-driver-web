@@ -184,6 +184,12 @@ export async function fileInfraction(input: FileInfractionInput): Promise<StaffA
     if (!input.infraction_type.trim()) return { ok: false, error: "Infraction type is required." };
 
     const supabase = createClient();
+    const infractionType = input.infraction_type.trim();
+    const fineAmount = Number(input.fine_amount);
+    if (!Number.isFinite(fineAmount) || fineAmount < 0) {
+      return { ok: false, error: "Enter a valid fine amount." };
+    }
+
     const { data: dbTemplate } = await supabase
       .from("infraction_templates")
       .select("code, label, amount, points, category, active")
@@ -191,12 +197,11 @@ export async function fileInfraction(input: FileInfractionInput): Promise<StaffA
       .eq("active", true)
       .maybeSingle();
     const template = dbTemplate ?? findInfractionTemplate(input.infraction_template_code);
-    if (!template) return { ok: false, error: "Select a valid infraction template." };
-    if (input.infraction_type !== template.label || Number(input.fine_amount) !== Number(template.amount)) {
-      return { ok: false, error: "Infraction amount must match the selected prebuilt template." };
+    if (template && fineAmount !== Number(template.amount)) {
+      return { ok: false, error: "Fine amount must match the selected infraction template." };
     }
 
-    const infractionStatus: PaymentStatus = input.status === "paid" ? "paid" : "unpaid";
+    const infractionStatus: PaymentStatus = "unpaid";
     const { data: inserted, error } = await supabase
       .from("infractions")
       .insert({
@@ -205,10 +210,10 @@ export async function fileInfraction(input: FileInfractionInput): Promise<StaffA
         vehicle_id: input.vehicle_id,
         driver_id: input.driver_id,
         agent_id: staff.id,
-        infraction_type: template.label,
+        infraction_type: infractionType,
         description: input.description.trim() || null,
         location: input.location.trim() || null,
-        fine_amount: Number(template.amount),
+        fine_amount: fineAmount,
         status: infractionStatus,
         evidence_path: input.evidence_path,
       })
@@ -220,8 +225,8 @@ export async function fileInfraction(input: FileInfractionInput): Promise<StaffA
     if (inserted?.id) {
       const { error: transactionError } = await supabase.from("transactions").insert({
         infraction_id: inserted.id,
-        amount: Number(template.amount),
-        status: input.status,
+        amount: fineAmount,
+        status: "unpaid",
       });
       if (transactionError) {
         return { ok: false, error: `Infraction filed but transaction failed: ${friendlyError(transactionError)}` };

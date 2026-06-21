@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { normalizePlateForCountry } from "@/lib/vehicles";
 import { DEFAULT_COUNTRY } from "@/lib/countries";
 import { lastKnownLocation, type TrackingEvent } from "@/lib/tracking";
+import { signDocumentPaths } from "@/lib/storage-urls";
 import { LogVehicleCheckIn } from "@/components/tracking/LogVehicleCheckIn";
 import { SearchPlateDialog } from "./SearchPlateDialog";
 import { CreateInfractionDialog } from "./CreateInfractionDialog";
@@ -62,13 +63,30 @@ export default async function StaffSearchPage({
 
   const vehicle = vehicleResult.data;
   let owner = null;
-  if (vehicle?.owner_id) {
-    const { data: o } = await supabase
-      .from("profiles")
-      .select("id, full_name, phone, email, national_id, driver_license, address")
-      .eq("id", vehicle.owner_id)
-      .maybeSingle();
-    owner = o;
+  let vehiclePhotoUrl: string | null = null;
+
+  if (vehicle?.id) {
+    const [ownerResult, photoResult] = await Promise.all([
+      vehicle.owner_id
+        ? supabase
+            .from("profiles")
+            .select("id, full_name, phone, email, national_id, driver_license, address")
+            .eq("id", vehicle.owner_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+      supabase
+        .from("documents")
+        .select("file_path")
+        .eq("vehicle_id", vehicle.id)
+        .eq("doc_type", "vehicle_photo")
+        .eq("label", "front")
+        .maybeSingle(),
+    ]);
+    owner = ownerResult.data;
+    if (photoResult.data?.file_path) {
+      const signed = await signDocumentPaths([photoResult.data.file_path]);
+      vehiclePhotoUrl = signed[photoResult.data.file_path] ?? null;
+    }
   }
 
   const infractions = infractionsResult.data ?? [];
@@ -127,6 +145,7 @@ export default async function StaffSearchPage({
           infractions={infractions}
           trackingEvents={trackingEvents}
           lastLocation={lastLocation}
+          vehiclePhotoUrl={vehiclePhotoUrl}
           checkInAction={
             <LogVehicleCheckIn
               plate={plate}

@@ -4,7 +4,6 @@ import {
   ClipboardList,
   MapPin,
   Search,
-  Shield,
   User,
   Wallet,
 } from "lucide-react";
@@ -13,7 +12,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { CountryBadge } from "@/components/vehicles/CountryBadge";
-import { StaffDocumentsLoader } from "@/components/documents/StaffDocumentsLoader";
+import { VehiclePhotoPreview } from "@/components/vehicles/VehiclePhotoPreview";
+import { PlateSearchDocumentsSection } from "./PlateSearchDocumentsSection";
 import {
   LastKnownLocationBadge,
   VehicleTrackingTimeline,
@@ -45,6 +45,7 @@ type Props = {
   trackingEvents: TrackingEvent[];
   lastLocation: { location: string; at: string } | null;
   checkInAction: React.ReactNode;
+  vehiclePhotoUrl?: string | null;
 };
 
 export function PlateSearchResults({
@@ -56,6 +57,7 @@ export function PlateSearchResults({
   trackingEvents,
   lastLocation,
   checkInAction,
+  vehiclePhotoUrl = null,
 }: Props) {
   const unpaid = infractions.filter((i) => i.status === "unpaid");
   const unpaidTotal = unpaid.reduce((sum, i) => sum + Number(i.fine_amount ?? 0), 0);
@@ -73,6 +75,7 @@ export function PlateSearchResults({
         unpaidCount={unpaid.length}
         unpaidTotal={unpaidTotal}
         lastLocation={lastLocation}
+        vehiclePhotoUrl={vehiclePhotoUrl}
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -221,26 +224,10 @@ export function PlateSearchResults({
       </div>
 
       {(owner || vehicle) && (
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-4 w-4 text-stone-500 dark:text-slate-400" />
-                Documents
-              </CardTitle>
-              <CardDescription>
-                Driver ID and vehicle registration files on file.
-              </CardDescription>
-            </div>
-          </CardHeader>
-          <CardBody className="pt-0">
-            <StaffDocumentsLoader
-              ownerId={owner?.id ?? vehicle?.owner_id}
-              vehicleId={vehicle?.id}
-              title="Driver and vehicle files"
-            />
-          </CardBody>
-        </Card>
+        <PlateSearchDocumentsSection
+          ownerId={owner?.id ?? vehicle?.owner_id}
+          vehicleId={vehicle?.id}
+        />
       )}
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
@@ -334,6 +321,7 @@ function PlateSearchResultHeader({
   unpaidCount,
   unpaidTotal,
   lastLocation,
+  vehiclePhotoUrl,
 }: {
   plate: string;
   country: string;
@@ -343,6 +331,7 @@ function PlateSearchResultHeader({
   unpaidCount: number;
   unpaidTotal: number;
   lastLocation: { location: string; at: string } | null;
+  vehiclePhotoUrl?: string | null;
 }) {
   const vehicleSummary =
     registered && vehicle
@@ -360,7 +349,10 @@ function PlateSearchResultHeader({
       }
     >
       <CardBody className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0 space-y-3">
+        {registered && (
+          <VehiclePhotoPreview photoUrl={vehiclePhotoUrl ?? null} plate={plate} />
+        )}
+        <div className="min-w-0 flex-1 space-y-3">
           <p className="text-xs font-medium uppercase tracking-wide text-stone-500 dark:text-slate-400">
             Search result
           </p>
