@@ -3,8 +3,6 @@ import {
   AlertTriangle,
   Search,
   FileCheck,
-  Coins,
-  CheckCircle2,
   BarChart3,
   ListOrdered,
 } from "lucide-react";
@@ -16,20 +14,26 @@ import { chartColors } from "@/components/charts/theme";
 import { countByWeek, topN } from "@/components/dashboard/analytics";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { InfractionStatusBadge } from "@/components/ui/InfractionStatusBadge";
-import { formatCurrency, formatDate } from "@/lib/utils";
 import { requireStaffProfile } from "@/lib/auth";
-import { resolveLedgerStatus } from "@/lib/transactions";
 import { loadTransactionsForInfractionIds } from "@/lib/queries/infractions";
+import { AgentRecentInfractionsTable } from "./AgentRecentInfractionsTable";
 import type { PaymentStatus } from "@/lib/types/database";
 
 type InfractionRow = {
   id: string;
   plate_number: string;
+  registration_country: string | null;
   infraction_type: string;
-  fine_amount: number | string;
+  description: string | null;
+  location: string | null;
+  fine_amount: string;
   status: PaymentStatus;
+  evidence_path: string | null;
+  vehicle_id: string | null;
+  driver_id: string | null;
+  agent_id: string | null;
   created_at: string;
+  updated_at: string;
 };
 
 export async function AgentOverviewPage() {
@@ -38,47 +42,27 @@ export async function AgentOverviewPage() {
 
   const [
     { count: totalInfractions },
-    { count: unpaidCount },
     { data: myInfractions },
   ] = await Promise.all([
     supabase.from("infractions").select("id", { count: "exact", head: true }),
     supabase
       .from("infractions")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "unpaid"),
-    supabase
-      .from("infractions")
-      .select("id, plate_number, infraction_type, fine_amount, status, created_at")
+      .select(
+        "id, plate_number, registration_country, infraction_type, description, location, fine_amount, status, evidence_path, vehicle_id, driver_id, agent_id, created_at, updated_at"
+      )
       .eq("agent_id", profile.id)
       .order("created_at", { ascending: false }),
   ]);
 
-  const mine: InfractionRow[] = (myInfractions ?? []).map((i) => ({
-    ...i,
-    fine_amount: Number(i.fine_amount),
-  }));
+  const mine: InfractionRow[] = myInfractions ?? [];
 
   const transactionStatusByInfraction = await loadTransactionsForInfractionIds(
     supabase,
     mine.map((i) => i.id)
   );
 
-  const mineWithLedger = mine.map((infraction) => ({
-    ...infraction,
-    ledgerStatus: resolveLedgerStatus(
-      infraction.status,
-      transactionStatusByInfraction[infraction.id]
-    ),
-  }));
-
   const weekly = countByWeek(mine, 8);
   const topTypes = topN(mine, (i) => i.infraction_type, 5);
-  const totalFinesIssued = mine.reduce((s, i) => s + Number(i.fine_amount), 0);
-  const paid = mineWithLedger.filter((i) => i.ledgerStatus === "paid").length;
-  const pending = mineWithLedger.filter((i) => i.ledgerStatus === "pending").length;
-  const unpaidMine = mineWithLedger.filter((i) => i.ledgerStatus === "unpaid").length;
-  const denom = paid + pending + unpaidMine;
-  const resolutionRate = denom === 0 ? 0 : Math.round((paid / denom) * 1000) / 10;
   const recent = mine.slice(0, 5);
 
   return (
@@ -94,7 +78,7 @@ export async function AgentOverviewPage() {
         }
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <KpiCard
           label="Total infractions"
           value={totalInfractions ?? 0}
@@ -103,31 +87,10 @@ export async function AgentOverviewPage() {
           hint="System-wide"
         />
         <KpiCard
-          label="Currently unpaid"
-          value={unpaidCount ?? 0}
-          icon={<AlertTriangle className="h-4 w-4" />}
-          accent="red"
-          hint="System-wide"
-        />
-        <KpiCard
           label="Issued by you"
           value={mine.length}
           icon={<FileCheck className="h-4 w-4" />}
           accent="brand"
-        />
-        <KpiCard
-          label="Fines issued"
-          value={formatCurrency(totalFinesIssued)}
-          icon={<Coins className="h-4 w-4" />}
-          accent="gold"
-          hint="All-time total (XAF)"
-        />
-        <KpiCard
-          label="Resolution rate"
-          value={`${resolutionRate.toFixed(1)}%`}
-          icon={<CheckCircle2 className="h-4 w-4" />}
-          accent={resolutionRate >= 60 ? "brand" : "stone"}
-          hint={`${paid} paid / ${denom} total`}
         />
       </div>
 
@@ -204,49 +167,11 @@ export async function AgentOverviewPage() {
                 description="Use the plate search to look up a vehicle and create one."
               />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="text-left text-stone-500 dark:text-slate-400 border-b border-stone-200 dark:border-slate-800">
-                    <tr>
-                      <th className="py-2 pr-4 font-medium">Date</th>
-                      <th className="py-2 pr-4 font-medium">Plate</th>
-                      <th className="py-2 pr-4 font-medium">Type</th>
-                      <th className="py-2 pr-4 font-medium">Amount</th>
-                      <th className="py-2 pr-4 font-medium">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recent.map((i) => {
-                      const ledgerStatus = resolveLedgerStatus(
-                        i.status,
-                        transactionStatusByInfraction[i.id]
-                      );
-                      return (
-                        <tr
-                          key={i.id}
-                          className="border-b border-stone-100 dark:border-slate-800 last:border-0"
-                        >
-                          <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">
-                            {formatDate(i.created_at)}
-                          </td>
-                          <td className="py-2 pr-4 font-mono font-medium text-stone-900 dark:text-stone-100">
-                            {i.plate_number}
-                          </td>
-                          <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">
-                            {i.infraction_type}
-                          </td>
-                          <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">
-                            {formatCurrency(Number(i.fine_amount))}
-                          </td>
-                          <td className="py-2 pr-4">
-                            <InfractionStatusBadge status={ledgerStatus} />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <AgentRecentInfractionsTable
+                infractions={recent}
+                transactionStatusByInfraction={transactionStatusByInfraction}
+                canManageVehicles={false}
+              />
             )}
           </CardBody>
         </Card>

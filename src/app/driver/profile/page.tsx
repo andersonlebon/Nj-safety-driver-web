@@ -1,5 +1,8 @@
 import { requireDriverProfile } from "@/lib/auth";
+import { loadProfilePhotoUrl } from "@/lib/queries/profile-photo";
+import { createClient } from "@/lib/supabase/server";
 import { Card, CardBody } from "@/components/ui/Card";
+import { ProfilePhotoEditor } from "@/components/profile/ProfilePhotoEditor";
 import { ProfileEditDialog } from "./ProfileEditDialog";
 import { DriverDocumentsSection } from "./DriverDocumentsSection";
 import { DriverProfileCommentsPanel } from "./DriverProfileCommentsPanel";
@@ -63,6 +66,9 @@ function PersonalInfoCard({ profile }: { profile: Profile }) {
 
 export default async function DriverProfilePage() {
   const { profile } = await requireDriverProfile();
+  const supabase = await createClient();
+  const photoUrl = await loadProfilePhotoUrl(supabase, profile.id);
+  const displayName = profile.full_name?.trim() || profile.email || "Driver";
 
   if (!profile.onboarded_at) {
     const initialStep: 1 | 2 | 3 =
@@ -111,6 +117,15 @@ export default async function DriverProfilePage() {
               <ProfileEditDialog profile={profile} />
             </div>
           </div>
+          <Card>
+            <CardBody>
+              <ProfilePhotoEditor
+                profileId={profile.id}
+                photoUrl={photoUrl}
+                displayName={displayName}
+              />
+            </CardBody>
+          </Card>
           <PersonalInfoCard profile={profile} />
         </div>
       }

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Sidebar, type NavItem } from "@/components/dashboard/Sidebar";
 import { MobileNav } from "@/components/dashboard/MobileNav";
 import { Topbar } from "@/components/dashboard/Topbar";
+import type { ProfileSwitcherMode } from "@/lib/auth/user-menu-profile";
 
 export function DashboardShell({
   items,
@@ -10,6 +11,9 @@ export function DashboardShell({
   userName,
   userEmail,
   roleLabel,
+  accountHref,
+  avatarUrl,
+  profileSwitcherMode,
   banner,
   children,
 }: {
@@ -19,6 +23,9 @@ export function DashboardShell({
   userName?: string | null;
   userEmail?: string | null;
   roleLabel: string;
+  accountHref: string;
+  avatarUrl?: string | null;
+  profileSwitcherMode?: ProfileSwitcherMode | null;
   banner?: ReactNode;
   children: ReactNode;
 }) {
@@ -32,6 +39,9 @@ export function DashboardShell({
           userName={userName}
           userEmail={userEmail}
           roleLabel={roleLabel}
+          accountHref={accountHref}
+          avatarUrl={avatarUrl}
+          profileSwitcherMode={profileSwitcherMode}
         />
         <main className="flex-1 px-4 sm:px-6 py-6">
           {banner}

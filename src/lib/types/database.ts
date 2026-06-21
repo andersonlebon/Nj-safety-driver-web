@@ -54,6 +54,7 @@ export type Database = {
           verification_status: VerificationStatus;
           admin_message: string | null;
           nationality_country: string | null;
+          avatar_path: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -71,6 +72,7 @@ export type Database = {
           verification_status?: VerificationStatus;
           admin_message?: string | null;
           nationality_country?: string | null;
+          avatar_path?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -88,6 +90,7 @@ export type Database = {
           verification_status?: VerificationStatus;
           admin_message?: string | null;
           nationality_country?: string | null;
+          avatar_path?: string | null;
           created_at?: string;
           updated_at?: string;
         };

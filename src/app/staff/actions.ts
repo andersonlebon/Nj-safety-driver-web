@@ -418,15 +418,28 @@ export async function approveAgentApplication(
     if ("ok" in auth) return auth;
 
     const supabase = createClient();
-    const { error } = await supabase
+    const { error: spError } = await supabase
       .from("staff_profiles")
       .update({ application_status: "approved" })
       .eq("profile_id", staffProfileId)
       .eq("staff_role", "agent");
 
-    if (error) return { ok: false, error: friendlyError(error) };
+    if (spError) return { ok: false, error: friendlyError(spError) };
+
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({
+        verification_status: "active",
+        admin_message: null,
+      })
+      .eq("id", staffProfileId)
+      .eq("role", "staff");
+
+    if (profileError) return { ok: false, error: friendlyError(profileError) };
 
     revalidatePath("/staff/agents");
+    revalidatePath("/staff/account");
+    revalidatePath("/staff", "layout");
     return { ok: true };
   } catch (err) {
     return { ok: false, error: friendlyError(err) };
@@ -450,14 +463,20 @@ export async function rejectAgentApplication(
 
     if (spError) return { ok: false, error: friendlyError(spError) };
 
-    if (message) {
-      await supabase
-        .from("profiles")
-        .update({ admin_message: message })
-        .eq("id", staffProfileId);
-    }
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({
+        verification_status: "rejected",
+        admin_message: message?.trim() || null,
+      })
+      .eq("id", staffProfileId)
+      .eq("role", "staff");
+
+    if (profileError) return { ok: false, error: friendlyError(profileError) };
 
     revalidatePath("/staff/agents");
+    revalidatePath("/staff/account");
+    revalidatePath("/staff", "layout");
     return { ok: true };
   } catch (err) {
     return { ok: false, error: friendlyError(err) };
@@ -477,6 +496,8 @@ export async function promoteAgentToAdmin(
     if (!result.ok) return result;
 
     revalidatePath("/staff/agents");
+    revalidatePath("/staff/account");
+    revalidatePath("/staff", "layout");
     return { ok: true };
   } catch (err) {
     return { ok: false, error: friendlyError(err) };

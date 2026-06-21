@@ -9,6 +9,8 @@ import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import type { NavItem } from "@/components/dashboard/Sidebar";
 import { DriverStatusBanner } from "@/components/dashboard/DriverStatusBanner";
 import { requireDriverProfile } from "@/lib/auth";
+import { loadProfilePhotoUrl } from "@/lib/queries/profile-photo";
+import { createClient } from "@/lib/supabase/server";
 import { getTranslations } from "@/i18n/server";
 
 export default async function DriverLayout({
@@ -18,6 +20,8 @@ export default async function DriverLayout({
 }) {
   const { profile } = await requireDriverProfile();
   const { t } = await getTranslations();
+  const supabase = await createClient();
+  const avatarUrl = await loadProfilePhotoUrl(supabase, profile.id);
 
   const navItems: NavItem[] = [
     {
@@ -55,6 +59,8 @@ export default async function DriverLayout({
       userName={profile.full_name}
       userEmail={profile.email}
       roleLabel={t("roles.driver")}
+      accountHref="/driver/profile"
+      avatarUrl={avatarUrl}
       banner={
         <DriverStatusBanner
           verificationStatus={profile.verification_status ?? "pending_documents"}

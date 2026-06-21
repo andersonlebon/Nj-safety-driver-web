@@ -209,6 +209,9 @@ function handleStorageMessage(message: string): string | undefined {
   if (lower.includes("payload too large") || lower.includes("413")) {
     return "This file is too large. Maximum size is 10 MB.";
   }
+  if (lower.includes("row-level security") || lower.includes("rls")) {
+    return "You do not have permission to perform this action.";
+  }
   if (lower.includes("mime type not supported") || lower.includes("415")) {
     return "This file type is not supported.";
   }

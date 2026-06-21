@@ -11,11 +11,14 @@ import { PaginatedTableFrame } from "@/components/table";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { InfractionStatusBadge } from "@/components/ui/InfractionStatusBadge";
+import { useStaffVehicleDetailModal } from "@/hooks/use-staff-vehicle-detail-modal";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { TableQuery } from "@/lib/pagination";
 import type { Database, PaymentStatus, TransactionStatus } from "@/lib/types/database";
 
-type Infraction = Database["public"]["Tables"]["infractions"]["Row"];
+type Infraction = Database["public"]["Tables"]["infractions"]["Row"] & {
+  registration_country?: string | null;
+};
 
 const STATUS_FILTER_OPTIONS = [
   { value: "paid", label: "Paid" },
@@ -32,6 +35,7 @@ export function InfractionsTable({
   infractions,
   allowStatusUpdates = true,
   transactionStatusByInfraction = {},
+  canManageVehicles = false,
 }: {
   pathname: string;
   query: TableQuery;
@@ -40,10 +44,15 @@ export function InfractionsTable({
   infractions: Infraction[];
   allowStatusUpdates?: boolean;
   transactionStatusByInfraction?: Record<string, TransactionStatus>;
+  canManageVehicles?: boolean;
 }) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { openFromInfraction, modal } = useStaffVehicleDetailModal({
+    canManageVehicles,
+    transactionStatusByInfraction,
+  });
 
   const updateStatus = async (id: string, status: PaymentStatus) => {
     setBusyId(id);
@@ -104,7 +113,8 @@ export function InfractionsTable({
                 return (
                   <tr
                     key={i.id}
-                    className="border-b border-stone-100 dark:border-slate-800 last:border-0 align-top"
+                    className="border-b border-stone-100 dark:border-slate-800 last:border-0 align-top cursor-pointer transition-colors hover:bg-stone-50/80 dark:hover:bg-slate-800/40"
+                    onClick={() => openFromInfraction(i, { initialTab: "fines" })}
                   >
                     <td className="py-2 pr-4 text-stone-600 dark:text-slate-400 whitespace-nowrap">
                       {formatDate(i.created_at)}
@@ -140,6 +150,7 @@ export function InfractionsTable({
                                   : displayStatus
                             }
                             disabled={busyId === i.id}
+                            onClick={(event) => event.stopPropagation()}
                             onChange={(e) =>
                               updateStatus(i.id, e.target.value as PaymentStatus)
                             }
@@ -156,7 +167,10 @@ export function InfractionsTable({
                         <Button
                           type="button"
                           variant="secondary"
-                          onClick={() => viewEvidence(i.evidence_path as string)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void viewEvidence(i.evidence_path as string);
+                          }}
                         >
                           <Eye className="h-4 w-4" /> View
                         </Button>
@@ -173,6 +187,8 @@ export function InfractionsTable({
           </table>
         </div>
       </PaginatedTableFrame>
+
+      {modal}
     </div>
   );
 }

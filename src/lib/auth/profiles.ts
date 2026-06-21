@@ -303,12 +303,20 @@ export async function promoteStaffToAdmin(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const admin = createAdminClient() as any;
 
-  const { error } = await admin
+  const { error: staffError } = await admin
     .from("staff_profiles")
     .update({ staff_role: "admin" })
     .eq("profile_id", staffProfileId);
 
-  if (error) return { ok: false, error: error.message };
+  if (staffError) return { ok: false, error: staffError.message };
+
+  const { error: profileError } = await admin
+    .from("profiles")
+    .update({ verification_status: "active", admin_message: null })
+    .eq("id", staffProfileId)
+    .eq("role", "staff");
+
+  if (profileError) return { ok: false, error: profileError.message };
   return { ok: true };
 }
 

@@ -45,6 +45,9 @@ type Props = {
   detailsLoading?: boolean;
   canManageVehicles: boolean;
   borderTransitHint?: ReactNode;
+  initialTab?: VehicleTabId;
+  /** View-only mode: no approve/reject footer or verify tab. */
+  readOnly?: boolean;
 };
 
 export function VehicleDetailModal({
@@ -61,9 +64,11 @@ export function VehicleDetailModal({
   detailsLoading = false,
   canManageVehicles,
   borderTransitHint,
+  initialTab = "overview",
+  readOnly = false,
 }: Props) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<VehicleTabId>("overview");
+  const [activeTab, setActiveTab] = useState<VehicleTabId>(initialTab);
   const [tabLoading, setTabLoading] = useState(false);
   const [approvePending, startApprove] = useTransition();
   const [rejectPending, startReject] = useTransition();
@@ -89,21 +94,22 @@ export function VehicleDetailModal({
     if (showOwner) list.push({ id: "owner", label: "Owner" });
     list.push({ id: "documents", label: "Documents" });
     list.push({ id: "fines", label: "Fines" });
-    if (canManageVehicles) list.push({ id: "verify", label: "Verify" });
+    if (canManageVehicles && !readOnly) list.push({ id: "verify", label: "Verify" });
     return list;
-  }, [canManageVehicles, showId, showOwner]);
+  }, [canManageVehicles, readOnly, showId, showOwner]);
 
   const status = (vehicle.verification_status ?? "pending_review") as VerificationStatus;
-  const canApprove = status !== "active";
-  const canReject = status !== "rejected";
+  const showVerificationActions = canManageVehicles && !readOnly;
+  const canApprove = showVerificationActions && status !== "active";
+  const canReject = showVerificationActions && status !== "rejected";
 
   useEffect(() => {
     if (open) {
-      setActiveTab("overview");
+      setActiveTab(initialTab);
       setTabLoading(false);
       setActionFeedback(null);
     }
-  }, [open, vehicle.id]);
+  }, [open, vehicle.id, initialTab]);
 
   useEffect(() => {
     if (!tabLoading) return;
@@ -173,7 +179,11 @@ export function VehicleDetailModal({
       open={open}
       onClose={onClose}
       title={vehicle.plate_number}
-      description="Review vehicle details, documents, and verification — actions stay pinned at the bottom."
+      description={
+        readOnly
+          ? "Review vehicle and infraction details."
+          : "Review vehicle details, documents, and verification — actions stay pinned at the bottom."
+      }
       className="max-w-4xl"
       footer={
         <div className="flex flex-col gap-3">
@@ -258,7 +268,7 @@ export function VehicleDetailModal({
                   />
                   {borderTransitHint}
                 </div>
-              ) : activeTab === "verify" && canManageVehicles ? (
+              ) : activeTab === "verify" && showVerificationActions ? (
                 <div className="space-y-4">
                   <p className="text-sm text-stone-600 dark:text-slate-400">
                     Confirm registration papers and photos match this plate before

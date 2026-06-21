@@ -224,9 +224,6 @@ export function buildDocumentUploadState(
     } else {
       const def = DRIVER_DOCUMENT_GROUPS.find((item) => item.docType === group.doc_type);
       if (def) driverDates[def.key] = dates;
-      if (group.doc_type === "other") {
-        driverDates.portrait = dates;
-      }
     }
   }
 

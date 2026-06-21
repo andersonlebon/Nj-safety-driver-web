@@ -76,6 +76,7 @@ export const profiles = pgTable("profiles", {
     .notNull()
     .default("pending_documents"),
   adminMessage: text("admin_message"),
+  avatarPath: text("avatar_path"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .default(sql`now()`),

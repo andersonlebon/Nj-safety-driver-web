@@ -17,15 +17,6 @@ export function matchDocumentToAttachment(
   const catalog = doc.vehicle_id ? VEHICLE_DOCUMENT_GROUPS : DRIVER_DOCUMENT_GROUPS;
 
   for (const group of catalog) {
-    if (group.key === "portrait") {
-      if (doc.doc_type !== "other") continue;
-      const attachment = group.attachments.find((item) => item.key === "portrait");
-      if (attachment && (doc.label === "portrait" || doc.label === attachment.label)) {
-        return { group, attachmentKey: attachment.key };
-      }
-      continue;
-    }
-
     if (group.docType !== doc.doc_type) continue;
 
     for (const attachment of group.attachments) {

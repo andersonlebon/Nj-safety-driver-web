@@ -8,11 +8,15 @@ import {
   ShieldCheck,
   Radar,
   ListChecks,
+  User,
 } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import type { NavItem } from "@/components/dashboard/Sidebar";
 import { requireStaffProfile } from "@/lib/auth";
 import { staffRoleLabel } from "@/lib/auth/profile-session";
+import { getProfileSwitcherMode } from "@/lib/auth/user-menu-profile";
+import { loadProfilePhotoUrl } from "@/lib/queries/profile-photo";
+import { createClient } from "@/lib/supabase/server";
 import { getTranslations } from "@/i18n/server";
 
 export default async function StaffLayout({
@@ -22,6 +26,11 @@ export default async function StaffLayout({
 }) {
   const { profile, staffProfile } = await requireStaffProfile();
   const { t } = await getTranslations();
+  const supabase = await createClient();
+  const [avatarUrl, profileSwitcherMode] = await Promise.all([
+    loadProfilePhotoUrl(supabase, profile.id),
+    getProfileSwitcherMode(),
+  ]);
 
   const isAdmin = staffProfile.staff_role === "admin";
 
@@ -78,16 +87,25 @@ export default async function StaffLayout({
       ]
     : [];
 
+  const accountNav: NavItem = {
+    href: "/staff/account",
+    label: t("nav.personalInfo"),
+    icon: <User className="h-4 w-4" />,
+  };
+
   const roleLabel = staffRoleLabel(staffProfile.staff_role);
 
   return (
     <DashboardShell
-      items={[...sharedNav, ...adminNav]}
+      items={[...sharedNav, ...adminNav, accountNav]}
       workspaceLabel={isAdmin ? t("workspaces.admin") : t("workspaces.agent")}
       title={isAdmin ? t("dashboards.admin") : t("dashboards.agent")}
       userName={profile.full_name}
       userEmail={profile.email}
       roleLabel={roleLabel}
+      accountHref="/staff/account"
+      avatarUrl={avatarUrl}
+      profileSwitcherMode={profileSwitcherMode}
     >
       {children}
     </DashboardShell>

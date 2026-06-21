@@ -1,5 +1,5 @@
 import type { DocumentType } from "@/lib/types/database";
-import { PHOTO_ACCEPT, PHOTO_OR_PDF_ACCEPT } from "@/components/uploads/EvidenceSlot";
+import { PHOTO_ACCEPT, PHOTO_OR_PDF_ACCEPT } from "@/lib/upload-limits";
 
 export type AttachmentDefinition = {
   key: string;
@@ -73,25 +73,6 @@ export const DRIVER_DOCUMENT_GROUPS: readonly DocumentGroupDefinition[] = [
         fileBase: "back",
         accept: PHOTO_ACCEPT,
         required: true,
-      },
-    ],
-  },
-  {
-    key: "portrait",
-    docType: "other",
-    title: "Portrait / selfie",
-    description: "Helps an agent confirm your identity in person.",
-    scope: "driver",
-    folder: "portrait",
-    required: false,
-    attachments: [
-      {
-        key: "portrait",
-        label: "portrait",
-        title: "Photo",
-        fileBase: "portrait",
-        accept: PHOTO_ACCEPT,
-        required: false,
       },
     ],
   },

@@ -12,11 +12,13 @@ import {
 import { cn } from "@/lib/utils";
 import { RequiredMark } from "@/components/ui/RequiredMark";
 import { useI18n } from "@/i18n/context";
+import {
+  MAX_EVIDENCE_BYTES,
+  PHOTO_ACCEPT,
+  PHOTO_OR_PDF_ACCEPT,
+} from "@/lib/upload-limits";
 
-export const MAX_EVIDENCE_BYTES = 10 * 1024 * 1024;
-
-export const PHOTO_ACCEPT = "image/jpeg,image/png,image/webp,image/heic";
-export const PHOTO_OR_PDF_ACCEPT = `${PHOTO_ACCEPT},application/pdf`;
+export { MAX_EVIDENCE_BYTES, PHOTO_ACCEPT, PHOTO_OR_PDF_ACCEPT };
 
 export type EvidenceSlotStatus =
   | "idle"

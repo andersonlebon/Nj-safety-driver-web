@@ -11,7 +11,7 @@ import { applyTableQueryFilters } from "@/lib/queries/table-filters";
 type Infraction = Database["public"]["Tables"]["infractions"]["Row"];
 
 const INFRACTION_LIST_COLUMNS =
-  "id, plate_number, registration_country, infraction_type, description, location, fine_amount, status, evidence_path, agent_id, driver_id, vehicle_id, created_at";
+  "id, plate_number, registration_country, infraction_type, description, location, fine_amount, status, evidence_path, agent_id, driver_id, vehicle_id, created_at, updated_at";
 
 export type InfractionsPageData = PaginatedResult<Infraction> & {
   transactionStatusByInfraction: Record<string, TransactionStatus>;

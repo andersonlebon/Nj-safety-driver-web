@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Card, CardBody } from "@/components/ui/Card";
 import { parseTableQuery } from "@/lib/pagination";
 import { loadInfractionsPaginated } from "@/lib/queries/infractions";
+import { requireStaffProfile } from "@/lib/auth";
 import { InfractionsTable } from "./InfractionsTable";
 import { CreateInfractionDialog } from "../search/CreateInfractionDialog";
 
@@ -14,6 +15,8 @@ export default async function AgentInfractionsPage({
 }) {
   const supabase = createClient();
   const tableQuery = parseTableQuery(searchParams);
+  const { staffProfile } = await requireStaffProfile();
+  const canManageVehicles = staffProfile.staff_role === "admin";
 
   const [pageData, { data: templates }] = await Promise.all([
     loadInfractionsPaginated(supabase, tableQuery),
@@ -44,6 +47,7 @@ export default async function AgentInfractionsPage({
             totalCount={pageData.totalCount}
             infractions={pageData.rows}
             transactionStatusByInfraction={pageData.transactionStatusByInfraction}
+            canManageVehicles={canManageVehicles}
           />
         </CardBody>
       </Card>
