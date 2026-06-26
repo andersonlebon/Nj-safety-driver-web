@@ -10,6 +10,7 @@ import type { NavItem } from "@/components/dashboard/Sidebar";
 import { DriverStatusBanner } from "@/components/dashboard/DriverStatusBanner";
 import { requireDriverProfile } from "@/lib/auth";
 import { loadProfilePhotoUrl } from "@/lib/queries/profile-photo";
+import { syncComplianceLockForDriver } from "@/lib/queries/compliance";
 import { createClient } from "@/lib/supabase/server";
 import { getTranslations } from "@/i18n/server";
 
@@ -18,9 +19,21 @@ export default async function DriverLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { profile } = await requireDriverProfile();
+  const { profile: initialProfile } = await requireDriverProfile();
   const { t } = await getTranslations();
   const supabase = await createClient();
+
+  await syncComplianceLockForDriver(supabase, initialProfile.id);
+
+  const { data: refreshedProfile } = await supabase
+    .from("profiles")
+    .select(
+      "id, full_name, email, verification_status, admin_message, onboarded_at"
+    )
+    .eq("id", initialProfile.id)
+    .maybeSingle();
+
+  const profile = refreshedProfile ?? initialProfile;
   const avatarUrl = await loadProfilePhotoUrl(supabase, profile.id);
 
   const navItems: NavItem[] = [

@@ -317,6 +317,7 @@ export type Database = {
           amount_paid: string;
           payment_transaction_count: number;
           status: PaymentStatus;
+          points: number;
           evidence_path: string | null;
           created_at: string;
           updated_at: string;
@@ -334,6 +335,7 @@ export type Database = {
           amount_paid?: string;
           payment_transaction_count?: number;
           status?: PaymentStatus;
+          points?: number;
           evidence_path?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -351,6 +353,7 @@ export type Database = {
           amount_paid?: string;
           payment_transaction_count?: number;
           status?: PaymentStatus;
+          points?: number;
           evidence_path?: string | null;
           created_at?: string;
           updated_at?: string;

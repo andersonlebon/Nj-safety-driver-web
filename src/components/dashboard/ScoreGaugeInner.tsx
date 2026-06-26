@@ -4,6 +4,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import { chartColors } from "@/components/charts/theme";
 import { formatChartValue, type ValueFormat } from "@/components/charts/formats";
 import { useChartTheme } from "@/components/charts/useChartTheme";
+import { COMPLIANCE_RULES } from "@/lib/compliance";
 
 export type ScoreGaugeProps = {
   /** 0–100 */
@@ -30,7 +31,7 @@ export default function ScoreGaugeInner({
   const color =
     safe >= 80
       ? chartColors.brand
-      : safe >= 50
+      : safe >= COMPLIANCE_RULES.minimumAllowedToDrive
         ? chartColors.gold
         : chartColors.unpaid;
   const { isDark } = useChartTheme();

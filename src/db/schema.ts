@@ -229,6 +229,7 @@ export const infractions = pgTable("infractions", {
     .notNull()
     .default(0),
   status: paymentStatus("status").notNull().default("unpaid"),
+  points: integer("points").notNull().default(2),
   evidencePath: text("evidence_path"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

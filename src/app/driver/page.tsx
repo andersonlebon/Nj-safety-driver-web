@@ -38,6 +38,7 @@ type InfractionRow = {
   fine_amount: number;
   amount_paid: number;
   status: PaymentStatus;
+  points: number;
   created_at: string;
 };
 
@@ -68,7 +69,7 @@ export default async function DriverOverviewPage() {
     supabase
       .from("infractions")
       .select(
-        "id, plate_number, infraction_type, fine_amount, amount_paid, status, created_at"
+        "id, plate_number, infraction_type, fine_amount, amount_paid, status, points, created_at"
       )
       .eq("driver_id", profile.id)
       .order("created_at", { ascending: false }),
@@ -79,6 +80,7 @@ export default async function DriverOverviewPage() {
     ...i,
     fine_amount: Number(i.fine_amount),
     amount_paid: Number(i.amount_paid ?? 0),
+    points: Number(i.points ?? COMPLIANCE_RULES.defaultInfractionPoints),
   }));
 
   const transactionStatusCounts = infractions.reduce(
@@ -114,10 +116,7 @@ export default async function DriverOverviewPage() {
   const monthly = sumByMonth(infractions, 6);
   const recent = infractions.slice(0, 5);
 
-  const score = computeComplianceScore({
-    infractions,
-    verificationStatus: profile.verification_status,
-  });
+  const score = computeComplianceScore(infractions);
 
   const statusSlices: DonutSlice[] = [
     { label: t("driver.overview.charts.paid"), value: transactionStatusCounts.paid, color: statusColor.paid },
@@ -128,7 +127,7 @@ export default async function DriverOverviewPage() {
   const scoreDescription =
     score >= 80
       ? t("driver.overview.compliance.descriptionExcellent")
-      : score >= 50
+      : score >= COMPLIANCE_RULES.minimumAllowedToDrive
         ? t("driver.overview.compliance.descriptionWarning")
         : t("driver.overview.compliance.descriptionCritical");
 
@@ -280,7 +279,6 @@ export default async function DriverOverviewPage() {
             />
             <p className="mt-3 text-xs text-stone-500 dark:text-slate-400">
               {t("driver.overview.compliance.formula", {
-                penalty: COMPLIANCE_RULES.unpaidInfractionPenalty,
                 minimum: COMPLIANCE_RULES.minimumAllowedToDrive,
               })}
             </p>

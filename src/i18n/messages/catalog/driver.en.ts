@@ -47,9 +47,9 @@ export const driverOverview = {
     descriptionExcellent: "All clear. Keep it up — drive safely.",
     descriptionWarning: "Action recommended. Resolve open items soon.",
     descriptionCritical:
-      "Critical. Address unpaid infractions before driving.",
+      "Critical. Your profile is locked for driving until staff review.",
     formula:
-      "Formula: 100 minus {penalty} pts per unpaid infraction. Payment transactions are tracked separately; points are restored only when the infraction is marked paid. Scores at or below {minimum}% require review before driving.",
+      "Formula: start at 100, minus each infraction's template points (permanent, even after payment). Scores below {minimum} lock your driver profile.",
   },
   recentInfractions: {
     title: "Recent infractions",

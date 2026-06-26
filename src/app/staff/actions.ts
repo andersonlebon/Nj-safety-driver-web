@@ -7,6 +7,7 @@ import { requireStaffProfileForAction, requireAdminProfileForAction } from "@/li
 import { isDomesticCountry } from "@/lib/countries";
 import { normalizePlateForCountry } from "@/lib/vehicles";
 import type { FileInfractionInput } from "@/lib/infractions";
+import { syncComplianceLockForDriver } from "@/lib/queries/compliance";
 import { findInfractionTemplate } from "@/lib/infraction-templates";
 import {
   TRANSIT_ID_DOC_TYPE,
@@ -206,6 +207,9 @@ export async function fileInfraction(input: FileInfractionInput): Promise<StaffA
     }
 
     const infractionStatus: PaymentStatus = "unpaid";
+    const penaltyPoints = template
+      ? Math.max(0, Number(template.points) || 0)
+      : 0;
     const { data: inserted, error } = await supabase
       .from("infractions")
       .insert({
@@ -218,6 +222,7 @@ export async function fileInfraction(input: FileInfractionInput): Promise<StaffA
         description: input.description.trim() || null,
         location: input.location.trim() || null,
         fine_amount: fineAmount,
+        points: penaltyPoints,
         status: infractionStatus,
         evidence_path: input.evidence_path,
       })
@@ -225,6 +230,10 @@ export async function fileInfraction(input: FileInfractionInput): Promise<StaffA
       .single();
 
     if (error) return { ok: false, error: friendlyError(error) };
+
+    if (input.driver_id) {
+      await syncComplianceLockForDriver(supabase, input.driver_id);
+    }
 
     if (inserted?.id) {
       const { error: trackingError } = await supabase.from("vehicle_tracking_events").insert({
@@ -244,6 +253,7 @@ export async function fileInfraction(input: FileInfractionInput): Promise<StaffA
 
     revalidatePath("/staff/search");
     revalidatePath("/staff/infractions");
+    revalidatePath("/driver");
     revalidatePath("/driver/infractions");
     revalidatePath("/driver/payments");
     return { ok: true };

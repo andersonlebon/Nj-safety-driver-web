@@ -49,9 +49,9 @@ export const driverOverview = {
     descriptionWarning:
       "Action recommandée. Réglez les points ouverts bientôt.",
     descriptionCritical:
-      "Critique. Réglez les infractions impayées avant de conduire.",
+      "Critique. Votre profil est verrouillé pour la conduite jusqu'à révision par le personnel.",
     formula:
-      "Formule : 100 moins {penalty} pts par infraction impayée. Les transactions de paiement sont suivies séparément ; les points sont restaurés uniquement lorsque l'infraction est marquée payée. Les scores à {minimum} % ou moins nécessitent une révision avant de conduire.",
+      "Formule : 100 moins les points du modèle d'infraction (définitifs, même après paiement). Un score inférieur à {minimum} verrouille votre profil conducteur.",
   },
   recentInfractions: {
     title: "Infractions récentes",
