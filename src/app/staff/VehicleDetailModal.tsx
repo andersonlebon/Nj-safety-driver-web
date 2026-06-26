@@ -13,7 +13,6 @@ import {
 } from "@/components/vehicles/VehicleDetailContent";
 import { VehicleOwnerPanel } from "@/components/vehicles/VehicleOwnerPanel";
 import { DriverProfileComments } from "@/components/driver/DriverProfileComments";
-import { VehicleVerificationActions } from "./VehicleVerificationActions";
 import { cn } from "@/lib/utils";
 import {
   approveVehicleAsStaff,
@@ -51,7 +50,7 @@ type Props = {
   staffName: string;
   borderTransitHint?: ReactNode;
   initialTab?: VehicleTabId;
-  /** View-only mode: no approve/reject footer or verify tab. */
+  /** View-only mode: no approve/reject footer. */
   readOnly?: boolean;
 };
 
@@ -104,11 +103,8 @@ export function VehicleDetailModal({
     list.push({ id: "documents", label: t("vehicles.detail.sections.documents") });
     list.push({ id: "fines", label: t("vehicles.detail.sections.fines") });
     list.push({ id: "comments", label: t("vehicles.detail.sections.comments") });
-    if (canManageVehicles && !readOnly) {
-      list.push({ id: "verify", label: t("vehicles.detail.sections.verify") });
-    }
     return list;
-  }, [canManageVehicles, readOnly, showId, showOwner, t]);
+  }, [showId, showOwner, t]);
 
   const status = (vehicle.verification_status ?? "pending_review") as VerificationStatus;
   const showVerificationActions = canManageVehicles && !readOnly;
@@ -282,13 +278,6 @@ export function VehicleDetailModal({
                     scope="vehicle"
                   />
                   {borderTransitHint}
-                </div>
-              ) : activeTab === "verify" && showVerificationActions ? (
-                <div className="space-y-4">
-                  <p className="text-sm text-stone-600 dark:text-slate-400">
-                    {t("vehicles.detail.verifyTabHint")}
-                  </p>
-                  <VehicleVerificationActions vehicleId={vehicle.id} status={status} />
                 </div>
               ) : activeTab === "owner" ? (
                 <VehicleOwnerPanel vehicle={vehicle} owner={owner ?? null} />

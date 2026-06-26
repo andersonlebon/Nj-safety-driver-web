@@ -11,8 +11,7 @@ export type VehicleTabId =
   | "id"
   | "documents"
   | "fines"
-  | "comments"
-  | "verify";
+  | "comments";
 
 function SkeletonBlock({ className }: { className?: string }) {
   return <div className={cn("rounded bg-stone-100 dark:bg-slate-800/70", className)} />;
@@ -140,12 +139,6 @@ export function VehicleDetailTabSkeleton({ tab }: { tab: VehicleTabId }) {
             <SkeletonBlock className="h-3 w-24" />
             <SkeletonBlock className="h-20 w-full" />
           </div>
-        </div>
-      )}
-      {tab === "verify" && (
-        <div className="flex gap-2">
-          <SkeletonBlock className="h-9 w-28" />
-          <SkeletonBlock className="h-9 w-32" />
         </div>
       )}
     </div>
