@@ -77,7 +77,7 @@ export default async function DriverPaymentsPage({
 
       <Card>
         <CardBody>
-          <h3 className="text-sm font-semibold text-slate-900 mb-4">
+          <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100 mb-4">
             {t("driver.payments.ledgerTitle")}
           </h3>
           <DriverPaymentsTable

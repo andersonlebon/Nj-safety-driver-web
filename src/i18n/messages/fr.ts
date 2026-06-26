@@ -224,9 +224,6 @@ export const fr: Messages = {
   },
   status: {
     ...sharedFr.status,
-    transaction: {
-      initialized: sharedFr.status.payment.initialized,
-    },
   },
   tables: {
     ...sharedFr.tables,

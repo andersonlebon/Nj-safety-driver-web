@@ -20,5 +20,12 @@ export function InfractionStatusBadge({
       </span>
     );
   }
+  if (status === "rejected") {
+    return (
+      <span className="badge-unpaid">
+        {t("status.transaction.rejected")}
+      </span>
+    );
+  }
   return <StatusBadge status={status as PaymentStatus} />;
 }

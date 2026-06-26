@@ -11,6 +11,10 @@ export const sharedStatus = {
     pending: "En attente",
     initialized: "Initialisé",
   },
+  transaction: {
+    initialized: "Initialisé",
+    rejected: "Refusé",
+  },
   documentExpiry: {
     noExpiry: "Pas de date d'expiration",
     expiredDays: "Expiré il y a {days} jour(s)",

@@ -217,9 +217,6 @@ export const en = {
   },
   status: {
     ...sharedEn.status,
-    transaction: {
-      initialized: sharedEn.status.payment.initialized,
-    },
   },
   tables: {
     ...sharedEn.tables,

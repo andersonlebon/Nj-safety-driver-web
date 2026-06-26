@@ -73,7 +73,7 @@ export function DriverPaymentsTable({
       >
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="text-left text-slate-500 border-b border-slate-200">
+            <thead className="text-left text-stone-500 dark:text-slate-400 border-b border-stone-200 dark:border-slate-800">
               <tr>
                 <th className="py-2 pr-4 font-medium">{t("driver.payments.date")}</th>
                 <th className="py-2 pr-4 font-medium">{t("driver.payments.plate")}</th>
@@ -90,16 +90,30 @@ export function DriverPaymentsTable({
               {rows.map(({ infraction, summary }) => (
                 <tr
                   key={infraction.id}
-                  className="border-b border-slate-100 last:border-0 cursor-pointer hover:bg-stone-50/80 dark:hover:bg-slate-800/40 transition-colors"
+                  className="border-b border-stone-100 dark:border-slate-800 last:border-0 cursor-pointer hover:bg-stone-50/80 dark:hover:bg-slate-800/40 transition-colors"
                   onClick={() => openDetail(infraction.id)}
                 >
-                  <td className="py-2 pr-4 text-slate-700">{formatDate(infraction.created_at)}</td>
-                  <td className="py-2 pr-4 font-medium text-slate-900">{infraction.plate_number}</td>
-                  <td className="py-2 pr-4 text-slate-700">{infraction.infraction_type}</td>
-                  <td className="py-2 pr-4 text-slate-700">{formatCurrency(summary.totalDue)}</td>
-                  <td className="py-2 pr-4 text-slate-700">{formatCurrency(summary.amountPaid)}</td>
-                  <td className="py-2 pr-4 text-slate-700">{formatCurrency(summary.remaining)}</td>
-                  <td className="py-2 pr-4 text-slate-700">{summary.transactionCount}</td>
+                  <td className="py-2 pr-4 text-stone-600 dark:text-slate-400 whitespace-nowrap">
+                    {formatDate(infraction.created_at)}
+                  </td>
+                  <td className="py-2 pr-4 font-medium text-stone-900 dark:text-stone-100">
+                    {infraction.plate_number}
+                  </td>
+                  <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">
+                    {infraction.infraction_type}
+                  </td>
+                  <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">
+                    {formatCurrency(summary.totalDue)}
+                  </td>
+                  <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">
+                    {formatCurrency(summary.amountPaid)}
+                  </td>
+                  <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">
+                    {formatCurrency(summary.remaining)}
+                  </td>
+                  <td className="py-2 pr-4 text-stone-600 dark:text-slate-400">
+                    {summary.transactionCount}
+                  </td>
                   <td className="py-2 pr-4">
                     <InfractionStatusBadge status={summary.ledgerStatus} />
                   </td>
@@ -127,7 +141,9 @@ export function DriverPaymentsTable({
                             : t("driver.payments.submitPayment")}
                         </Button>
                       ) : (
-                        <span className="text-xs text-slate-400">{t("driver.payments.noAction")}</span>
+                        <span className="text-xs text-stone-400 dark:text-slate-500">
+                          {t("driver.payments.noAction")}
+                        </span>
                       )}
                     </div>
                   </td>
