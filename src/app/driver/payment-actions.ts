@@ -8,6 +8,9 @@ import {
   paymentReceiptStoragePath,
 } from "@/lib/payment-receipt";
 import { canSubmitManualPayment, summarizeInfractionPayment } from "@/lib/payments";
+import { loadTransactionsByInfractionIds } from "@/lib/queries/payments";
+import type { Database } from "@/lib/types/database";
+import type { InfractionPaymentSummary } from "@/lib/payments";
 import {
   ACCEPTED_PHOTO_TYPES,
   MAX_EVIDENCE_BYTES,
@@ -136,6 +139,46 @@ export async function submitManualInfractionPayment(
   } catch (err) {
     return { ok: false, error: friendlyError(err) };
   }
+}
+
+export type DriverInfractionPaymentDetail = {
+  infraction: Database["public"]["Tables"]["infractions"]["Row"];
+  transactions: Database["public"]["Tables"]["transactions"]["Row"][];
+  summary: InfractionPaymentSummary;
+};
+
+export async function getDriverInfractionPaymentDetail(
+  infractionId: string
+): Promise<DriverInfractionPaymentDetail | null> {
+  const auth = await requireDriverProfileForAction();
+  if ("ok" in auth) return null;
+
+  const supabase = createClient();
+  const { data: infraction, error } = await supabase
+    .from("infractions")
+    .select("*")
+    .eq("id", infractionId)
+    .eq("driver_id", auth.profile.id)
+    .maybeSingle();
+
+  if (error || !infraction) return null;
+
+  const transactionsByInfraction = await loadTransactionsByInfractionIds(supabase, [
+    infractionId,
+  ]);
+  const transactions = transactionsByInfraction[infractionId] ?? [];
+
+  return {
+    infraction,
+    transactions,
+    summary: summarizeInfractionPayment({
+      fineAmount: infraction.fine_amount,
+      amountPaid: infraction.amount_paid,
+      paymentTransactionCount: infraction.payment_transaction_count,
+      infractionStatus: infraction.status,
+      transactions,
+    }),
+  };
 }
 
 export async function loadInfractionTransactionsForDriver(infractionId: string) {

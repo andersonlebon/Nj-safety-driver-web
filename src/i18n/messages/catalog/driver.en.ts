@@ -359,6 +359,24 @@ export const driverInfractions = {
   filterUnpaid: "Unpaid",
   filterPending: "Pending",
   emptyValue: "—",
+  view: "View",
+  detail: {
+    title: "Infraction details",
+    description: "Fine and payment history for {plate}",
+    close: "Close",
+    payNow: "Submit payment",
+    loading: "Loading details…",
+    loadError: "Could not load infraction details.",
+    sectionInfraction: "Infraction",
+    sectionPayment: "Payment summary",
+    sectionTransactions: "Payment history",
+    descriptionLabel: "Description",
+    evidence: "Evidence",
+    viewEvidence: "View evidence",
+    noEvidence: "No evidence on file",
+    receipt: "Receipt",
+    noTransactions: "No payments submitted yet.",
+  },
 } as const;
 
 export const driverPayments = {
@@ -385,6 +403,7 @@ export const driverPayments = {
   paidSoFar: "Paid so far",
   remaining: "Remaining",
   transactions: "Transactions",
+  status: "Status",
   actions: "Actions",
   submitPayment: "Submit payment",
   awaitingReview: "Awaiting review",

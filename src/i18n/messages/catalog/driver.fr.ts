@@ -379,6 +379,24 @@ export const driverInfractions = {
   filterUnpaid: "Impayé",
   filterPending: "En attente",
   emptyValue: "—",
+  view: "Voir",
+  detail: {
+    title: "Détails de l'infraction",
+    description: "Amende et historique des paiements pour {plate}",
+    close: "Fermer",
+    payNow: "Soumettre un paiement",
+    loading: "Chargement des détails…",
+    loadError: "Impossible de charger les détails de l'infraction.",
+    sectionInfraction: "Infraction",
+    sectionPayment: "Résumé des paiements",
+    sectionTransactions: "Historique des paiements",
+    descriptionLabel: "Description",
+    evidence: "Preuve",
+    viewEvidence: "Voir la preuve",
+    noEvidence: "Aucune preuve enregistrée",
+    receipt: "Reçu",
+    noTransactions: "Aucun paiement soumis pour l'instant.",
+  },
 } as const;
 
 export const driverPayments = {
@@ -406,6 +424,7 @@ export const driverPayments = {
   paidSoFar: "Déjà payé",
   remaining: "Reste à payer",
   transactions: "Transactions",
+  status: "Statut",
   actions: "Actions",
   submitPayment: "Soumettre un paiement",
   awaitingReview: "En validation",
