@@ -172,7 +172,7 @@ export const sharedVehicles = {
     verificationRejectTitle: "Reject vehicle",
     comments: {
       title: "Vehicle review notes",
-      hint: "Staff notes about this vehicle's documents and verification. Separate from the driver profile chat.",
+      hint: "Staff notes about this vehicle's documents and verification. The driver can read and reply here. Separate from the driver profile chat.",
       empty: "No vehicle notes yet. Leave the first note for other staff reviewing this car.",
       formLabel: "Add a vehicle note",
       formPlaceholder:

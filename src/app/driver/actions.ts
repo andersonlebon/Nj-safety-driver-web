@@ -13,6 +13,10 @@ import {
   appendDriverProfileComment,
   fetchDriverProfileComments,
 } from "@/lib/driver-profile-comments-store";
+import {
+  appendVehicleComment,
+  fetchVehicleComments,
+} from "@/lib/vehicle-comments-store";
 
 export type DriverActionResult = { ok: true } | { ok: false; error: string };
 
@@ -127,6 +131,79 @@ export async function postDriverProfileCommentAsDriver(
     if (!result.ok) return result;
 
     revalidatePath("/driver/profile");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: friendlyError(err) };
+  }
+}
+
+async function requireOwnedVehicleForAction(
+  supabase: ReturnType<typeof createClient>,
+  profileId: string,
+  vehicleId: string
+): Promise<DriverActionResult | { ok: true; vehicleId: string }> {
+  if (!vehicleId) return { ok: false, error: "Missing vehicle id." };
+
+  const { data, error } = await supabase
+    .from("vehicles")
+    .select("id, owner_id")
+    .eq("id", vehicleId)
+    .maybeSingle();
+
+  if (error) return { ok: false, error: friendlyError(error) };
+  if (!data || data.owner_id !== profileId) {
+    return { ok: false, error: "Vehicle not found." };
+  }
+
+  return { ok: true, vehicleId: data.id };
+}
+
+export async function getVehicleCommentsForDriver(
+  vehicleId: string
+): Promise<DriverProfileComment[]> {
+  const auth = await requireDriverProfileForAction();
+  if ("ok" in auth) return [];
+
+  const supabase = createClient();
+  const access = await requireOwnedVehicleForAction(
+    supabase,
+    auth.profile.id,
+    vehicleId
+  );
+  if (!("vehicleId" in access)) return [];
+
+  return fetchVehicleComments(supabase, access.vehicleId);
+}
+
+export async function postVehicleCommentAsDriver(
+  vehicleId: string,
+  message: string
+): Promise<DriverActionResult> {
+  try {
+    const auth = await requireDriverProfileForAction();
+    if ("ok" in auth) return auth;
+
+    const trimmed = message.trim();
+    if (!trimmed) return { ok: false, error: "Comment cannot be empty." };
+
+    const supabase = createClient();
+    const access = await requireOwnedVehicleForAction(
+      supabase,
+      auth.profile.id,
+      vehicleId
+    );
+    if (!("vehicleId" in access)) return access;
+
+    const result = await appendVehicleComment(
+      supabase,
+      access.vehicleId,
+      buildDriverProfileComment(auth.profile, trimmed)
+    );
+
+    if (!result.ok) return result;
+
+    revalidatePath("/driver/vehicles");
+    revalidatePath(`/driver/vehicles/${access.vehicleId}`);
     return { ok: true };
   } catch (err) {
     return { ok: false, error: friendlyError(err) };

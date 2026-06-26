@@ -22,10 +22,12 @@ export function VehicleList({
   vehicles,
   photoUrls,
   lastLocations,
+  driverName,
 }: {
   vehicles: Vehicle[];
   photoUrls: Record<string, string>;
   lastLocations?: Record<string, { location: string; at: string }>;
+  driverName: string;
 }) {
   const { t } = useI18n();
   const router = useRouter();
@@ -195,6 +197,7 @@ export function VehicleList({
           open
           onClose={() => setSelected(null)}
           vehicle={selected}
+          driverName={driverName}
           photoUrl={photoUrls[selected.id]}
           infractions={infractions}
           trackingEvents={trackingEvents}

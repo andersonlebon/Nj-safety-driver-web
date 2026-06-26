@@ -6,6 +6,7 @@ import { requireDriverProfile } from "@/lib/auth";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Card, CardBody } from "@/components/ui/Card";
 import { VehicleDetailContent } from "@/components/vehicles/VehicleDetailContent";
+import { DriverVehicleCommentsPanel } from "../DriverVehicleCommentsPanel";
 import { signDocumentPaths } from "@/lib/storage-urls";
 import type { TrackingEvent } from "@/lib/tracking";
 
@@ -95,6 +96,17 @@ export default async function DriverVehicleDetailPage({
             infractions={infractions ?? []}
             trackingEvents={trackingEvents}
             showOwner={false}
+          />
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardBody>
+          <DriverVehicleCommentsPanel
+            vehicleId={vehicle.id}
+            driverName={
+              profile.full_name ?? profile.email ?? t("driver.vehicles.detail.comments.senderYou")
+            }
           />
         </CardBody>
       </Card>

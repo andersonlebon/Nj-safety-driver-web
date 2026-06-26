@@ -25,7 +25,6 @@ import {
   DETAIL_MODAL_TAB_SWITCH_MS,
 } from "./detail-modal-layout";
 import {
-  DriverVerificationPanel,
   VerificationStatusBadge,
 } from "./DriverVerificationPanel";
 import { useI18n } from "@/i18n/context";
@@ -38,7 +37,7 @@ type DriverVehicle = Pick<
   "id" | "plate_number" | "registration_country" | "brand" | "model" | "verification_status"
 >;
 
-type TabId = "profile" | "documents" | "vehicles" | "comments" | "verify";
+type TabId = "profile" | "documents" | "vehicles" | "comments";
 
 type Props = {
   driver: Driver;
@@ -77,9 +76,7 @@ export function DriverDetailModal({
     message: string;
   } | null>(null);
 
-  const tabs = canManageDrivers
-    ? [...baseTabs, { id: "verify" as const, label: t("staff.drivers.detail.tabVerify") }]
-    : baseTabs;
+  const tabs = baseTabs;
 
   const canApprove = driver.verification_status !== "active";
   const canReject = driver.verification_status !== "rejected";
@@ -252,19 +249,6 @@ export function DriverDetailModal({
                     embedded
                     fillHeight
                   />
-                  </div>
-                )}
-                {activeTab === "verify" && canManageDrivers && (
-                  <div className="space-y-4">
-                    <p className="text-sm text-stone-600 dark:text-slate-400">
-                      {t("staff.drivers.detail.verifyTabHint")}
-                    </p>
-                    <DriverVerificationPanel
-                      userId={driver.id}
-                      status={driver.verification_status ?? "pending_documents"}
-                      adminMessage={driver.admin_message}
-                      hideApprove
-                    />
                   </div>
                 )}
               </>

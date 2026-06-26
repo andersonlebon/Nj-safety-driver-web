@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/i18n/context";
 
-type DriverTabId = "profile" | "documents" | "vehicles" | "comments" | "verify";
+type DriverTabId = "profile" | "documents" | "vehicles" | "comments";
 
 export type VehicleTabId =
   | "overview"
@@ -83,16 +83,6 @@ export function DriverDetailTabSkeleton({ tab }: { tab: DriverTabId }) {
         </div>
       )}
 
-      {tab === "verify" && (
-        <>
-          <div className="h-4 w-full max-w-md rounded bg-stone-100 dark:bg-slate-800/70" />
-          <div className="h-4 w-3/4 rounded bg-stone-100 dark:bg-slate-800/60" />
-          <div className="flex gap-2 pt-2">
-            <div className="h-9 w-28 rounded-lg bg-stone-200 dark:bg-slate-800" />
-            <div className="h-9 w-32 rounded-lg bg-stone-100 dark:bg-slate-800/70" />
-          </div>
-        </>
-      )}
     </div>
   );
 }

@@ -412,6 +412,7 @@ export async function postVehicleCommentAsStaff(
 
     revalidatePath("/staff/vehicles");
     revalidatePath("/staff/infractions");
+    revalidatePath("/driver/vehicles");
     return { ok: true };
   } catch (err) {
     return { ok: false, error: friendlyError(err) };

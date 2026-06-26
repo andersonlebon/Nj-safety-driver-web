@@ -71,6 +71,9 @@ export default async function DriverVehiclesPage() {
               vehicles={vehicles}
               photoUrls={photoUrls}
               lastLocations={lastLocations}
+              driverName={
+                profile.full_name ?? profile.email ?? t("driver.profile.chat.senderYou")
+              }
             />
           )}
         </CardBody>
