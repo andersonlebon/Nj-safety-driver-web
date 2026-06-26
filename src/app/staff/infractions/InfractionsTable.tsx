@@ -31,6 +31,7 @@ export function InfractionsTable({
   allowStatusUpdates = true,
   transactionStatusByInfraction = {},
   canManageVehicles = true,
+  staffName,
 }: {
   pathname: string;
   query: TableQuery;
@@ -40,6 +41,7 @@ export function InfractionsTable({
   allowStatusUpdates?: boolean;
   transactionStatusByInfraction?: Record<string, TransactionStatus>;
   canManageVehicles?: boolean;
+  staffName: string;
 }) {
   const router = useRouter();
   const { t } = useI18n();
@@ -57,6 +59,7 @@ export function InfractionsTable({
   const [error, setError] = useState<string | null>(null);
   const { openFromInfraction, modal } = useStaffVehicleDetailModal({
     canManageVehicles,
+    staffName,
     transactionStatusByInfraction,
   });
 

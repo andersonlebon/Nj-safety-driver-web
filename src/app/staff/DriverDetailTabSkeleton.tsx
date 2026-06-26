@@ -11,6 +11,7 @@ export type VehicleTabId =
   | "id"
   | "documents"
   | "fines"
+  | "comments"
   | "verify";
 
 function SkeletonBlock({ className }: { className?: string }) {
@@ -136,6 +137,20 @@ export function VehicleDetailTabSkeleton({ tab }: { tab: VehicleTabId }) {
           </div>
           <SkeletonBlock className="h-24 w-full" />
         </>
+      )}
+      {tab === "comments" && (
+        <div className="rounded-lg border border-stone-200 dark:border-slate-800 flex flex-col h-full min-h-[16rem]">
+          <div className="flex-1 p-3 space-y-3">
+            <div className="flex gap-3">
+              <div className="h-9 w-9 rounded-full bg-stone-200 dark:bg-slate-800 shrink-0" />
+              <div className="h-16 flex-1 max-w-[70%] rounded-xl bg-stone-100 dark:bg-slate-800/70" />
+            </div>
+          </div>
+          <div className="border-t border-stone-200 dark:border-slate-800 p-3 space-y-3">
+            <SkeletonBlock className="h-3 w-24" />
+            <SkeletonBlock className="h-20 w-full" />
+          </div>
+        </div>
       )}
       {tab === "verify" && (
         <div className="flex gap-2">

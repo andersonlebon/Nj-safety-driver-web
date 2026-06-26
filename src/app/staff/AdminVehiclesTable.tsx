@@ -36,6 +36,7 @@ export function AdminVehiclesTable({
   ownerMap,
   photoUrls,
   canManageVehicles = true,
+  staffName,
   initialOpenVehicleId,
 }: {
   pathname: string;
@@ -47,6 +48,7 @@ export function AdminVehiclesTable({
   ownerMap: Record<string, VehicleOwnerProfile>;
   photoUrls: Record<string, string>;
   canManageVehicles?: boolean;
+  staffName: string;
   initialOpenVehicleId?: string;
 }) {
   const { t } = useI18n();
@@ -318,6 +320,7 @@ export function AdminVehiclesTable({
           transitIdUrls={transitIdUrls}
           detailsLoading={detailsLoading}
           canManageVehicles={canManageVehicles}
+          staffName={staffName}
           borderTransitHint={
             selected.is_border_transit &&
             !selected.owner_id &&

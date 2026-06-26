@@ -12,10 +12,13 @@ import {
   type VehicleDetailSection,
 } from "@/components/vehicles/VehicleDetailContent";
 import { VehicleOwnerPanel } from "@/components/vehicles/VehicleOwnerPanel";
+import { DriverProfileComments } from "@/components/driver/DriverProfileComments";
 import { VehicleVerificationActions } from "./VehicleVerificationActions";
 import { cn } from "@/lib/utils";
 import {
   approveVehicleAsStaff,
+  getVehicleCommentsForStaff,
+  postVehicleCommentAsStaff,
   rejectVehicleAsStaff,
 } from "./actions";
 import {
@@ -45,6 +48,7 @@ type Props = {
   transitIdUrls: TransitIdDocUrls;
   detailsLoading?: boolean;
   canManageVehicles: boolean;
+  staffName: string;
   borderTransitHint?: ReactNode;
   initialTab?: VehicleTabId;
   /** View-only mode: no approve/reject footer or verify tab. */
@@ -64,6 +68,7 @@ export function VehicleDetailModal({
   transitIdUrls,
   detailsLoading = false,
   canManageVehicles,
+  staffName,
   borderTransitHint,
   initialTab = "overview",
   readOnly = false,
@@ -98,6 +103,7 @@ export function VehicleDetailModal({
     if (showOwner) list.push({ id: "owner", label: t("vehicles.detail.sections.owner") });
     list.push({ id: "documents", label: t("vehicles.detail.sections.documents") });
     list.push({ id: "fines", label: t("vehicles.detail.sections.fines") });
+    list.push({ id: "comments", label: t("vehicles.detail.sections.comments") });
     if (canManageVehicles && !readOnly) {
       list.push({ id: "verify", label: t("vehicles.detail.sections.verify") });
     }
@@ -259,7 +265,10 @@ export function VehicleDetailModal({
           ))}
         </div>
 
-        <div role="tabpanel" className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain">
+        <div role="tabpanel" className={cn(
+          "flex-1 min-h-0 overflow-y-auto overscroll-y-contain",
+          activeTab === "comments" && "flex flex-col"
+        )}>
           {showTabSkeleton ? (
             <VehicleDetailTabSkeleton tab={activeTab} />
           ) : (
@@ -283,6 +292,33 @@ export function VehicleDetailModal({
                 </div>
               ) : activeTab === "owner" ? (
                 <VehicleOwnerPanel vehicle={vehicle} owner={owner ?? null} />
+              ) : activeTab === "comments" ? (
+                <div className="flex flex-col min-h-0 h-full space-y-3">
+                  <p className="text-sm text-stone-600 dark:text-slate-400 shrink-0">
+                    {t("vehicles.detail.comments.hint")}
+                  </p>
+                  <DriverProfileComments
+                    driverProfileId={vehicle.id}
+                    viewer={{
+                      role: "staff",
+                      displayName: staffName,
+                    }}
+                    loadComments={getVehicleCommentsForStaff}
+                    sendComment={postVehicleCommentAsStaff}
+                    embedded
+                    fillHeight
+                    copy={{
+                      title: t("vehicles.detail.comments.title"),
+                      empty: t("vehicles.detail.comments.empty"),
+                      formLabel: t("vehicles.detail.comments.formLabel"),
+                      formPlaceholder: t("vehicles.detail.comments.formPlaceholder"),
+                      formSend: t("vehicles.detail.comments.formSend"),
+                      loadingAria: t("vehicles.detail.comments.loadingAria"),
+                      senderYou: t("vehicles.detail.comments.senderYou"),
+                      errorEmpty: t("vehicles.detail.comments.errorEmpty"),
+                    }}
+                  />
+                </div>
               ) : (
                 <VehicleDetailContent
                   vehicle={vehicle}

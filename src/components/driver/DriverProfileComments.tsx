@@ -19,6 +19,17 @@ type Viewer = {
   displayName: string;
 };
 
+type CommentCopy = {
+  title: string;
+  empty: string;
+  formLabel: string;
+  formPlaceholder: string;
+  formSend: string;
+  loadingAria: string;
+  senderYou: string;
+  errorEmpty: string;
+};
+
 type Props = {
   driverProfileId: string;
   viewer: Viewer;
@@ -30,6 +41,7 @@ type Props = {
   embedded?: boolean;
   /** Fill available height (e.g. inside a fixed-height modal tab). */
   fillHeight?: boolean;
+  copy?: CommentCopy;
 };
 
 function commentAlignEnd(
@@ -47,8 +59,19 @@ export function DriverProfileComments({
   sendComment,
   embedded = false,
   fillHeight = false,
+  copy,
 }: Props) {
   const { t } = useI18n();
+  const labels: CommentCopy = copy ?? {
+    title: t("driver.profile.chat.title"),
+    empty: t("driver.profile.chat.empty"),
+    formLabel: t("driver.profile.chat.formLabel"),
+    formPlaceholder: t("driver.profile.chat.formPlaceholder"),
+    formSend: t("driver.profile.chat.formSend"),
+    loadingAria: t("driver.profile.chat.loadingAria"),
+    senderYou: t("driver.profile.chat.senderYou"),
+    errorEmpty: t("driver.profile.chat.errorEmpty"),
+  };
   const [comments, setComments] = useState<DriverProfileComment[]>([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +93,7 @@ export function DriverProfileComments({
     e.preventDefault();
     const trimmed = message.trim();
     if (!trimmed) {
-      setError(t("driver.profile.chat.errorEmpty"));
+      setError(labels.errorEmpty);
       return;
     }
 
@@ -98,7 +121,7 @@ export function DriverProfileComments({
         <div className="flex items-center gap-2 mb-4">
           <MessageSquare className="h-4 w-4 text-brand-600 dark:text-brand-400" />
           <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
-            {t("driver.profile.chat.title")}
+            {labels.title}
           </h3>
         </div>
       )}
@@ -116,7 +139,7 @@ export function DriverProfileComments({
           )}
         >
           {loading ? (
-            <div className="animate-pulse space-y-3" aria-label={t("driver.profile.chat.loadingAria")}>
+            <div className="animate-pulse space-y-3" aria-label={labels.loadingAria}>
               <div className="flex gap-3">
                 <div className="h-9 w-9 shrink-0 rounded-full bg-stone-200 dark:bg-slate-800" />
                 <div className="h-14 flex-1 max-w-[70%] rounded-xl bg-stone-100 dark:bg-slate-800/70" />
@@ -128,14 +151,14 @@ export function DriverProfileComments({
             </div>
           ) : comments.length === 0 ? (
             <p className="text-sm text-stone-500 dark:text-slate-400">
-              {t("driver.profile.chat.empty")}
+              {labels.empty}
             </p>
           ) : (
             comments.map((comment, index) => {
               const isStaffMessage = Boolean(comment.staffName);
               const label = commentSenderLabel(comment, viewer);
               const displayLabel =
-                label === "me" ? t("driver.profile.chat.senderYou") : label;
+                label === "me" ? labels.senderYou : label;
               const alignEnd = commentAlignEnd(comment, viewer);
 
               return (
@@ -200,17 +223,17 @@ export function DriverProfileComments({
         >
           {error && <Alert variant="error">{error}</Alert>}
           <Textarea
-            label={t("driver.profile.chat.formLabel")}
+            label={labels.formLabel}
             name="profile_comment"
             rows={3}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder={t("driver.profile.chat.formPlaceholder")}
+            placeholder={labels.formPlaceholder}
           />
           <div className="flex justify-end">
             <Button type="submit" loading={pending} className="text-sm py-2 px-3">
               <Send className="h-4 w-4 mr-1.5" />
-              {t("driver.profile.chat.formSend")}
+              {labels.formSend}
             </Button>
           </div>
         </form>

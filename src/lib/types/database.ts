@@ -168,6 +168,7 @@ export type Database = {
           insurance_status: boolean;
           inspection_status: boolean;
           verification_status: VerificationStatus;
+          vehicle_comments: Json;
           created_at: string;
           updated_at: string;
         };
@@ -191,6 +192,7 @@ export type Database = {
           insurance_status?: boolean;
           inspection_status?: boolean;
           verification_status?: VerificationStatus;
+          vehicle_comments?: Json;
           created_at?: string;
           updated_at?: string;
         };
@@ -214,6 +216,7 @@ export type Database = {
           insurance_status?: boolean;
           inspection_status?: boolean;
           verification_status?: VerificationStatus;
+          vehicle_comments?: Json;
           created_at?: string;
           updated_at?: string;
         };

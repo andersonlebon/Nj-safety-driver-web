@@ -189,6 +189,7 @@ export async function AgentOverviewPage() {
                 infractions={recent}
                 transactionStatusByInfraction={transactionStatusByInfraction}
                 canManageVehicles
+                staffName={profile.full_name ?? profile.email ?? t("staff.shared.staffMemberFallback")}
               />
             )}
           </CardBody>

@@ -17,14 +17,17 @@ export function AgentRecentInfractionsTable({
   infractions,
   transactionStatusByInfraction,
   canManageVehicles = true,
+  staffName,
 }: {
   infractions: Row[];
   transactionStatusByInfraction: Record<string, TransactionStatus>;
   canManageVehicles?: boolean;
+  staffName: string;
 }) {
   const { t } = useI18n();
   const { openFromInfraction, modal } = useStaffVehicleDetailModal({
     canManageVehicles,
+    staffName,
     transactionStatusByInfraction,
   });
 

@@ -28,9 +28,11 @@ type OpenOptions = {
 
 export function useStaffVehicleDetailModal({
   canManageVehicles = true,
+  staffName,
   transactionStatusByInfraction = {},
 }: {
   canManageVehicles?: boolean;
+  staffName: string;
   transactionStatusByInfraction?: Record<string, TransactionStatus>;
 }) {
   const { t } = useI18n();
@@ -98,6 +100,7 @@ export function useStaffVehicleDetailModal({
           transitIdUrls={bundle.transitIdUrls}
           detailsLoading={detailsLoading || pending}
           canManageVehicles={canManageVehicles}
+          staffName={staffName}
           initialTab={initialTab}
           borderTransitHint={
             bundle.vehicle.is_border_transit &&

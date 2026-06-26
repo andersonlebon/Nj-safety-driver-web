@@ -16,7 +16,7 @@ export default async function AgentVehiclesPage({
 }: {
   searchParams?: Record<string, string | string[] | undefined>;
 }) {
-  await requireStaffProfile();
+  const { profile: me } = await requireStaffProfile();
   const supabase = createClient();
   const tableQuery = parseTableQuery(searchParams);
   const pageData = await loadVehicleDirectoryPaginated(supabase, tableQuery);
@@ -47,6 +47,7 @@ export default async function AgentVehiclesPage({
             ownerMap={pageData.ownerMap}
             photoUrls={pageData.photoUrls}
             canManageVehicles
+            staffName={me.full_name ?? me.email ?? t("staff.shared.staffMemberFallback")}
             initialOpenVehicleId={openVehicleId || undefined}
           />
         </CardBody>

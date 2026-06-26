@@ -23,6 +23,10 @@ import {
   appendDriverProfileComment,
   fetchDriverProfileComments,
 } from "@/lib/driver-profile-comments-store";
+import {
+  appendVehicleComment,
+  fetchVehicleComments,
+} from "@/lib/vehicle-comments-store";
 
 export type StaffActionResult = { ok: true; vehicleId?: string } | { ok: false; error: string };
 
@@ -370,6 +374,44 @@ export async function rejectVehicleAsStaff(
 
     revalidatePath("/staff/vehicles");
     revalidatePath("/staff/drivers");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: friendlyError(err) };
+  }
+}
+
+export async function getVehicleCommentsForStaff(
+  vehicleId: string
+): Promise<DriverProfileComment[]> {
+  const auth = await requireStaffProfileForAction();
+  if ("ok" in auth) return [];
+
+  const supabase = createClient();
+  return fetchVehicleComments(supabase, vehicleId);
+}
+
+export async function postVehicleCommentAsStaff(
+  vehicleId: string,
+  message: string
+): Promise<StaffActionResult> {
+  try {
+    const auth = await requireStaffProfileForAction();
+    if ("ok" in auth) return auth;
+
+    const trimmed = message.trim();
+    if (!trimmed) return { ok: false, error: "Comment cannot be empty." };
+
+    const supabase = createClient();
+    const result = await appendVehicleComment(
+      supabase,
+      vehicleId,
+      buildStaffProfileComment(auth.profile, trimmed)
+    );
+
+    if (!result.ok) return result;
+
+    revalidatePath("/staff/vehicles");
+    revalidatePath("/staff/infractions");
     return { ok: true };
   } catch (err) {
     return { ok: false, error: friendlyError(err) };

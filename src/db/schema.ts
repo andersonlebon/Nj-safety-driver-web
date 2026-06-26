@@ -145,6 +145,7 @@ export const vehicles = pgTable("vehicles", {
   verificationStatus: verificationStatus("verification_status")
     .notNull()
     .default("pending_review"),
+  vehicleComments: jsonb("vehicle_comments").notNull().default([]),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .default(sql`now()`),

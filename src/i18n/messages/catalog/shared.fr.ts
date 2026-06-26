@@ -130,6 +130,7 @@ export const sharedVehicles = {
       infractions: "Infractions",
       tracking: "Suivi",
       verify: "Vérifier",
+      comments: "Commentaires",
     },
     modalTitle: "Véhicule {plate}",
     modalDescription:
@@ -174,6 +175,18 @@ export const sharedVehicles = {
     vehicleDocumentsTitle: "Documents du véhicule",
     verificationApproveTitle: "Approuver le véhicule",
     verificationRejectTitle: "Refuser le véhicule",
+    comments: {
+      title: "Notes de vérification véhicule",
+      hint: "Notes du personnel sur les documents et la vérification de ce véhicule. Séparées du chat du profil conducteur.",
+      empty: "Aucune note pour ce véhicule. Laissez la première note pour les autres agents.",
+      formLabel: "Ajouter une note véhicule",
+      formPlaceholder:
+        "Problèmes de documents, pièces manquantes ou contexte de vérification pour cette plaque…",
+      formSend: "Publier la note",
+      loadingAria: "Chargement des notes véhicule",
+      senderYou: "Vous",
+      errorEmpty: "Saisissez une note avant d'envoyer.",
+    },
   },
 } as const;
 

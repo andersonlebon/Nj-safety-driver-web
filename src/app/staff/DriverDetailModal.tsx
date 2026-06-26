@@ -190,16 +190,6 @@ export function DriverDetailModal({
                     {t("staff.drivers.detail.approveDriver")}
                   </Button>
                 )}
-                {canManageDrivers && (
-                  <DriverVerificationPanel
-                    userId={driver.id}
-                    status={driver.verification_status ?? "pending_documents"}
-                    adminMessage={driver.admin_message}
-                    hideApprove
-                    hideReject
-                    compact
-                  />
-                )}
               </div>
             </div>
           </div>
@@ -247,7 +237,11 @@ export function DriverDetailModal({
                 )}
                 {activeTab === "vehicles" && <VehiclesTab vehicles={vehicles} t={t} emDash={emDash} />}
                 {activeTab === "comments" && (
-                  <DriverProfileComments
+                  <div className="flex flex-col min-h-0 h-full space-y-3">
+                    <p className="text-sm text-stone-600 dark:text-slate-400 shrink-0">
+                      {t("staff.drivers.detail.profileCommentsHint")}
+                    </p>
+                    <DriverProfileComments
                     driverProfileId={driver.id}
                     viewer={{
                       role: "staff",
@@ -258,6 +252,7 @@ export function DriverDetailModal({
                     embedded
                     fillHeight
                   />
+                  </div>
                 )}
                 {activeTab === "verify" && canManageDrivers && (
                   <div className="space-y-4">
