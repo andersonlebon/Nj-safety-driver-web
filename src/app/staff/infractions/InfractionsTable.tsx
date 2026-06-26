@@ -30,7 +30,7 @@ export function InfractionsTable({
   infractions,
   allowStatusUpdates = true,
   transactionStatusByInfraction = {},
-  canManageVehicles = false,
+  canManageVehicles = true,
 }: {
   pathname: string;
   query: TableQuery;

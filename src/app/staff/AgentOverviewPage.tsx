@@ -188,7 +188,7 @@ export async function AgentOverviewPage() {
               <AgentRecentInfractionsTable
                 infractions={recent}
                 transactionStatusByInfraction={transactionStatusByInfraction}
-                canManageVehicles={false}
+                canManageVehicles
               />
             )}
           </CardBody>

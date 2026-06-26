@@ -1,6 +1,6 @@
 import { Car } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { requireStaffProfile, requireAdminProfile } from "@/lib/auth";
+import { requireStaffProfile } from "@/lib/auth";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Alert } from "@/components/ui/Alert";
@@ -46,7 +46,7 @@ export default async function AgentVehiclesPage({
             vehicles={pageData.rows}
             ownerMap={pageData.ownerMap}
             photoUrls={pageData.photoUrls}
-            canManageVehicles={false}
+            canManageVehicles
             initialOpenVehicleId={openVehicleId || undefined}
           />
         </CardBody>

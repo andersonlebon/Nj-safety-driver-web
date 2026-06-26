@@ -1,6 +1,6 @@
 import { Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { requireStaffProfile, requireAdminProfile } from "@/lib/auth";
+import { requireStaffProfile } from "@/lib/auth";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Card, CardBody } from "@/components/ui/Card";
 import { parseTableQuery } from "@/lib/pagination";
@@ -38,7 +38,7 @@ export default async function AgentDriversPage({
             staffName={me.full_name ?? me.email ?? t("staff.shared.staffMemberFallback")}
             staffRole={staffProfile.staff_role}
             vehiclesByDriver={pageData.vehiclesByDriver}
-            canManageDrivers={false}
+            canManageDrivers
           />
         </CardBody>
       </Card>

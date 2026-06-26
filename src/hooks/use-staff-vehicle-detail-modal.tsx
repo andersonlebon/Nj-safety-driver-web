@@ -27,7 +27,7 @@ type OpenOptions = {
 };
 
 export function useStaffVehicleDetailModal({
-  canManageVehicles = false,
+  canManageVehicles = true,
   transactionStatusByInfraction = {},
 }: {
   canManageVehicles?: boolean;
@@ -99,7 +99,6 @@ export function useStaffVehicleDetailModal({
           detailsLoading={detailsLoading || pending}
           canManageVehicles={canManageVehicles}
           initialTab={initialTab}
-          readOnly
           borderTransitHint={
             bundle.vehicle.is_border_transit &&
             !bundle.vehicle.owner_id &&

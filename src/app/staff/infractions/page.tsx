@@ -16,8 +16,7 @@ export default async function AgentInfractionsPage({
 }) {
   const supabase = createClient();
   const tableQuery = parseTableQuery(searchParams);
-  const { staffProfile } = await requireStaffProfile();
-  const canManageVehicles = staffProfile.staff_role === "admin";
+  await requireStaffProfile();
   const { t } = await getTranslations();
 
   const [pageData, { data: templates }] = await Promise.all([
@@ -49,7 +48,7 @@ export default async function AgentInfractionsPage({
             totalCount={pageData.totalCount}
             infractions={pageData.rows}
             transactionStatusByInfraction={pageData.transactionStatusByInfraction}
-            canManageVehicles={canManageVehicles}
+            canManageVehicles
             allowStatusUpdates={false}
           />
         </CardBody>

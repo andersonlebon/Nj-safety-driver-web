@@ -16,7 +16,7 @@ type Row = InfractionDetail & {
 export function AgentRecentInfractionsTable({
   infractions,
   transactionStatusByInfraction,
-  canManageVehicles = false,
+  canManageVehicles = true,
 }: {
   infractions: Row[];
   transactionStatusByInfraction: Record<string, TransactionStatus>;

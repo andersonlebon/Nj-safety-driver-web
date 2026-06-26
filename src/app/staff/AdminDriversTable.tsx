@@ -29,7 +29,7 @@ export function AdminDriversTable({
   staffName,
   staffRole,
   vehiclesByDriver = {},
-  canManageDrivers = staffRole === "admin",
+  canManageDrivers = true,
 }: {
   pathname: string;
   query: TableQuery;
